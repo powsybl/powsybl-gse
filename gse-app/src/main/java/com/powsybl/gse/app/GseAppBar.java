@@ -18,10 +18,14 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.text.Text;
 
+import java.util.ResourceBundle;
+
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
 public class GseAppBar extends HBox {
+
+    private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.GseAppBar");
 
     private final Button createButton;
 
@@ -37,9 +41,9 @@ public class GseAppBar extends HBox {
         Region logo = brandingConfig.getLogo();
         logo.setPrefSize(32, 32);
 
-        createButton = createButton("Create", null);
+        createButton = createButton(RESOURCE_BUNDLE.getString("Create"), null);
         createButton.getStyleClass().add("gse-app-bar-text");
-        openButton = createButton("Open", null);
+        openButton = createButton(RESOURCE_BUNDLE.getString("Open"), null);
         openButton.getStyleClass().add("gse-app-bar-text");
 
         Text questionGlyph = Glyph.createAwesomeFont('\uf059');
@@ -53,7 +57,7 @@ public class GseAppBar extends HBox {
         getChildren().addAll(logo, createButton, openButton, gluePanel, helpButton);
     }
 
-    private Button createButton(String text, Node graphic) {
+    private static Button createButton(String text, Node graphic) {
         Button createButton = new Button(text, graphic);
         createButton.getStyleClass().add("gse-app-bar-button");
         return createButton;
