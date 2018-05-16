@@ -1,0 +1,89 @@
+.root {
+    -gse-app-bar-background-color: black;
+    -gse-app-bar-text-color: white;
+}
+
+.gse-app-bar {
+    -fx-background-color: -gse-app-bar-background-color;
+}
+
+.gse-app-bar-icon {
+    -fx-fill: -gse-app-bar-text-color;
+    -fx-font-size: 18px;
+}
+
+.gse-app-bar-icon:hover {
+    -fx-fill: lightgrey;
+}
+
+.gse-app-bar-button {
+    -fx-text-fill: -gse-app-bar-text-color;
+    -fx-font-size: 1.2em;
+    -fx-background-color: transparent;
+}
+
+.gse-app-bar-button:hover {
+    -fx-text-fill: lightgrey;
+}
+
+.gse-tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {
+    -fx-text-fill: -gse-app-bar-text-color;
+}
+
+.gse-tab-pane > .tab-header-area > .headers-region > .tab:selected > .tab-container > .tab-label {
+    -fx-text-fill: -fx-text-base-color;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab {
+    -fx-background-insets: 0 0 0 0, 0 0 0 0, 0 0 0 0;
+    -fx-background-radius: 0 0 0 0, 0 0 0 0, 0 0 0 0;
+}
+
+.gse-tab-pane > .tab-header-area > .headers-region > .tab {
+    -fx-background-color: -gse-app-bar-background-color;
+}
+
+.gse-tab-pane > .tab-header-area > .headers-region > .tab:selected {
+    -fx-background-color: -fx-body-color;
+}
+
+.tab-pane:top > .tab-header-area {
+    -fx-background-insets: 0, 0 0 0 0;
+    -fx-padding: 0em 0em 0em 0em;
+}
+
+.gse-tab-pane > .tab-header-area > .tab-header-background {
+    -fx-background-color: -gse-app-bar-background-color;
+}
+
+.gse-toolbar-button {
+    -fx-background-color: transparent;
+    -fx-padding: 5, 5, 5, 5;
+}
+
+.gse-toolbar-button:hover {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+}
+
+.gse-toolbar-button:pressed {
+    -fx-background-color: -fx-pressed-base;
+}
+
+.close-button {
+    -fx-background-color: -fx-mark-color;
+    -fx-shape: "M 0,0 H1 L 4,3 7,0 H8 V1 L 5,4 8,7 V8 H7 L 4,5 1,8 H0 V7 L 3,4 0,1 Z";
+    -fx-scale-shape: false;
+    -fx-effect: dropshadow(two-pass-box , rgba(255, 255, 255, 0.4), 1, 0.0 , 0, 1);
+}
+
+.close-button:hover {
+    -fx-background-color: derive(-fx-mark-color, -30%);
+}
+
+.transparent-button {
+    -fx-background-color: transparent;
+}
+
+.transparent-button.hover {
+     -fx-background-color: derive(-fx-mark-color, -30%);
+}
