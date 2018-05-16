@@ -38,9 +38,11 @@ public class GseAppBar extends HBox {
         logo.setPrefSize(32, 32);
 
         createButton = createButton("Create", null);
+        createButton.getStyleClass().add("gse-app-bar-text");
         openButton = createButton("Open", null);
+        openButton.getStyleClass().add("gse-app-bar-text");
 
-        Text questionGlyph = Glyph.createAwesomeFont('\uf059').size("1.7em");
+        Text questionGlyph = Glyph.createAwesomeFont('\uf059');
         questionGlyph.getStyleClass().add("gse-app-bar-icon");
 
         helpButton = createButton("", questionGlyph);

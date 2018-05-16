@@ -7,22 +7,25 @@
     -fx-background-color: -gse-app-bar-background-color;
 }
 
+.gse-app-bar-button {
+    -fx-background-color: transparent;
+}
+
 .gse-app-bar-icon {
     -fx-fill: -gse-app-bar-text-color;
-    -fx-font-size: 18px;
+    -fx-font-size: 1.7em;
 }
 
 .gse-app-bar-icon:hover {
     -fx-fill: lightgrey;
 }
 
-.gse-app-bar-button {
+.gse-app-bar-text {
     -fx-text-fill: -gse-app-bar-text-color;
     -fx-font-size: 1.2em;
-    -fx-background-color: transparent;
 }
 
-.gse-app-bar-button:hover {
+.gse-app-bar-text:hover {
     -fx-text-fill: lightgrey;
 }
 
