@@ -192,7 +192,12 @@ public class ProjectPane extends Tab {
                     if (value == null) {
                         GseUtil.setWaitingText(this);
                     } else {
-                        if (value instanceof ProjectNode) {
+                        if (value instanceof String) {
+                            setText((String) value);
+                            setGraphic(getTreeItem().getGraphic());
+                            setTextFill(Color.BLACK);
+                            setOpacity(1);
+                        } else if (value instanceof ProjectNode) {
                             ProjectNode node = (ProjectNode) value;
                             setText(node.getName());
                             setGraphic(getTreeItem().getGraphic());
