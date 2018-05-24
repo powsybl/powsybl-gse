@@ -6,6 +6,8 @@
  */
 package com.powsybl.gse.app;
 
+import com.powsybl.afs.AppData;
+import com.powsybl.gse.spi.GseAuthenticator;
 import com.powsybl.gse.spi.BrandingConfig;
 import com.powsybl.gse.util.Glyph;
 import javafx.geometry.Insets;
@@ -33,7 +35,7 @@ public class GseAppBar extends HBox {
 
     private final Button helpButton;
 
-    public GseAppBar(BrandingConfig brandingConfig) {
+    public GseAppBar(AppData data, BrandingConfig brandingConfig) {
         getStyleClass().add("gse-app-bar");
         setPadding(new Insets(3, 5, 3, 5));
         setAlignment(Pos.CENTER_LEFT);
@@ -54,7 +56,9 @@ public class GseAppBar extends HBox {
         Pane gluePanel = new Pane();
         setHgrow(gluePanel, Priority.ALWAYS);
 
-        getChildren().addAll(logo, createButton, openButton, gluePanel, helpButton);
+        getChildren().addAll(logo, createButton, openButton, gluePanel);
+        GseAuthenticator.find().ifPresent(authenticator -> getChildren().add(new UserSessionPane(data, authenticator)));
+        getChildren().add(helpButton);
     }
 
     private static Button createButton(String text, Node graphic) {

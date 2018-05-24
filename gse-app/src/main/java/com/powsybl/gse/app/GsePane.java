@@ -111,7 +111,7 @@ public class GsePane extends StackPane {
     }
 
     private GseAppBar createAppBar() {
-        GseAppBar appBar = new GseAppBar(brandingConfig);
+        GseAppBar appBar = new GseAppBar(appData, brandingConfig);
 
         appBar.getCreateButton().setOnAction(event -> {
             Optional<Project> project = NewProjectPane.showAndWaitDialog(getScene().getWindow(), appData, context);
