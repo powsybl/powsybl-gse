@@ -59,7 +59,7 @@
         <tiwulfx.version>2.0-SNAPSHOT</tiwulfx.version>
         <richtextfx.version>0.8.2</richtextfx.version>
 
-        <powsyblcore.version>1.1.0-SNAPSHOT</powsyblcore.version>
+        <powsyblcore.version>1.2.0-SNAPSHOT</powsyblcore.version>
 
     </properties>
 
