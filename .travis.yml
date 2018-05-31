@@ -19,4 +19,4 @@ install:
 - pushd powsybl/powsybl-core && mvn install && popd
 
 script:
-- mvn clean verify -Pjacoco coveralls:report sonar:sonar
+- mvn clean verify
