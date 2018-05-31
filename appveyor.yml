@@ -14,6 +14,9 @@ install:
   - cmd: SET PATH=%M2_HOME%\bin;%JAVA_HOME%\bin;%PATH%
 before_build:
   - git clone https://github.com/powsybl/powsybl-core.git powsybl/powsybl-core
-  - pushd powsybl/powsybl-core; mvn -DskipTests install --batch-mode; popd
+  - ps: |
+      pushd powsybl/powsybl-core
+      mvn -DskipTests install --batch-mode
+      popd
 build_script:
   - mvn clean package --batch-mode
