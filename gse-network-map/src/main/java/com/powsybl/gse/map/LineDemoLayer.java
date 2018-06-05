@@ -95,7 +95,7 @@ public class LineDemoLayer extends CanvasBasedLayer {
         }
 
         stopWatch.stop();
-        LOGGER.info("Average simplification {}", (((float) simplifiedMapPointCount) / mapPointCount));
+        LOGGER.info("Average simplification {}", ((float) simplifiedMapPointCount) / mapPointCount);
         LOGGER.info("Lines drawn in {} ms", stopWatch.getTime());
     }
 
