@@ -5,6 +5,7 @@ import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcType;
+import javafx.scene.text.Font;
 import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +39,7 @@ public class SubtationDemoLayer extends CanvasBasedLayer {
             while ((line = reader.readLine()) != null) {
                 String[] tokens = line.split(";");
                 String id = tokens[0];
-                Color color = LineGraphic.parseNominalVoltage(tokens[4]);
+                Color color = LineGraphic.parseBaseVoltage(tokens[4]).getColor();
                 double lon = Double.parseDouble(tokens[5]);
                 double lat = Double.parseDouble(tokens[6]);
                 coords.put(id, new SubstationGraphic(id, color, new Coordinate(lon, lat)));
@@ -56,12 +57,20 @@ public class SubtationDemoLayer extends CanvasBasedLayer {
 
         GraphicsContext gc = canvas.getGraphicsContext2D();
         gc.setLineWidth(1);
+        gc.setFont(Font.font(11));
+
+        double zoom = baseMap.zoom().doubleValue();
+        double size = zoom < 8 ? zoom / 2 : zoom;
 
         for (Map.Entry<String, SubstationGraphic> e : coords.entrySet()) {
             SubstationGraphic substation = e.getValue();
-            Point2D p = baseMap.getMapPoint(substation.getPosition().getLat(), substation.getPosition().getLon());
+            Point2D p = baseMap.getMapPoint(substation.getPosition().getLat(),
+                                            substation.getPosition().getLon());
             gc.setFill(substation.getColor());
-            gc.fillArc(p.getX(), p.getY(), 5, 5, 0, 360, ArcType.ROUND);
+            gc.fillArc(p.getX() - size / 2, p.getY() - size / 2, size, size, 0, 360, ArcType.ROUND);
+            if (zoom > 9) {
+                gc.fillText(substation.getId(), p.getX() + 10, p.getY() + 10);
+            }
         }
 
         stopWatch.stop();

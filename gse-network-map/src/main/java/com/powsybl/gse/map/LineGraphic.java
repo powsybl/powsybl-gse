@@ -8,25 +8,40 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
 public class LineGraphic {
 
-    static final Color[] NOMINAL_VOLTAGE_COLOR = {
-        Color.rgb(171, 175, 40),  // jaune fonce pur etre lisible sur du blanc
-        Color.rgb(255, 130, 144), // pink1   plus lisible
-        Color.rgb(160, 32, 240),  // purple
-        Color.rgb(204, 85, 0),    // orange
-        Color.rgb(1, 175, 175),   //cyan  plus fonce  150 KV
-        Color.rgb(34, 139, 34),   // forest green 225 KV
-        Color.RED
-    };
+    enum BaseVoltage {
+        VL_400_KV(Color.RED, 0),
+        VL_225_KV(Color.rgb(34, 139, 34), 1),
+        VL_150_KV(Color.rgb(1, 175, 175), 2),
+        VL_90_KV(Color.rgb(204, 85, 0), 3),
+        VL_63_KV(Color.rgb(160, 32, 240), 4),
+        VL_45_KV(Color.rgb(255, 130, 144), 5),
+        VL_INF_45_KV(Color.rgb(171, 175, 40), 6),
+        VL_HORS_TENSION(Color.BLACK, 7),
+        VL_COURANT_CONTINU(Color.YELLOW, 8);
 
-    private static final Pattern ANGLE_PATTERN = Pattern.compile("\"(.*)° (.*)' (.*)\"\"\"");
+        private final Color color;
+
+        private final int order;
+
+        BaseVoltage(Color color, int order) {
+            this.color = Objects.requireNonNull(color);
+            this.order = order;
+        }
+
+        public Color getColor() {
+            return color;
+        }
+
+        public int getOrder() {
+            return order;
+        }
+    }
 
     private final String id;
 
@@ -34,7 +49,7 @@ public class LineGraphic {
 
     private final Color color;
 
-    private final Set<PylonGraphic> pylons = new TreeSet<>();
+    private final List<SegmentGraphic> segments = new ArrayList<>();
 
     public LineGraphic(String id, int drawOrder, Color color) {
         this.id = Objects.requireNonNull(id);
@@ -54,107 +69,93 @@ public class LineGraphic {
         return color;
     }
 
-    public Set<PylonGraphic> getPylons() {
-        return pylons;
+    public List<SegmentGraphic> getSegments() {
+        return segments;
     }
 
-    private static double parseAngle(String angle) {
-        Matcher matcher = ANGLE_PATTERN.matcher(angle);
-        if (!matcher.matches()) {
-            throw new IllegalArgumentException("Invalid angle " + angle);
-        }
-        double degree = Double.parseDouble(matcher.group(1));
-        double minutes = Double.parseDouble(matcher.group(2));
-        double seconds = Double.parseDouble(matcher.group(3).replace(',', '.'));
-        return degree + minutes / 60 + seconds / 3600;
-    }
-
-    static Color parseNominalVoltage(String nominalVoltage) {
-        switch (nominalVoltage) {
+    static BaseVoltage parseBaseVoltage(String str) {
+        switch (str) {
             case "400 KV":
             case "400 kV":
-                return NOMINAL_VOLTAGE_COLOR[6];
+                return BaseVoltage.VL_400_KV;
             case "225 KV":
             case "225 kV":
-                return NOMINAL_VOLTAGE_COLOR[5];
+                return BaseVoltage.VL_225_KV;
             case "150 KV":
             case "150 kV":
-                return NOMINAL_VOLTAGE_COLOR[4];
+                return BaseVoltage.VL_150_KV;
             case "90 KV":
             case "90 kV":
-                return NOMINAL_VOLTAGE_COLOR[3];
+                return BaseVoltage.VL_90_KV;
             case "63 KV":
             case "63 kV":
-                return NOMINAL_VOLTAGE_COLOR[2];
+                return BaseVoltage.VL_63_KV;
             case "45 KV":
             case "45 kV":
-                return NOMINAL_VOLTAGE_COLOR[1];
+                return BaseVoltage.VL_45_KV;
             case "INFERIEUR A 45 KV":
             case "INF 45 kV":
-                return NOMINAL_VOLTAGE_COLOR[0];
+                return BaseVoltage.VL_INF_45_KV;
             case "HORS TENSION":
-                return Color.BLACK;
+                return BaseVoltage.VL_HORS_TENSION;
+            case "COURANT CONTINU":
+                return BaseVoltage.VL_COURANT_CONTINU;
             default:
-                throw new AssertionError(nominalVoltage);
-        }
-    }
-
-    private static int getDrawOrder(String nominalVoltage) {
-        switch (nominalVoltage) {
-            case "400 KV":
-                return 0;
-            case "225 KV":
-                return 1;
-            case "150 KV":
-                return 2;
-            case "90 KV":
-                return 3;
-            case "63 KV":
-                return 4;
-            case "45 KV":
-                return 5;
-            case "INFERIEUR A 45 KV":
-                return 6;
-            case "HORS TENSION":
-                return 7;
-            default:
-                throw new AssertionError(nominalVoltage);
+                throw new AssertionError(str);
         }
     }
 
     public static Collection<LineGraphic> parse() {
         Map<String, LineGraphic> lines = new HashMap<>();
 
-        int pylonCount = 0;
-        try (BufferedReader reader = Files.newBufferedReader(Paths.get("C:/Users/geoff_/Documents/Extract09042018_IL_Pylones.csv"))) {
-            reader.readLine();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] tokens = line.split(";");
-                String lineId = tokens[1];
-                if (lineId.isEmpty()) {
-                    continue;
+        int segmentCount = 0;
+        try {
+            try (BufferedReader reader = Files.newBufferedReader(Paths.get("C:/Users/geoff_/Documents/lignes-aeriennes.csv"))) {
+                reader.readLine();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] tokens = line.split(";");
+                    String lineId = tokens[1];
+                    if (lineId.isEmpty()) {
+                        continue;
+                    }
+                    BaseVoltage baseVoltage = parseBaseVoltage(tokens[5]);
+                    double lon1 = Double.parseDouble(tokens[8]);
+                    double lat1 = Double.parseDouble(tokens[9]);
+                    double lon2 = Double.parseDouble(tokens[10]);
+                    double lat2 = Double.parseDouble(tokens[11]);
+                    lines.computeIfAbsent(lineId, id -> new LineGraphic(id, baseVoltage.getOrder(), baseVoltage.getColor()))
+                            .getSegments()
+                            .add(new SegmentGraphic(new Coordinate(lon1, lat1), new Coordinate(lon2, lat2)));
+                    segmentCount++;
                 }
-                Color color = parseNominalVoltage(tokens[2]);
-                int drawOrder = getDrawOrder(tokens[2]);
-                int pylonNum = Integer.parseInt(tokens[8]);
-                if ("Non-Renseignée".equals(tokens[23])) {
-                    continue;
-                }
-                double lon = parseAngle(tokens[23]);
-                double lat = parseAngle(tokens[24]);
-                if (lat < 0) { // discard bad data
-                    continue;
-                }
-                lines.computeIfAbsent(lineId, id -> new LineGraphic(id, drawOrder, color)).getPylons()
-                        .add(new PylonGraphic(new Coordinate(lon, lat), pylonNum));
-                pylonCount++;
             }
 
-            System.out.println(lines.size() + "lines, " + pylonCount + " pylons");
+            try (BufferedReader reader = Files.newBufferedReader(Paths.get("C:/Users/geoff_/Documents/lignes-souterraines.csv"))) {
+                reader.readLine();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] tokens = line.split(";");
+                    String lineId = tokens[1];
+                    if (lineId.isEmpty()) {
+                        continue;
+                    }
+                    BaseVoltage baseVoltage = parseBaseVoltage(tokens[5]);
+                    double lon1 = Double.parseDouble(tokens[9]);
+                    double lat1 = Double.parseDouble(tokens[10]);
+                    double lon2 = Double.parseDouble(tokens[11]);
+                    double lat2 = Double.parseDouble(tokens[12]);
+                    lines.computeIfAbsent(lineId, id -> new LineGraphic(id, baseVoltage.getOrder(), baseVoltage.getColor()))
+                            .getSegments()
+                            .add(new SegmentGraphic(new Coordinate(lon1, lat1), new Coordinate(lon2, lat2)));
+                    segmentCount++;
+                }
+            }
 
-//            for (Map.Entry<String, Set<PylonGraphic>> e : coords.entrySet()) {
-//                System.out.println(e.getKey() + " " + e.getValue());
+            System.out.println(lines.size() + "lines, " + segmentCount + " segments");
+
+//            for (Map.Entry<String, LineGraphic> e : lines.entrySet()) {
+//                System.out.println(e.getKey() + " " + e.getValue().getSegments());
 //            }
         } catch (IOException e) {
             throw new UncheckedIOException(e);

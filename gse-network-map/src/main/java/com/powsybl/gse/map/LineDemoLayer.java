@@ -1,15 +1,16 @@
 package com.powsybl.gse.map;
 
 import com.gluonhq.maps.MapView;
-import com.goebl.simplify.PointExtractor;
-import com.goebl.simplify.Simplify;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
 import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -18,22 +19,6 @@ import java.util.stream.Collectors;
 public class LineDemoLayer extends CanvasBasedLayer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LineDemoLayer.class);
-
-    private static final boolean SIMPLIFICATION = false;
-
-    private static final PointExtractor<Point2D> POINT_EXTRACTOR = new PointExtractor<Point2D>() {
-        @Override
-        public double getX(Point2D point2D) {
-            return point2D.getX();
-        }
-
-        @Override
-        public double getY(Point2D point2D) {
-            return point2D.getY();
-        }
-    };
-
-    private final Simplify<Point2D> simplify = new Simplify<>(new Point2D[0], POINT_EXTRACTOR);
 
     private Map<Integer, List<LineGraphic>> lines;
 
@@ -48,55 +33,29 @@ public class LineDemoLayer extends CanvasBasedLayer {
         lines = new TreeMap<>(LineGraphic.parse().stream().collect(Collectors.groupingBy(LineGraphic::getDrawOrder)));
     }
 
-    private Point2D[] projectCoordinates(Set<PylonGraphic> pylons) {
-        Point2D[] mapPoints = new Point2D[pylons.size()];
-        int i = 0;
-        for (PylonGraphic pylon : pylons) {
-            mapPoints[i] = baseMap.getMapPoint(pylon.getCoordinate().getLat(),
-                                               pylon.getCoordinate().getLon());
-            i++;
-        }
-        return mapPoints;
-    }
-
-    private static Point2D[] simplifyMapPoints(Point2D[] mapPoints, Simplify<Point2D> simplify) {
-        return SIMPLIFICATION ? simplify.simplify(mapPoints, 1f, false) : mapPoints;
-    }
-
     private void draw(GraphicsContext gc, int drawOrder, List<LineGraphic> lines) {
         LOGGER.info("Drawing lines at order {}", drawOrder);
 
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
 
-        int mapPointCount = 0;
-        int simplifiedMapPointCount = 0;
+        for (LineGraphic line : lines) {
 
-        for (LineGraphic l : lines) {
-            if (l.getPylons().size() < 2) {
-                continue;
-            }
+            gc.setStroke(line.getColor());
 
-            Point2D[] mapPoints = projectCoordinates(l.getPylons());
-            Point2D[] simplifiedMapPoints = simplifyMapPoints(mapPoints, simplify);
+            for (SegmentGraphic segment : line.getSegments()) {
+                Point2D point1 = baseMap.getMapPoint(segment.getCoordinate1().getLat(),
+                                                     segment.getCoordinate1().getLon());
+                Point2D point2 = baseMap.getMapPoint(segment.getCoordinate2().getLat(),
+                                                     segment.getCoordinate2().getLon());
 
-            mapPointCount += mapPoints.length;
-            simplifiedMapPointCount += simplifiedMapPoints.length;
-
-            gc.setStroke(l.getColor());
-
-            Point2D prev = null;
-            for (Point2D mapPoint : simplifiedMapPoints) {
-                if (prev != null) {
-                    gc.strokeLine(prev.getX(), prev.getY(), mapPoint.getX(), mapPoint.getY());
-                }
-                prev = mapPoint;
+                gc.strokeLine(point1.getX(), point1.getY(), point2.getX(), point2.getY());
             }
         }
 
         stopWatch.stop();
-        LOGGER.info("Average simplification {}", ((float) simplifiedMapPointCount) / mapPointCount);
-        LOGGER.info("Lines drawn in {} ms", stopWatch.getTime());
+
+        LOGGER.info("Lines drawn in {} ms at zoom {}", stopWatch.getTime(), baseMap.zoom().getValue());
     }
 
     @Override
@@ -110,7 +69,7 @@ public class LineDemoLayer extends CanvasBasedLayer {
         }
 
         GraphicsContext gc = canvas.getGraphicsContext2D();
-        gc.setLineWidth(1);
+        gc.setLineWidth(baseMap.zoom().getValue() >= 8 ? 2 : 1);
 
         Iterator<Map.Entry<Integer, List<LineGraphic>>> it = lines.entrySet().iterator();
         if (it.hasNext()) {
