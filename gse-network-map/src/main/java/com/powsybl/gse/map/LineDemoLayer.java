@@ -30,7 +30,7 @@ public class LineDemoLayer extends CanvasBasedLayer {
 
     @Override
     protected void initialize() {
-        lines = new TreeMap<>(LineGraphic.parse().stream().collect(Collectors.groupingBy(LineGraphic::getDrawOrder)));
+        lines = new TreeMap<>(RteOpenData.parseLines().stream().collect(Collectors.groupingBy(LineGraphic::getDrawOrder)));
     }
 
     private void draw(GraphicsContext gc, int drawOrder, List<LineGraphic> lines) {
