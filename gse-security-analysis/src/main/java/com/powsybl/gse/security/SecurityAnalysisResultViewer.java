@@ -13,14 +13,12 @@ import com.powsybl.security.LimitViolation;
 import com.powsybl.security.LimitViolationsResult;
 import com.powsybl.security.SecurityAnalysisResult;
 import com.powsybl.security.afs.SecurityAnalysisRunner;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 
@@ -48,7 +46,9 @@ public class SecurityAnalysisResultViewer extends BorderPane implements ProjectF
 
     private final Tab postContTab;
 
-    private final TableView<LimitViolation> preContTable = new TableView<>();
+    private final TableView<LimitViolation> preContTable = new LimitViolationsTableView();
+
+    private final ContingenciesSplitPane postContSplitPane = new ContingenciesSplitPane();
 
     private final Service<SecurityAnalysisResult> resultLoadingService;
 
@@ -56,35 +56,9 @@ public class SecurityAnalysisResultViewer extends BorderPane implements ProjectF
         this.runner = Objects.requireNonNull(runner);
         this.scene = Objects.requireNonNull(scene);
         this.context = Objects.requireNonNull(context);
-        TableColumn<LimitViolation, String> equipmentColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Equipment"));
-        equipmentColumn.setPrefWidth(200);
-        equipmentColumn.setCellValueFactory(new PropertyValueFactory<>("subjectId"));
-        TableColumn<LimitViolation, String> violationTypeColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("ViolationType"));
-        violationTypeColumn.setPrefWidth(150);
-        violationTypeColumn.setCellValueFactory(new PropertyValueFactory<>("limitType"));
-        TableColumn<LimitViolation, String> violationNameColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("ViolationName"));
-        violationNameColumn.setPrefWidth(150);
-        violationNameColumn.setCellValueFactory(new PropertyValueFactory<>("limitName"));
-        TableColumn<LimitViolation, Float> limitColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Limit"));
-        limitColumn.setCellValueFactory(new PropertyValueFactory<>("limit"));
-        TableColumn<LimitViolation, Float> valueColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Value"));
-        valueColumn.setCellValueFactory(new PropertyValueFactory<>("value"));
-        TableColumn<LimitViolation, Float> loadColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Load"));
-        loadColumn.setPrefWidth(150);
-        loadColumn.setCellValueFactory(features -> {
-            LimitViolation violation = features.getValue();
-            float load = violation.getValue() / (violation.getLimit() * violation.getLimitReduction()) * 100;
-            return new SimpleObjectProperty<>(load);
-        });
-        preContTable.getColumns().setAll(equipmentColumn,
-                                         violationTypeColumn,
-                                         violationNameColumn,
-                                         limitColumn,
-                                         valueColumn,
-                                         loadColumn);
         preContTab = new Tab(RESOURCE_BUNDLE.getString("PreContingency"), preContTable);
         preContTab.setClosable(false);
-        postContTab = new Tab(RESOURCE_BUNDLE.getString("PostContingency"));
+        postContTab = new Tab(RESOURCE_BUNDLE.getString("PostContingency"), postContSplitPane);
         postContTab.setClosable(false);
         tabPane = new TabPane(preContTab, postContTab);
         StackPane mainPane = new StackPane(tabPane, new Group(preContProgressIndic));
@@ -112,6 +86,7 @@ public class SecurityAnalysisResultViewer extends BorderPane implements ProjectF
             if (result != null) {
                 LimitViolationsResult preContingencyResult = result.getPreContingencyResult();
                 preContTable.getItems().setAll(preContingencyResult.getLimitViolations());
+                postContSplitPane.resetWithSecurityAnalysisResults(result);
             } else {
                 // TODO
             }
