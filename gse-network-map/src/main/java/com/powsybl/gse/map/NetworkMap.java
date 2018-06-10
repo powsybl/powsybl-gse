@@ -98,5 +98,6 @@ public class NetworkMap extends BorderPane implements ProjectFileViewer {
 
     @Override
     public void dispose() {
+        // nothing to dispose
     }
 }

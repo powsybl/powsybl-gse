@@ -27,9 +27,6 @@ public final class RteOpenData {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RteOpenData.class);
 
-    private RteOpenData() {
-    }
-
     enum BaseVoltage {
         VL_400_KV(Color.RED, 0),
         VL_225_KV(Color.rgb(34, 139, 34), 1),
@@ -57,6 +54,9 @@ public final class RteOpenData {
         public int getOrder() {
             return order;
         }
+    }
+
+    private RteOpenData() {
     }
 
     private static BaseVoltage parseBaseVoltage(String str) {
@@ -160,10 +160,6 @@ public final class RteOpenData {
             }
 
             LOGGER.info("{} lines, {} segments", lines.size(), segmentCount);
-
-//            for (Map.Entry<String, LineGraphic> e : lines.entrySet()) {
-//                System.out.println(e.getKey() + " " + e.getValue().getSegments());
-//            }
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
