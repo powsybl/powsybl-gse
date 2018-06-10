@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2018, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package com.powsybl.gse.security;
 
 import com.powsybl.security.LimitViolationsResult;
@@ -10,16 +16,18 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * @author Sebastien Murgey <sebastien.murgey at rte-france.com>
+ */
 public class ContingenciesSplitPane extends SplitPane {
     private Map<String, LimitViolationsResult> limitViolationsResultPerContingency = new HashMap<>();
 
-    private ListView<String> contingencyListView = new ListView<>();
+    private final ListView<String> contingencyListView = new ListView<>();
 
-    private LimitViolationsTableView limitViolationsTableView = new LimitViolationsTableView();
+    private final LimitViolationsTableView limitViolationsTableView = new LimitViolationsTableView();
 
     ContingenciesSplitPane() {
-        super();
-        this.getItems().setAll(contingencyListView, limitViolationsTableView);
+        getItems().setAll(contingencyListView, limitViolationsTableView);
 
         contingencyListView.getSelectionModel().selectedItemProperty()
                 .addListener((observable, oldValue, newValue) -> refreshLimitViolationsTableView(newValue));
