@@ -25,6 +25,16 @@ import java.util.Objects;
  */
 public class NetworkMap extends BorderPane implements ProjectFileViewer {
 
+    /**
+     * Hack to fix layer refreshing issue
+     */
+    private static class MapView2 extends MapView {
+        @Override
+        public void markDirty() {
+            super.markDirty();
+        }
+    }
+
     private final ProjectCase projectCase;
 
     private final GseContext context;
@@ -35,13 +45,13 @@ public class NetworkMap extends BorderPane implements ProjectFileViewer {
 
     private final Button zoomOutButton;
 
-    private final MapView view;
+    private final MapView2 view;
 
     public NetworkMap(ProjectCase projectCase, GseContext context) {
         this.projectCase = Objects.requireNonNull(projectCase);
         this.context = Objects.requireNonNull(context);
 
-        view = new MapView();
+        view = new MapView2();
         setCenter(view);
 
         zoomInButton = new Button("", Glyph.createAwesomeFont('\uf00e').size("1.2em"));
@@ -54,6 +64,9 @@ public class NetworkMap extends BorderPane implements ProjectFileViewer {
 
         toolBar = new ToolBar(zoomInButton, zoomOutButton);
         setTop(toolBar);
+
+        view.addLayer(new SubtationDemoLayer(view));
+        view.addLayer(new LineDemoLayer(view));
     }
 
     private void fireZoomEvent(double zoom) {
@@ -69,6 +82,7 @@ public class NetworkMap extends BorderPane implements ProjectFileViewer {
                 screenCoord.getX(), screenCoord.getY(),
                 false, false, false, false, false, false, zoom, zoom, null);
         ZoomEvent.fireEvent(view, evt);
+        view.markDirty();
     }
 
     @Override
@@ -78,11 +92,12 @@ public class NetworkMap extends BorderPane implements ProjectFileViewer {
 
     @Override
     public void view() {
-        view.setZoom(5);
-        view.setCenter(50, 4);
+        view.setZoom(6);
+        view.setCenter(47, 3);
     }
 
     @Override
     public void dispose() {
+        // nothing to dispose
     }
 }
