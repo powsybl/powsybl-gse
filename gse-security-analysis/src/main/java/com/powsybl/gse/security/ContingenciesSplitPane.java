@@ -27,6 +27,7 @@ public class ContingenciesSplitPane extends SplitPane {
     private final LimitViolationsTableView limitViolationsTableView = new LimitViolationsTableView();
 
     ContingenciesSplitPane() {
+        setDividerPositions(0.2);
         getItems().setAll(contingencyListView, limitViolationsTableView);
 
         contingencyListView.getSelectionModel().selectedItemProperty()
