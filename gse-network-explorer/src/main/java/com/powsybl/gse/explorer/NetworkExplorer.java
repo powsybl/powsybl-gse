@@ -226,8 +226,10 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
                     }
                 }
             } catch (Throwable t) {
-                updater.accept(null);
-                Platform.runLater(() -> GseUtil.showDialogError(t));
+                Platform.runLater(() -> {
+                    updater.accept(null);
+                    GseUtil.showDialogError(t);
+                });
             }
         });
     }
