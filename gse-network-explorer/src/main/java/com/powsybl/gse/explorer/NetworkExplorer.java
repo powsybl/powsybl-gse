@@ -257,6 +257,10 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
                 icon = new LineIcon(ICON_COLOR, ICON_THICKNESS, rem);
                 break;
 
+            case "SWITCH":
+                icon = new SwitchIcon(ICON_COLOR, ICON_THICKNESS, rem);
+                break;
+
             default:
                 break;
         }
@@ -312,6 +316,16 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
                     "        equipments: it.connectables.collect {",
                     "                        [",
                     "                            type: it.type.name() == 'SHUNT_COMPENSATOR' ? (it.getbPerSection() > 0 ? 'CAPACITOR' : 'INDUCTOR'): it.type,",
+                    "                            idAndName: [",
+                    "                                           id: it.id,",
+                    "                                           name: it.name",
+                    "                                       ]",
+                    "                        ]",
+                    "                    }",
+                    "                    +",
+                    "                    it.nodeBreakerView.switches.collect {",
+                    "                        [",
+                    "                            type: 'SWITCH',",
                     "                            idAndName: [",
                     "                                           id: it.id,",
                     "                                           name: it.name",
