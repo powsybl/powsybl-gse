@@ -28,8 +28,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -44,7 +42,6 @@ import java.util.function.Function;
  */
 class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCaseListener {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(NetworkExplorer.class);
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.NetworkExplorer");
 
     private static final IdAndName BUSY = new IdAndName("...", "...");
@@ -97,9 +94,6 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
 
         private String type;
 
-        public EquipmentQueryResult() {
-        }
-
         public IdAndName getIdAndName() {
             return idAndName;
         }
@@ -122,9 +116,6 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         private IdAndName idAndName;
 
         private List<EquipmentQueryResult> equipments;
-
-        public VoltageLevelQueryResult() {
-        }
 
         public IdAndName getIdAndName() {
             return idAndName;
@@ -225,9 +216,11 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
                         throw new UncheckedIOException(e);
                     }
                 }
-            } catch (Throwable t) {
-                updater.accept(null);
-                Platform.runLater(() -> GseUtil.showDialogError(t));
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    updater.accept(null);
+                    GseUtil.showDialogError(e);
+                });
             }
         });
     }
@@ -285,6 +278,26 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         }, substationExecutor);
     }
 
+    private void fillSubstationDetailViewWithQueryResults(IdAndName substationIdAndName, List<VoltageLevelQueryResult> voltageLevelQueryResults) {
+        if (voltageLevelQueryResults != null) {
+            TreeItem<IdAndName> substationItem = new TreeItem<>(substationIdAndName);
+            substationItem.setExpanded(true);
+            for (VoltageLevelQueryResult voltageLevelQueryResult : voltageLevelQueryResults) {
+                TreeItem<IdAndName> voltageLevelItem = new TreeItem<>(voltageLevelQueryResult.getIdAndName());
+                substationItem.getChildren().add(voltageLevelItem);
+                for (EquipmentQueryResult equipmentQueryResult : voltageLevelQueryResult.getEquipments()) {
+                    Node icon = getIcon(equipmentQueryResult.getType());
+                    TreeItem<IdAndName> equipmentItem = new TreeItem<>(equipmentQueryResult.getIdAndName(), icon);
+                    voltageLevelItem.getChildren().add(equipmentItem);
+                }
+                voltageLevelItem.setExpanded(true);
+            }
+            substationDetailedView.setRoot(substationItem);
+        } else {
+            substationDetailedView.setRoot(null);
+        }
+    }
+
     private void refreshSubstationDetailView(IdAndName substationIdAndName) {
         if (substationIdAndName != null && substationIdAndName != BUSY) {
             substationDetailedView.setRoot(new TreeItem<>(BUSY));
@@ -308,31 +321,16 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
                     "    ]",
                     "}",
                     "");
-            queryNetwork(query, voltageLevelQueryResultListType, (List<VoltageLevelQueryResult> voltageLevelQueryResults) -> {
-                if (voltageLevelQueryResults != null) {
-                    TreeItem<IdAndName> substationItem = new TreeItem<>(substationIdAndName);
-                    substationItem.setExpanded(true);
-                    for (VoltageLevelQueryResult voltageLevelQueryResult : voltageLevelQueryResults) {
-                        TreeItem<IdAndName> voltageLevelItem = new TreeItem<>(voltageLevelQueryResult.getIdAndName());
-                        substationItem.getChildren().add(voltageLevelItem);
-                        for (EquipmentQueryResult equipmentQueryResult : voltageLevelQueryResult.getEquipments()) {
-                            Node icon = getIcon(equipmentQueryResult.getType());
-                            TreeItem<IdAndName> equipmentItem = new TreeItem<>(equipmentQueryResult.getIdAndName(), icon);
-                            voltageLevelItem.getChildren().add(equipmentItem);
-                        }
-                        voltageLevelItem.setExpanded(true);
-                    }
-                    substationDetailedView.setRoot(substationItem);
-                } else {
-                    substationDetailedView.setRoot(null);
-                }
-            }, substationDetailsExecutor);
+            queryNetwork(query, voltageLevelQueryResultListType,
+                (List<VoltageLevelQueryResult> voltageLevelQueryResults) -> fillSubstationDetailViewWithQueryResults(substationIdAndName, voltageLevelQueryResults),
+                substationDetailsExecutor);
         } else {
             substationDetailedView.setRoot(null);
         }
     }
 
     private void refreshEquipmentView(TreeItem<IdAndName> equipmentIdAndName) {
+        //TODO to be used to fill per equipment details
     }
 
     @Override
