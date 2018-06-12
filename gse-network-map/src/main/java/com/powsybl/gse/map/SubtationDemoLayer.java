@@ -57,6 +57,6 @@ public class SubtationDemoLayer extends CanvasBasedLayer {
         }
 
         stopWatch.stop();
-        LOGGER.info("Substations drawed in {} ms ", stopWatch.getTime());
+        LOGGER.trace("Substations drawed in {} ms ", stopWatch.getTime());
     }
 }

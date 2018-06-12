@@ -8,17 +8,17 @@ package com.powsybl.gse.map;
 
 import com.powsybl.commons.config.PlatformConfig;
 import javafx.scene.paint.Color;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * Parse RTE substation and line segment coordinates.
@@ -40,6 +40,8 @@ import java.util.Objects;
 public final class RteOpenData {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RteOpenData.class);
+
+    private static final CSVFormat CSV_FORMAT = CSVFormat.newFormat(';');
 
     enum BaseVoltage {
         VL_400_KV(Color.RED, 0),
@@ -108,40 +110,49 @@ public final class RteOpenData {
     public static Map<String, SubstationGraphic> parseSubstations() {
         Map<String, SubstationGraphic> coords = new HashMap<>();
 
-        try (BufferedReader reader = Files.newBufferedReader(PlatformConfig.defaultConfig().getConfigDir().resolve("postes-electriques-rte-et-client.csv"))) {
-            reader.readLine();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] tokens = line.split(";");
-                String id = tokens[0];
-                Color color = parseBaseVoltage(tokens[4]).getColor();
-                double lon = Double.parseDouble(tokens[5]);
-                double lat = Double.parseDouble(tokens[6]);
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+
+        int substationCount = 0;
+
+        try (CSVParser parser = CSV_FORMAT.parse(Files.newBufferedReader(PlatformConfig.defaultConfig().getConfigDir().resolve("postes-electriques-rte-et-client.csv")))) {
+            Iterator<CSVRecord> it = parser.iterator();
+            it.next();
+            while (it.hasNext()) {
+                CSVRecord record = it.next();
+                String id = record.get(0);
+                Color color = parseBaseVoltage(record.get(4)).getColor();
+                double lon = Double.parseDouble(record.get(5));
+                double lat = Double.parseDouble(record.get(6));
                 coords.put(id, new SubstationGraphic(id, color, new Coordinate(lon, lat)));
+                substationCount++;
             }
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+
+        LOGGER.info("{} substations read in {} ms", substationCount, stopWatch.getTime());
 
         return coords;
     }
 
     private static int parseLine(Map<String, LineGraphic> lines, String fileName, int lon1Index, int lat1Index, int lon2Index, int lat2Index) {
         int segmentCount = 0;
-        try (BufferedReader reader = Files.newBufferedReader(PlatformConfig.defaultConfig().getConfigDir().resolve(fileName))) {
-            reader.readLine();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] tokens = line.split(";");
-                String lineId = tokens[1];
+
+        try (CSVParser parser = CSV_FORMAT.parse(Files.newBufferedReader(PlatformConfig.defaultConfig().getConfigDir().resolve(fileName)))) {
+            Iterator<CSVRecord> it = parser.iterator();
+            it.next();
+            while (it.hasNext()) {
+                CSVRecord record = it.next();
+                String lineId = record.get(1);
                 if (lineId.isEmpty()) {
                     continue;
                 }
-                BaseVoltage baseVoltage = parseBaseVoltage(tokens[5]);
-                double lon1 = Double.parseDouble(tokens[lon1Index]);
-                double lat1 = Double.parseDouble(tokens[lat1Index]);
-                double lon2 = Double.parseDouble(tokens[lon2Index]);
-                double lat2 = Double.parseDouble(tokens[lat2Index]);
+                BaseVoltage baseVoltage = parseBaseVoltage(record.get(5));
+                double lon1 = Double.parseDouble(record.get(lon1Index));
+                double lat1 = Double.parseDouble(record.get(lat1Index));
+                double lon2 = Double.parseDouble(record.get(lon2Index));
+                double lat2 = Double.parseDouble(record.get(lat2Index));
                 lines.computeIfAbsent(lineId, id -> new LineGraphic(id, baseVoltage.getOrder(), baseVoltage.getColor()))
                         .getSegments()
                         .add(new SegmentGraphic(new Coordinate(lon1, lat1), new Coordinate(lon2, lat2)));
@@ -156,10 +167,13 @@ public final class RteOpenData {
     public static Collection<LineGraphic> parseLines() {
         Map<String, LineGraphic> lines = new HashMap<>();
 
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+
         int segmentCount = parseLine(lines, "lignes-aeriennes.csv", 8, 9, 10, 11);
         segmentCount += parseLine(lines, "lignes-souterraines.csv", 9, 10, 11, 12);
 
-        LOGGER.info("{} lines, {} segments", lines.size(), segmentCount);
+        LOGGER.info("{} lines, {} segments read in {} ms", lines.size(), segmentCount, stopWatch.getTime());
 
         return lines.values();
     }
