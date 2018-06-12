@@ -80,6 +80,7 @@
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-iidm-xml-converter</artifactId>
             <version>${powsyblcore.version}</version>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- Default UI components -->
