@@ -33,7 +33,7 @@ public class LineDemoLayer extends CanvasBasedLayer {
     }
 
     private void draw(GraphicsContext gc, int drawOrder, List<LineGraphic> lines) {
-        LOGGER.info("Drawing lines at order {}", drawOrder);
+        LOGGER.trace("Drawing lines at order {}", drawOrder);
 
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
@@ -54,7 +54,7 @@ public class LineDemoLayer extends CanvasBasedLayer {
 
         stopWatch.stop();
 
-        LOGGER.info("Lines drawn in {} ms at zoom {}", stopWatch.getTime(), baseMap.zoom().getValue());
+        LOGGER.trace("Lines drawn in {} ms at zoom {}", stopWatch.getTime(), baseMap.zoom().getValue());
     }
 
     @Override

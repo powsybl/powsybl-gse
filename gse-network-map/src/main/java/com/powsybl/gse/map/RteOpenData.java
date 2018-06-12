@@ -8,6 +8,7 @@ package com.powsybl.gse.map;
 
 import com.powsybl.commons.config.PlatformConfig;
 import javafx.scene.paint.Color;
+import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,6 +109,11 @@ public final class RteOpenData {
     public static Map<String, SubstationGraphic> parseSubstations() {
         Map<String, SubstationGraphic> coords = new HashMap<>();
 
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+
+        int substationCount = 0;
+
         try (BufferedReader reader = Files.newBufferedReader(PlatformConfig.defaultConfig().getConfigDir().resolve("postes-electriques-rte-et-client.csv"))) {
             reader.readLine();
             String line;
@@ -122,6 +128,8 @@ public final class RteOpenData {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+
+        LOGGER.info("{} substations read in {} ms", substationCount, stopWatch.getTime());
 
         return coords;
     }
@@ -156,10 +164,13 @@ public final class RteOpenData {
     public static Collection<LineGraphic> parseLines() {
         Map<String, LineGraphic> lines = new HashMap<>();
 
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+
         int segmentCount = parseLine(lines, "lignes-aeriennes.csv", 8, 9, 10, 11);
         segmentCount += parseLine(lines, "lignes-souterraines.csv", 9, 10, 11, 12);
 
-        LOGGER.info("{} lines, {} segments", lines.size(), segmentCount);
+        LOGGER.info("{} lines, {} segments read in {} ms", lines.size(), segmentCount, stopWatch.getTime());
 
         return lines.values();
     }
