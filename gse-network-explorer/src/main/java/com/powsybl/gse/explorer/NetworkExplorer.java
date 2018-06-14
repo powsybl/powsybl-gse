@@ -36,6 +36,7 @@ import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -274,7 +275,14 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
             if (substationIds == null) {
                 substationsView.getItems().clear();
             } else {
-                substationsView.getItems().setAll(substationIds);
+                boolean selected = showName.isSelected();
+                substationsView.getItems().setAll(substationIds.stream().sorted((o1, o2) -> {
+                    if (selected) {
+                        return Objects.compare(o1.name, o2.name, String::compareTo);
+                    } else {
+                        return o1.id.compareTo(o2.id);
+                    }
+                }).collect(Collectors.toList()));
                 if (substationsView.getItems().size() > 0) {
                     substationsView.getSelectionModel().selectFirst();
                 }
