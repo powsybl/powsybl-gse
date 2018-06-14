@@ -29,8 +29,6 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -136,8 +134,6 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         }
     }
 
-    private final GseContext context;
-
     private final LastTaskOnlyExecutor substationExecutor;
 
     private final LastTaskOnlyExecutor substationDetailsExecutor;
@@ -159,7 +155,6 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
 
     NetworkExplorer(ProjectCase projectCase, GseContext context) {
         this.projectCase = Objects.requireNonNull(projectCase);
-        this.context = Objects.requireNonNull(context);
 
         substationExecutor = new LastTaskOnlyExecutor(context.getExecutor());
         substationDetailsExecutor = new LastTaskOnlyExecutor(context.getExecutor());
@@ -182,9 +177,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
             substationDetailedView.refresh();
         });
 
-        substationsView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
-            refreshSubstationDetailView(newValue);
-        });
+        substationsView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> refreshSubstationDetailView(newValue));
 
         substationDetailedView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeItem<IdAndName>>() {
             @Override
@@ -211,12 +204,8 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
             try {
                 String json = projectCase.queryNetwork(ScriptType.GROOVY, groovyScript);
                 if (json != null) {
-                    try {
-                        T obj = mapper.readValue(json, valueType);
-                        Platform.runLater(() -> updater.accept(obj));
-                    } catch (IOException e) {
-                        throw new UncheckedIOException(e);
-                    }
+                    T obj = mapper.readValue(json, valueType);
+                    Platform.runLater(() -> updater.accept(obj));
                 }
             } catch (Exception e) {
                 Platform.runLater(() -> {
