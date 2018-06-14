@@ -31,6 +31,7 @@ import javafx.scene.text.Text;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.ResourceBundle;
@@ -268,6 +269,16 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         return icon;
     }
 
+    private Comparator<IdAndName> getIdAndNameComparator(boolean selected) {
+        return (o1, o2) -> {
+            if (selected) {
+                return Objects.compare(o1.name, o2.name, String::compareTo);
+            } else {
+                return o1.id.compareTo(o2.id);
+            }
+        };
+    }
+
     private void refreshSubstationsView() {
         substationsView.getItems().setAll(BUSY);
         String query = "network.substations.collect { [id: it.id, name: it.name] }";
@@ -276,13 +287,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
                 substationsView.getItems().clear();
             } else {
                 boolean selected = showName.isSelected();
-                substationsView.getItems().setAll(substationIds.stream().sorted((o1, o2) -> {
-                    if (selected) {
-                        return Objects.compare(o1.name, o2.name, String::compareTo);
-                    } else {
-                        return o1.id.compareTo(o2.id);
-                    }
-                }).collect(Collectors.toList()));
+                substationsView.getItems().setAll(substationIds.stream().sorted(getIdAndNameComparator(selected)).collect(Collectors.toList()));
                 if (substationsView.getItems().size() > 0) {
                     substationsView.getSelectionModel().selectFirst();
                 }
