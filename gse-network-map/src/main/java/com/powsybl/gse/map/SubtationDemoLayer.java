@@ -15,8 +15,8 @@ import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -25,15 +25,11 @@ public class SubtationDemoLayer extends CanvasBasedLayer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SubtationDemoLayer.class);
 
-    private final Map<String, SubstationGraphic> coords = new HashMap<>();
+    private final Map<String, SubstationGraphic> substations;
 
-    public SubtationDemoLayer(MapView mapView) {
+    public SubtationDemoLayer(MapView mapView, Map<String, SubstationGraphic> substations) {
         super(mapView);
-    }
-
-    @Override
-    protected void initialize() {
-        coords.putAll(RteOpenData.parseSubstations());
+        this.substations = Objects.requireNonNull(substations);
     }
 
     @Override
@@ -49,7 +45,7 @@ public class SubtationDemoLayer extends CanvasBasedLayer {
         double zoom = baseMap.zoom().doubleValue();
         double size = zoom < 8 ? zoom / 2 : zoom;
 
-        for (Map.Entry<String, SubstationGraphic> e : coords.entrySet()) {
+        for (Map.Entry<String, SubstationGraphic> e : substations.entrySet()) {
             SubstationGraphic substation = e.getValue();
             Point2D p = baseMap.getMapPoint(substation.getPosition().getLat(),
                                             substation.getPosition().getLon());
@@ -61,6 +57,6 @@ public class SubtationDemoLayer extends CanvasBasedLayer {
         }
 
         stopWatch.stop();
-        LOGGER.info("Substations drawed in {} ms ", stopWatch.getTime());
+        LOGGER.trace("Substations drawed in {} ms ", stopWatch.getTime());
     }
 }

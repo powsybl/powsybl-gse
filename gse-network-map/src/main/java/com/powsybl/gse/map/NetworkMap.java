@@ -11,19 +11,26 @@ import com.powsybl.afs.ext.base.ProjectCase;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.util.Glyph;
+import com.powsybl.gse.util.GseUtil;
+import javafx.application.Platform;
 import javafx.geometry.Point2D;
+import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ToolBar;
 import javafx.scene.input.ZoomEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.Objects;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class NetworkMap extends BorderPane implements ProjectFileViewer {
+public class NetworkMap extends StackPane implements ProjectFileViewer {
 
     /**
      * Hack to fix layer refreshing issue
@@ -47,12 +54,18 @@ public class NetworkMap extends BorderPane implements ProjectFileViewer {
 
     private final MapView2 view;
 
+    private final BorderPane mainPane;
+
+    private final ProgressIndicator progressIndicator = new ProgressIndicator();
+
     public NetworkMap(ProjectCase projectCase, GseContext context) {
         this.projectCase = Objects.requireNonNull(projectCase);
         this.context = Objects.requireNonNull(context);
 
         view = new MapView2();
-        setCenter(view);
+        mainPane = new BorderPane();
+        getChildren().addAll(mainPane, new Group(progressIndicator));
+        mainPane.setCenter(view);
 
         zoomInButton = new Button("", Glyph.createAwesomeFont('\uf00e').size("1.2em"));
         zoomInButton.getStyleClass().add("gse-toolbar-button");
@@ -63,10 +76,7 @@ public class NetworkMap extends BorderPane implements ProjectFileViewer {
         zoomOutButton.setOnAction(event -> fireZoomEvent(0.5));
 
         toolBar = new ToolBar(zoomInButton, zoomOutButton);
-        setTop(toolBar);
-
-        view.addLayer(new SubtationDemoLayer(view));
-        view.addLayer(new LineDemoLayer(view));
+        mainPane.setTop(toolBar);
     }
 
     private void fireZoomEvent(double zoom) {
@@ -94,6 +104,21 @@ public class NetworkMap extends BorderPane implements ProjectFileViewer {
     public void view() {
         view.setZoom(6);
         view.setCenter(47, 3);
+        progressIndicator.setVisible(true);
+        mainPane.setDisable(true);
+        GseUtil.execute(context.getExecutor(), () -> {
+            // load french data from CSV
+            Map<String, SubstationGraphic> substations = RteOpenData.parseSubstations();
+            Collection<LineGraphic> lines = RteOpenData.parseLines();
+
+            Platform.runLater(() -> {
+                view.addLayer(new SubtationDemoLayer(view, substations));
+                view.addLayer(new LineDemoLayer(view, lines));
+                view.markDirty();
+                progressIndicator.setVisible(false);
+                mainPane.setDisable(false);
+            });
+        });
     }
 
     @Override

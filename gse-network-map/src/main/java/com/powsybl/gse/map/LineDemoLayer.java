@@ -13,10 +13,7 @@ import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -30,17 +27,13 @@ public class LineDemoLayer extends CanvasBasedLayer {
 
     private CancellableGraphicTaskChain firstTask;
 
-    public LineDemoLayer(MapView mapView) {
+    public LineDemoLayer(MapView mapView, Collection<LineGraphic> lines) {
         super(mapView);
-    }
-
-    @Override
-    protected void initialize() {
-        lines = new TreeMap<>(RteOpenData.parseLines().stream().collect(Collectors.groupingBy(LineGraphic::getDrawOrder)));
+        this.lines = new TreeMap<>(Objects.requireNonNull(lines).stream().collect(Collectors.groupingBy(LineGraphic::getDrawOrder)));
     }
 
     private void draw(GraphicsContext gc, int drawOrder, List<LineGraphic> lines) {
-        LOGGER.info("Drawing lines at order {}", drawOrder);
+        LOGGER.trace("Drawing lines at order {}", drawOrder);
 
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
@@ -61,7 +54,7 @@ public class LineDemoLayer extends CanvasBasedLayer {
 
         stopWatch.stop();
 
-        LOGGER.info("Lines drawn in {} ms at zoom {}", stopWatch.getTime(), baseMap.zoom().getValue());
+        LOGGER.trace("Lines drawn in {} ms at zoom {}", stopWatch.getTime(), baseMap.zoom().getValue());
     }
 
     @Override
