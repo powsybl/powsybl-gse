@@ -269,7 +269,8 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         return icon;
     }
 
-    private Comparator<IdAndName> getIdAndNameComparator(boolean selected) {
+    private Comparator<IdAndName> getIdAndNameComparator() {
+        boolean selected = showName.isSelected();
         return (o1, o2) -> {
             if (selected) {
                 return Objects.compare(o1.name, o2.name, String::compareTo);
@@ -286,8 +287,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
             if (substationIds == null) {
                 substationsView.getItems().clear();
             } else {
-                boolean selected = showName.isSelected();
-                substationsView.getItems().setAll(substationIds.stream().sorted(getIdAndNameComparator(selected)).collect(Collectors.toList()));
+                substationsView.getItems().setAll(substationIds.stream().sorted(getIdAndNameComparator()).collect(Collectors.toList()));
                 if (substationsView.getItems().size() > 0) {
                     substationsView.getSelectionModel().selectFirst();
                 }
