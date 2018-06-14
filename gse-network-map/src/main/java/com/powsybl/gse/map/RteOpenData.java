@@ -9,6 +9,7 @@ package com.powsybl.gse.map;
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.config.PlatformConfig;
 import javafx.scene.paint.Color;
+import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +23,20 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
+ * Parse RTE substation and line segment coordinates.
+ * The 3 following file have to be downloaded in $HOME/.itools directory:
+ * <ul>
+ *     <li>
+ *         <a href="https://rte-opendata.opendatasoft.com/explore/dataset/postes-electriques-rte-et-client/download/?format=csv&timezone=Europe/Berlin&use_labels_for_header=true">postes-electriques-rte-et-client.csv</a>
+ *     </li>
+ *     <li>
+ *         <a href="https://rte-opendata.opendatasoft.com/explore/dataset/lignes-aeriennes/download/?format=csv&timezone=Europe/Berlin&use_labels_for_header=true">lignes-aeriennes.csv</a>
+ *     </li>
+ *     <li>
+ *         <a href="https://rte-opendata.opendatasoft.com/explore/dataset/lignes-souterraines/download/?format=csv&timezone=Europe/Berlin&use_labels_for_header=true">lignes-souterraines.csv</a>
+ *     </li>
+ * </ul>
+ *
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
 public final class RteOpenData {
@@ -102,6 +117,11 @@ public final class RteOpenData {
     public static Map<String, SubstationGraphic> parseSubstations() {
         Map<String, SubstationGraphic> coords = new HashMap<>();
 
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+
+        int substationCount = 0;
+
         try (BufferedReader reader = Files.newBufferedReader(PlatformConfig.defaultConfig().getConfigDir().resolve("postes-electriques-rte-et-client.csv"))) {
             skipHeader(reader);
             String line;
@@ -117,62 +137,49 @@ public final class RteOpenData {
             throw new UncheckedIOException(e);
         }
 
+        LOGGER.info("{} substations read in {} ms", substationCount, stopWatch.getTime());
+
         return coords;
+    }
+
+    private static int parseLine(Map<String, LineGraphic> lines, String fileName, int lon1Index, int lat1Index, int lon2Index, int lat2Index) {
+        int segmentCount = 0;
+        try (BufferedReader reader = Files.newBufferedReader(PlatformConfig.defaultConfig().getConfigDir().resolve(fileName))) {
+            skipHeader(reader);
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] tokens = line.split(";");
+                String lineId = tokens[1];
+                if (lineId.isEmpty()) {
+                    continue;
+                }
+                BaseVoltage baseVoltage = parseBaseVoltage(tokens[5]);
+                double lon1 = Double.parseDouble(tokens[lon1Index]);
+                double lat1 = Double.parseDouble(tokens[lat1Index]);
+                double lon2 = Double.parseDouble(tokens[lon2Index]);
+                double lat2 = Double.parseDouble(tokens[lat2Index]);
+                lines.computeIfAbsent(lineId, id -> new LineGraphic(id, baseVoltage.getOrder(), baseVoltage.getColor()))
+                        .getSegments()
+                        .add(new SegmentGraphic(new Coordinate(lon1, lat1), new Coordinate(lon2, lat2)));
+                segmentCount++;
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        return segmentCount;
     }
 
     public static Collection<LineGraphic> parseLines() {
         Map<String, LineGraphic> lines = new HashMap<>();
 
-        int segmentCount = 0;
-        try {
-            try (BufferedReader reader = Files.newBufferedReader(PlatformConfig.defaultConfig().getConfigDir().resolve("lignes-aeriennes.csv"))) {
-                skipHeader(reader);
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] tokens = line.split(";");
-                    String lineId = tokens[1];
-                    if (lineId.isEmpty()) {
-                        continue;
-                    }
-                    BaseVoltage baseVoltage = parseBaseVoltage(tokens[5]);
-                    double lon1 = Double.parseDouble(tokens[8]);
-                    double lat1 = Double.parseDouble(tokens[9]);
-                    double lon2 = Double.parseDouble(tokens[10]);
-                    double lat2 = Double.parseDouble(tokens[11]);
-                    lines.computeIfAbsent(lineId, id -> new LineGraphic(id, baseVoltage.getOrder(), baseVoltage.getColor()))
-                            .getSegments()
-                            .add(new SegmentGraphic(new Coordinate(lon1, lat1), new Coordinate(lon2, lat2)));
-                    segmentCount++;
-                }
-            }
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
 
-            try (BufferedReader reader = Files.newBufferedReader(PlatformConfig.defaultConfig().getConfigDir().resolve("lignes-souterraines.csv"))) {
-                skipHeader(reader);
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] tokens = line.split(";");
-                    String lineId = tokens[1];
-                    if (lineId.isEmpty()) {
-                        continue;
-                    }
-                    BaseVoltage baseVoltage = parseBaseVoltage(tokens[5]);
-                    double lon1 = Double.parseDouble(tokens[9]);
-                    double lat1 = Double.parseDouble(tokens[10]);
-                    double lon2 = Double.parseDouble(tokens[11]);
-                    double lat2 = Double.parseDouble(tokens[12]);
-                    lines.computeIfAbsent(lineId, id -> new LineGraphic(id, baseVoltage.getOrder(), baseVoltage.getColor()))
-                            .getSegments()
-                            .add(new SegmentGraphic(new Coordinate(lon1, lat1), new Coordinate(lon2, lat2)));
-                    segmentCount++;
-                }
-            }
+        int segmentCount = parseLine(lines, "lignes-aeriennes.csv", 8, 9, 10, 11);
+        segmentCount += parseLine(lines, "lignes-souterraines.csv", 9, 10, 11, 12);
 
-            LOGGER.info("{} lines, {} segments", lines.size(), segmentCount);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        LOGGER.info("{} lines, {} segments read in {} ms", lines.size(), segmentCount, stopWatch.getTime());
 
         return lines.values();
     }
-
 }
