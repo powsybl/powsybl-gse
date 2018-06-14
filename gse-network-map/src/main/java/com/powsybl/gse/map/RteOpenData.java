@@ -6,6 +6,7 @@
  */
 package com.powsybl.gse.map;
 
+import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.config.PlatformConfig;
 import javafx.scene.paint.Color;
 import org.slf4j.Logger;
@@ -105,11 +106,18 @@ public final class RteOpenData {
         }
     }
 
+    private static void skipHeader(BufferedReader reader) throws IOException {
+        String line = reader.readLine();
+        if (line == null) {
+            throw new PowsyblException("Header is missing");
+        }
+    }
+
     public static Map<String, SubstationGraphic> parseSubstations() {
         Map<String, SubstationGraphic> coords = new HashMap<>();
 
         try (BufferedReader reader = Files.newBufferedReader(PlatformConfig.defaultConfig().getConfigDir().resolve("postes-electriques-rte-et-client.csv"))) {
-            reader.readLine();
+            skipHeader(reader);
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] tokens = line.split(";");
@@ -129,7 +137,7 @@ public final class RteOpenData {
     private static int parseLine(Map<String, LineGraphic> lines, String fileName, int lon1Index, int lat1Index, int lon2Index, int lat2Index) {
         int segmentCount = 0;
         try (BufferedReader reader = Files.newBufferedReader(PlatformConfig.defaultConfig().getConfigDir().resolve(fileName))) {
-            reader.readLine();
+            skipHeader(reader);
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] tokens = line.split(";");
