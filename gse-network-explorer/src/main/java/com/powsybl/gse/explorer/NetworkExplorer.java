@@ -29,13 +29,13 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -134,8 +134,6 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         }
     }
 
-    private final GseContext context;
-
     private final LastTaskOnlyExecutor substationExecutor;
 
     private final LastTaskOnlyExecutor substationDetailsExecutor;
@@ -157,7 +155,6 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
 
     NetworkExplorer(ProjectCase projectCase, GseContext context) {
         this.projectCase = Objects.requireNonNull(projectCase);
-        this.context = Objects.requireNonNull(context);
 
         substationExecutor = new LastTaskOnlyExecutor(context.getExecutor());
         substationDetailsExecutor = new LastTaskOnlyExecutor(context.getExecutor());
@@ -180,9 +177,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
             substationDetailedView.refresh();
         });
 
-        substationsView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
-            refreshSubstationDetailView(newValue);
-        });
+        substationsView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> refreshSubstationDetailView(newValue));
 
         substationDetailedView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeItem<IdAndName>>() {
             @Override
@@ -209,12 +204,8 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
             try {
                 String json = projectCase.queryNetwork(ScriptType.GROOVY, groovyScript);
                 if (json != null) {
-                    try {
-                        T obj = mapper.readValue(json, valueType);
-                        Platform.runLater(() -> updater.accept(obj));
-                    } catch (IOException e) {
-                        throw new UncheckedIOException(e);
-                    }
+                    T obj = mapper.readValue(json, valueType);
+                    Platform.runLater(() -> updater.accept(obj));
                 }
             } catch (Exception e) {
                 Platform.runLater(() -> {
@@ -267,6 +258,17 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         return icon;
     }
 
+    private Comparator<IdAndName> getIdAndNameComparator() {
+        boolean selected = showName.isSelected();
+        return (o1, o2) -> {
+            if (selected) {
+                return Objects.compare(o1.name, o2.name, String::compareTo);
+            } else {
+                return o1.id.compareTo(o2.id);
+            }
+        };
+    }
+
     private void refreshSubstationsView() {
         substationsView.getItems().setAll(BUSY);
         String query = "network.substations.collect { [id: it.id, name: it.name] }";
@@ -274,7 +276,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
             if (substationIds == null) {
                 substationsView.getItems().clear();
             } else {
-                substationsView.getItems().setAll(substationIds);
+                substationsView.getItems().setAll(substationIds.stream().sorted(getIdAndNameComparator()).collect(Collectors.toList()));
                 if (substationsView.getItems().size() > 0) {
                     substationsView.getSelectionModel().selectFirst();
                 }
