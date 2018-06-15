@@ -38,4 +38,9 @@ public class SubstationGraphic {
     public Coordinate getPosition() {
         return position;
     }
+
+    @Override
+    public String toString() {
+        return id;
+    }
 }

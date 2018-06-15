@@ -69,11 +69,11 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
 
         zoomInButton = new Button("", Glyph.createAwesomeFont('\uf00e').size("1.2em"));
         zoomInButton.getStyleClass().add("gse-toolbar-button");
-        zoomInButton.setOnAction(event -> fireZoomEvent(1.5));
+        zoomInButton.setOnAction(event -> fireZoomEvent(2));
 
         zoomOutButton = new Button("", Glyph.createAwesomeFont('\uf010').size("1.2em"));
         zoomOutButton.getStyleClass().add("gse-toolbar-button");
-        zoomOutButton.setOnAction(event -> fireZoomEvent(0.5));
+        zoomOutButton.setOnAction(event -> fireZoomEvent(0));
 
         toolBar = new ToolBar(zoomInButton, zoomOutButton);
         mainPane.setTop(toolBar);

@@ -16,10 +16,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * Parse RTE substation and line segment coordinates.
@@ -150,9 +147,12 @@ public final class RteOpenData {
                 double lat1 = Double.parseDouble(tokens[lat1Index]);
                 double lon2 = Double.parseDouble(tokens[lon2Index]);
                 double lat2 = Double.parseDouble(tokens[lat2Index]);
-                lines.computeIfAbsent(lineId, id -> new LineGraphic(id, baseVoltage.getOrder(), baseVoltage.getColor()))
-                        .getSegments()
-                        .add(new SegmentGraphic(new Coordinate(lon1, lat1), new Coordinate(lon2, lat2)));
+                LineGraphic lineGraphic  = lines.get(lineId);
+                if (lineGraphic == null) {
+                    lineGraphic = new LineGraphic(lineId, baseVoltage.getOrder(), baseVoltage.getColor());
+                    lines.put(lineId, lineGraphic);
+                }
+                lineGraphic.getSegments().add(new SegmentGraphic(new Coordinate(lon1, lat1), new Coordinate(lon2, lat2), lineGraphic));
                 segmentCount++;
             }
         } catch (IOException e) {
