@@ -142,7 +142,7 @@ public final class RteOpenData {
     private static int parseLine(Map<String, LineGraphic> lines, String fileName, int lon1Index, int lat1Index, int lon2Index, int lat2Index) {
         int segmentCount = 0;
         try (BufferedReader reader = Files.newBufferedReader(PlatformConfig.defaultConfig().getConfigDir().resolve(fileName))) {
-            reader.readLine();
+            skipHeader(reader);
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] tokens = line.split(";");

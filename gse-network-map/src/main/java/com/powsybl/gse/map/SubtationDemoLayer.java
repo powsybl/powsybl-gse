@@ -9,7 +9,6 @@ package com.powsybl.gse.map;
 import com.github.davidmoten.rtree.geometry.Geometries;
 import com.github.davidmoten.rtree.geometry.Point;
 import com.gluonhq.maps.MapView;
-import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.shape.ArcType;
