@@ -35,10 +35,11 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
     /**
      * Hack to fix layer refreshing issue
      */
-    private static class MapView2 extends MapView {
+    private class MapView2 extends MapView {
         @Override
         public void markDirty() {
             super.markDirty();
+            taskQueue.reset();
         }
     }
 
@@ -58,9 +59,12 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
 
     private final ProgressIndicator progressIndicator = new ProgressIndicator();
 
+    private final CancellableGraphicTaskQueue taskQueue;
+
     public NetworkMap(ProjectCase projectCase, GseContext context) {
         this.projectCase = Objects.requireNonNull(projectCase);
         this.context = Objects.requireNonNull(context);
+        taskQueue = new CancellableGraphicTaskQueue(context.getExecutor());
 
         view = new MapView2();
         mainPane = new BorderPane();
@@ -113,7 +117,7 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
 
             Platform.runLater(() -> {
                 view.addLayer(new SubtationDemoLayer(view, substations));
-                view.addLayer(new LineDemoLayer(view, lines));
+                view.addLayer(new LineDemoLayer(view, lines, taskQueue));
                 view.markDirty();
                 progressIndicator.setVisible(false);
                 mainPane.setDisable(false);

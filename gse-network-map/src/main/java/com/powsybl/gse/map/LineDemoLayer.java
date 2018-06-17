@@ -26,11 +26,12 @@ public class LineDemoLayer extends CanvasBasedLayer<SegmentGraphic> {
 
     private final Collection<LineGraphic> lines;
 
-    private CancellableGraphicTaskChain firstTask;
+    private final CancellableGraphicTaskQueue taskQueue;
 
-    public LineDemoLayer(MapView mapView, Collection<LineGraphic> lines) {
+    public LineDemoLayer(MapView mapView, Collection<LineGraphic> lines, CancellableGraphicTaskQueue taskQueue) {
         super(mapView);
         this.lines = Objects.requireNonNull(lines);
+        this.taskQueue = Objects.requireNonNull(taskQueue);
     }
 
     @Override
@@ -80,12 +81,6 @@ public class LineDemoLayer extends CanvasBasedLayer<SegmentGraphic> {
     protected void layoutLayer() {
         super.layoutLayer();
 
-        if (firstTask != null) {
-            firstTask.cancel();
-            firstTask.waitForCompletion();
-            firstTask = null;
-        }
-
         double zoom = baseMap.zoom().getValue();
 
         GraphicsContext gc = canvas.getGraphicsContext2D();
@@ -125,22 +120,9 @@ public class LineDemoLayer extends CanvasBasedLayer<SegmentGraphic> {
             draw(gc, e.getKey(), e.getValue());
         }
 
-        CancellableGraphicTaskChain prevTask = null;
         while (it.hasNext()) {
             Map.Entry<Integer, List<SegmentGraphic>> e = it.next();
-
-            CancellableGraphicTaskChain nextTask = new CancellableGraphicTaskChain(() -> draw(gc, e.getKey(), e.getValue()));
-            if (firstTask == null) {
-                firstTask = nextTask;
-            }
-            if (prevTask != null) {
-                prevTask.setNext(nextTask);
-            }
-            prevTask = nextTask;
-        }
-
-        if (firstTask != null) {
-            firstTask.start();
+            taskQueue.addTask(() -> draw(gc, e.getKey(), e.getValue()));
         }
     }
 }
