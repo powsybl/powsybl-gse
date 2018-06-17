@@ -6,16 +6,13 @@
  */
 package com.powsybl.gse.map;
 
-import com.github.davidmoten.rtree.Entry;
 import com.github.davidmoten.rtree.RTree;
 import com.github.davidmoten.rtree.geometry.Geometries;
 import com.github.davidmoten.rtree.geometry.Geometry;
 import com.github.davidmoten.rtree.geometry.Point;
-import com.github.davidmoten.rtree.geometry.Rectangle;
 import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.Observable;
 
 import java.util.Collection;
 import java.util.Objects;
@@ -49,8 +46,7 @@ public final class SubstationGraphicIndex {
         return new SubstationGraphicIndex(tree);
     }
 
-    public Observable<Entry<SubstationGraphic, Geometry>> search(Rectangle bounds) {
-        Objects.requireNonNull(bounds);
-        return tree.search(bounds);
+    public RTree<SubstationGraphic, Geometry> getTree() {
+        return tree;
     }
 }

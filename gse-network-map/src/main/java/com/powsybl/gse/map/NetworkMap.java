@@ -17,6 +17,7 @@ import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ToolBar;
 import javafx.scene.input.ZoomEvent;
@@ -52,6 +53,8 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
 
     private final Button zoomOutButton;
 
+    private final CheckBox showPylons = new CheckBox("Show pylons");
+
     private final MapView2 view;
 
     private final BorderPane mainPane;
@@ -59,6 +62,8 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
     private final ProgressIndicator progressIndicator = new ProgressIndicator();
 
     private final CancellableGraphicTaskQueue taskQueue;
+
+    private final NetworkMapConfig config = new NetworkMapConfig();
 
     public NetworkMap(ProjectCase projectCase, GseContext context) {
         this.projectCase = Objects.requireNonNull(projectCase);
@@ -78,8 +83,11 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
         zoomOutButton.getStyleClass().add("gse-toolbar-button");
         zoomOutButton.setOnAction(event -> fireZoomEvent(0));
 
-        toolBar = new ToolBar(zoomInButton, zoomOutButton);
+        toolBar = new ToolBar(zoomInButton, zoomOutButton, showPylons);
         mainPane.setTop(toolBar);
+
+        showPylons.selectedProperty().bindBidirectional(config.isShowPylons());
+        showPylons.selectedProperty().addListener((observable, oldValue, newValue) -> view.markDirty());
     }
 
     private void fireZoomEvent(double zoom) {
@@ -134,7 +142,7 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
 
             Platform.runLater(() -> {
                 view.addLayer(new SubtationDemoLayer(view, substationIndex));
-                view.addLayer(new LineDemoLayer(view, segmentIndexes, taskQueue));
+                view.addLayer(new LineDemoLayer(view, segmentIndexes, taskQueue, config));
                 view.markDirty();
                 progressIndicator.setVisible(false);
                 mainPane.setDisable(false);

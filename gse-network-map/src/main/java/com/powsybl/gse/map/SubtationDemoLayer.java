@@ -46,7 +46,7 @@ public class SubtationDemoLayer extends CanvasBasedLayer {
 
         int[] drawnSubstations = new int[1];
 
-        substationIndex.search(getMapBounds())
+        substationIndex.getTree().search(getMapBounds())
                 .toBlocking()
                 .toIterable()
                 .forEach(e -> {

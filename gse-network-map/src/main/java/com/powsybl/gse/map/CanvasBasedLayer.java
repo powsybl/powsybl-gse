@@ -30,6 +30,11 @@ public class CanvasBasedLayer extends MapLayer {
         canvas.widthProperty().bind(mapView.widthProperty());
         canvas.heightProperty().bind(mapView.heightProperty());
         getChildren().add(canvas);
+        canvas.setOnMouseClicked(event -> onMapClick(getMapCoordinate(new Point2D(event.getX(), event.getY()))));
+    }
+
+    protected void onMapClick(Coordinate c) {
+        // to implement
     }
 
     protected Coordinate getMapCoordinate(Point2D point) {
