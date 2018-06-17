@@ -6,8 +6,6 @@
  */
 package com.powsybl.gse.map;
 
-import com.github.davidmoten.rtree.geometry.Geometries;
-import com.github.davidmoten.rtree.geometry.Point;
 import com.gluonhq.maps.MapView;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
@@ -17,36 +15,20 @@ import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
 import java.util.Objects;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class SubtationDemoLayer extends CanvasBasedLayer<SubstationGraphic> {
+public class SubtationDemoLayer extends CanvasBasedLayer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SubtationDemoLayer.class);
 
-    private final Map<String, SubstationGraphic> substations;
+    private final SubstationGraphicIndex substationIndex;
 
-    public SubtationDemoLayer(MapView mapView, Map<String, SubstationGraphic> substations) {
+    public SubtationDemoLayer(MapView mapView, SubstationGraphicIndex substationIndex) {
         super(mapView);
-        this.substations = Objects.requireNonNull(substations);
-    }
-
-    @Override
-    protected void initialize() {
-        StopWatch stopWatch = new StopWatch();
-        stopWatch.start();
-
-        for (Map.Entry<String, SubstationGraphic> e : substations.entrySet()) {
-            SubstationGraphic substation = e.getValue();
-            Point point = Geometries.pointGeographic(substation.getPosition().getLon(),
-                                                     substation.getPosition().getLat());
-            tree = tree.add(substation, point);
-        }
-
-        LOGGER.info("Substation R-tree built in {} ms", stopWatch.getTime());
+        this.substationIndex = Objects.requireNonNull(substationIndex);
     }
 
     @Override
@@ -64,7 +46,7 @@ public class SubtationDemoLayer extends CanvasBasedLayer<SubstationGraphic> {
 
         int[] drawnSubstations = new int[1];
 
-        tree.search(getMapBounds())
+        substationIndex.search(getMapBounds())
                 .toBlocking()
                 .toIterable()
                 .forEach(e -> {

@@ -23,9 +23,8 @@ import javafx.scene.input.ZoomEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -115,9 +114,27 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
             Map<String, SubstationGraphic> substations = RteOpenData.parseSubstations();
             Collection<LineGraphic> lines = RteOpenData.parseLines();
 
+            // one layer per base voltage, so split line segments per base voltage
+            Map<Integer, List<SegmentGraphic>> orderedSegments = new TreeMap<>();
+            for (LineGraphic line : lines) {
+                for (SegmentGraphic segment : line.getSegments()) {
+                    orderedSegments.computeIfAbsent(segment.getLine().getDrawOrder(), k -> new ArrayList<>())
+                            .add(segment);
+                }
+            }
+
+            // build indexes
+            SubstationGraphicIndex substationIndex = SubstationGraphicIndex.build(substations.values());
+            SortedMap<Integer, SegmentGraphicIndex> segmentIndexes = orderedSegments.entrySet()
+                    .stream()
+                    .collect(Collectors.toMap(Map.Entry::getKey,
+                        e -> SegmentGraphicIndex.build(e.getValue()),
+                        (v1, v2) -> { throw new AssertionError(); },
+                        TreeMap::new));
+
             Platform.runLater(() -> {
-                view.addLayer(new SubtationDemoLayer(view, substations));
-                view.addLayer(new LineDemoLayer(view, lines, taskQueue));
+                view.addLayer(new SubtationDemoLayer(view, substationIndex));
+                view.addLayer(new LineDemoLayer(view, segmentIndexes, taskQueue));
                 view.markDirty();
                 progressIndicator.setVisible(false);
                 mainPane.setDisable(false);

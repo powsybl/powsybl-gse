@@ -6,9 +6,7 @@
  */
 package com.powsybl.gse.map;
 
-import com.github.davidmoten.rtree.RTree;
 import com.github.davidmoten.rtree.geometry.Geometries;
-import com.github.davidmoten.rtree.geometry.Geometry;
 import com.github.davidmoten.rtree.geometry.Rectangle;
 import com.gluonhq.maps.MapLayer;
 import com.gluonhq.maps.MapView;
@@ -22,11 +20,9 @@ import java.util.Objects;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class CanvasBasedLayer<T> extends MapLayer {
+public class CanvasBasedLayer extends MapLayer {
 
     protected final Canvas canvas;
-
-    protected RTree<T, Geometry> tree = RTree.star().maxChildren(6).create();
 
     protected CanvasBasedLayer(MapView mapView) {
         Objects.requireNonNull(mapView);
