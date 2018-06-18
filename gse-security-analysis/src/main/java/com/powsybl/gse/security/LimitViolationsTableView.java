@@ -38,7 +38,7 @@ public class LimitViolationsTableView extends TableView<LimitViolation> {
         loadColumn.setPrefWidth(150);
         loadColumn.setCellValueFactory(features -> {
             LimitViolation violation = features.getValue();
-            float load = violation.getValue() / (violation.getLimit() * violation.getLimitReduction()) * 100;
+            float load = (float) (violation.getValue() / (violation.getLimit() * violation.getLimitReduction()) * 100);
             return new SimpleObjectProperty<>(load);
         });
         this.getColumns().setAll(equipmentColumn,
