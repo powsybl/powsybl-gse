@@ -40,13 +40,13 @@ public class GluonHqMapsInitializer implements FontLoader {
             @Override
             public boolean isExternalStorageWritable() {
                 //noinspection ConstantConditions
-                return getPrivateStorage().get().canWrite();
+                return getPrivateStorage().orElseThrow(AssertionError::new).canWrite();
             }
 
             @Override
             public boolean isExternalStorageReadable() {
                 //noinspection ConstantConditions
-                return getPrivateStorage().get().canRead();
+                return getPrivateStorage().orElseThrow(AssertionError::new).canRead();
             }
         };
 
