@@ -297,7 +297,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                     @Override
                     protected void updateItem(N item, boolean empty) {
                         super.updateItem(item, empty);
-                        if (!empty || item == null) {
+                        if (empty || item == null) {
                             setText(null);
                         } else {
                             setText(treeModel.getDescription((F) item));

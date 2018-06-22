@@ -2,7 +2,9 @@
 /.idea
 /gse-afs-ext-base/target/
 /gse-app/target/
+/gse-demo/target/
 /gse-network-explorer/target/
+/gse-network-map/target/
 /gse-security-analysis/target/
 /gse-spi/target/
 /gse-util/target/
