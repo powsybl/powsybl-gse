@@ -129,6 +129,7 @@ public final class RteOpenData {
                 double lon = Double.parseDouble(tokens[5]);
                 double lat = Double.parseDouble(tokens[6]);
                 coords.put(id, new SubstationGraphic(id, color, new Coordinate(lon, lat)));
+                substationCount++;
             }
         } catch (IOException e) {
             throw new UncheckedIOException(e);
