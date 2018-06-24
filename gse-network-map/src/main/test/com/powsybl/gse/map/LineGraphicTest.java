@@ -7,7 +7,6 @@
 package com.powsybl.gse.map;
 
 import javafx.scene.paint.Color;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -52,7 +51,6 @@ public class LineGraphicTest {
     }
 
     @Test
-    @Ignore
     public void test3() {
         LineGraphic line = new LineGraphic("l1", 0, Color.RED);
         line.getSegments().add(new SegmentGraphic(new Coordinate(1, 1), new Coordinate(1, 2), line));
@@ -64,9 +62,9 @@ public class LineGraphicTest {
         assertEquals(2, branches.size());
         BranchGraphic branch1 = branches.get(0);
         BranchGraphic branch2 = branches.get(1);
-        assertEquals(Arrays.asList(new Coordinate(1, 1), new Coordinate(1, 2), new Coordinate(1, 3)),
+        assertEquals(Arrays.asList(new Coordinate(1, 2), new Coordinate(1, 4), new Coordinate(1, 5)),
                 branch1.getPylons().stream().map(PylonGraphic::getCoordinate).collect(Collectors.toList()));
-        assertEquals(Arrays.asList(new Coordinate(1, 3), new Coordinate(1, 4), new Coordinate(1, 5)),
+        assertEquals(Arrays.asList(new Coordinate(1, 1), new Coordinate(1, 2), new Coordinate(1, 3)),
                 branch2.getPylons().stream().map(PylonGraphic::getCoordinate).collect(Collectors.toList()));
     }
 }

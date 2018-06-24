@@ -82,6 +82,14 @@ public class LineGraphic {
         pylons.add(pylon);
         remaining.remove(pylon);
         getNeighborsStream(pylon, remaining).findFirst().ifPresent(next -> traverse(next, pylons, remaining));
+        getNeighborsStream(pylon, remaining).forEach(next -> {
+            List<PylonGraphic> nextPylons = new ArrayList<>(1);
+            nextPylons.add(pylon);
+            traverse(next, nextPylons, remaining);
+            if (!nextPylons.isEmpty()) {
+                branches.add(new BranchGraphic(nextPylons, this));
+            }
+        });
     }
 
     public List<BranchGraphic> getBranches() {
