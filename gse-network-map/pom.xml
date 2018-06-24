@@ -25,6 +25,11 @@
             <version>0.8.5</version>
         </dependency>
         <dependency>
+            <groupId>com.goebl</groupId>
+            <artifactId>simplify</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>jul-to-slf4j</artifactId>
         </dependency>

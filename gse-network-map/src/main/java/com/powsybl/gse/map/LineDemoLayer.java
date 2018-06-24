@@ -10,6 +10,8 @@ import com.github.davidmoten.rtree.Entry;
 import com.github.davidmoten.rtree.geometry.Geometries;
 import com.github.davidmoten.rtree.geometry.Geometry;
 import com.gluonhq.maps.MapView;
+import com.goebl.simplify.PointExtractor;
+import com.goebl.simplify.Simplify;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.shape.ArcType;
@@ -30,6 +32,22 @@ import java.util.SortedMap;
 public class LineDemoLayer extends CanvasBasedLayer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LineDemoLayer.class);
+
+    private static final int PYLON_SHOW_ZOOM_THRESHOLD = 10;
+
+    private static final PointExtractor<Point2D> POINT_EXTRACTOR = new PointExtractor<Point2D>() {
+        @Override
+        public double getX(Point2D point2D) {
+            return point2D.getX();
+        }
+
+        @Override
+        public double getY(Point2D point2D) {
+            return point2D.getY();
+        }
+    };
+
+    private final Simplify<Point2D> simplify = new Simplify<>(new Point2D[0], POINT_EXTRACTOR);
 
     private final SortedMap<Integer, SegmentGroupGraphicIndex> segmentGroupIndexes;
 
@@ -66,7 +84,8 @@ public class LineDemoLayer extends CanvasBasedLayer {
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
 
-        int[] segmentGroupCount = new int[1];
+        int[] segmentCount = new int[1];
+        int[] drawnSegmentCount = new int[1];
 
         double pylonSize = 5;
 
@@ -76,27 +95,46 @@ public class LineDemoLayer extends CanvasBasedLayer {
             gc.setStroke(segmentGroup.getLine().getColor());
             gc.setFill(segmentGroup.getLine().getColor());
 
-            Point2D prev = null;
+            Point2D[] points = new Point2D[segmentGroup.getPylons().size()];
+            int i = 0;
             for (PylonGraphic pylon : segmentGroup.getPylons()) {
                 Coordinate c = pylon.getCoordinate();
                 Point2D point = baseMap.getMapPoint(c.getLat(), c.getLon());
+                points[i++] = point;
+            }
+
+            Point2D[] pointsToDraw;
+            if (zoom > PYLON_SHOW_ZOOM_THRESHOLD ) {
+                pointsToDraw = points;
+            } else {
+                pointsToDraw = simplify.simplify(points, 1, true);
+            }
+
+            segmentCount[0] += points.length - 1;
+            drawnSegmentCount[0] += pointsToDraw.length - 1;
+
+            Point2D prev = null;
+            for (Point2D point : pointsToDraw) {
                 if (prev != null) {
                     gc.strokeLine(prev.getX(), prev.getY(), point.getX(), point.getY());
                 }
                 // draw pylon
-                if (showPylons && zoom > 10) {
+                if (showPylons && zoom > PYLON_SHOW_ZOOM_THRESHOLD) {
                     gc.fillArc(point.getX() - pylonSize / 2, point.getY() - pylonSize / 2, pylonSize, pylonSize, 0, 360, ArcType.ROUND);
                 }
                 prev = point;
             }
-
-            segmentGroupCount[0]++;
         });
 
         stopWatch.stop();
 
-        LOGGER.info("{} line segment groups (order={}) drawn in {} ms at zoom {}",
-                segmentGroupCount[0], drawOrder, stopWatch.getTime(), baseMap.zoom().getValue());
+        double simplificationRate = 1;
+        if (drawnSegmentCount[0] != 0) {
+            simplificationRate = (double) drawnSegmentCount[0] / segmentCount[0];
+        }
+
+        LOGGER.info("{} line segments (order={}, simplification={}) drawn in {} ms at zoom {}",
+                segmentCount[0], drawOrder, simplificationRate, stopWatch.getTime(), baseMap.zoom().getValue());
     }
 
     @Override
