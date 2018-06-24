@@ -12,6 +12,9 @@ import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.util.Glyph;
 import com.powsybl.gse.util.GseUtil;
+import com.powsybl.iidm.network.Line;
+import com.powsybl.iidm.network.Network;
+import com.powsybl.iidm.network.Substation;
 import javafx.application.Platform;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
@@ -23,6 +26,8 @@ import javafx.scene.control.ToolBar;
 import javafx.scene.input.ZoomEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -31,6 +36,8 @@ import java.util.stream.Collectors;
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
 public class NetworkMap extends StackPane implements ProjectFileViewer {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(NetworkMap.class);
 
     /**
      * Hack to fix layer refreshing issue
@@ -111,6 +118,29 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
         return this;
     }
 
+    private void mapModelToGraphic(Map<String, SubstationGraphic> substations, Map<String, LineGraphic> lines) {
+        int mappedSubstations = 0;
+        Network network = projectCase.getNetwork();
+        for (Substation substation : network.getSubstations()) {
+            SubstationGraphic graphic = substations.get(substation.getId());
+            if (graphic != null) {
+                graphic.setModel(substation);
+                mappedSubstations++;
+            }
+        }
+        LOGGER.info("{}/{} substations mapped to graphic object", mappedSubstations, network.getSubstationCount());
+
+        int mappedLines = 0;
+        for (Line line : network.getLines()) {
+            LineGraphic graphic = lines.get(line.getId());
+            if (graphic != null) {
+                graphic.setModel(line);
+                mappedLines++;
+            }
+        }
+        LOGGER.info("{}/{} lines mapped to graphic object", mappedLines, network.getLineCount());
+    }
+
     @Override
     public void view() {
         view.setZoom(6);
@@ -120,11 +150,12 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
         GseUtil.execute(context.getExecutor(), () -> {
             // load french data from CSV
             Map<String, SubstationGraphic> substations = RteOpenData.parseSubstations();
-            Collection<LineGraphic> lines = RteOpenData.parseLines();
-            for (LineGraphic line : lines) {
+            Map<String, LineGraphic> lines = RteOpenData.parseLines();
+            for (LineGraphic line : lines.values()) {
                 line.updateBranches();
             }
-            Collection<BranchGraphic> branches = lines.stream()
+            Collection<BranchGraphic> branches = lines.entrySet().stream()
+                    .map(Map.Entry::getValue)
                     .flatMap(line -> line.getBranches().stream())
                     .collect(Collectors.toList());
 
@@ -134,6 +165,9 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
                 orderedBranches.computeIfAbsent(branch.getLine().getDrawOrder(), k -> new ArrayList<>())
                             .add(branch);
             }
+
+            // map model to graphic
+            mapModelToGraphic(substations, lines);
 
             // build indexes
             SubstationGraphicIndex substationIndex = SubstationGraphicIndex.build(substations.values());

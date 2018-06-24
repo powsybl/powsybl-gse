@@ -6,6 +6,7 @@
  */
 package com.powsybl.gse.map;
 
+import com.powsybl.iidm.network.Line;
 import javafx.scene.paint.Color;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +33,8 @@ public class LineGraphic {
 
     private final List<BranchGraphic> branches = new ArrayList<>();
 
+    private Line model;
+
     public LineGraphic(String id, int drawOrder, Color color) {
         this.id = Objects.requireNonNull(id);
         this.drawOrder = drawOrder;
@@ -52,6 +55,14 @@ public class LineGraphic {
 
     public List<SegmentGraphic> getSegments() {
         return segments;
+    }
+
+    public Line getModel() {
+        return model;
+    }
+
+    public void setModel(Line model) {
+        this.model = model;
     }
 
     private static Stream<PylonGraphic> getNeighborsStream(PylonGraphic pylon, Set<PylonGraphic> remaining) {
@@ -78,7 +89,7 @@ public class LineGraphic {
     }
 
     private void traverse(PylonGraphic pylon, List<PylonGraphic> pylons, Set<PylonGraphic> remaining) {
-        LOGGER.debug("Traverse pylon {}", pylon.getCoordinate());
+        LOGGER.trace("Traverse pylon {}", pylon.getCoordinate());
         pylons.add(pylon);
         remaining.remove(pylon);
         getNeighborsStream(pylon, remaining).findFirst().ifPresent(next -> traverse(next, pylons, remaining));

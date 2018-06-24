@@ -7,6 +7,7 @@
 package com.powsybl.gse.map;
 
 import com.github.davidmoten.rtree.geometry.Rectangle;
+import com.powsybl.iidm.network.Substation;
 import javafx.scene.paint.Color;
 
 import java.util.Objects;
@@ -21,6 +22,8 @@ public class SubstationGraphic implements IndexableGraphic {
     private final Color color;
 
     private final Coordinate position;
+
+    private Substation model;
 
     public SubstationGraphic(String id, Color color, Coordinate position) {
         this.id = Objects.requireNonNull(id);
@@ -38,6 +41,14 @@ public class SubstationGraphic implements IndexableGraphic {
 
     public Coordinate getPosition() {
         return position;
+    }
+
+    public Substation getModel() {
+        return model;
+    }
+
+    public void setModel(Substation model) {
+        this.model = model;
     }
 
     @Override

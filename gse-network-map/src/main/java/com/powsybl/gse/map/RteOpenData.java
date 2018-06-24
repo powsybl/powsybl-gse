@@ -170,7 +170,7 @@ public final class RteOpenData {
         return segmentCount;
     }
 
-    public static Collection<LineGraphic> parseLines() {
+    public static Map<String, LineGraphic> parseLines() {
         Map<String, LineGraphic> lines = new HashMap<>();
 
         StopWatch stopWatch = new StopWatch();
@@ -181,6 +181,6 @@ public final class RteOpenData {
 
         LOGGER.info("{} lines, {} segments read in {} ms", lines.size(), segmentCount, stopWatch.getTime());
 
-        return lines.values();
+        return lines;
     }
 }
