@@ -124,29 +124,29 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
             for (LineGraphic line : lines) {
                 line.updateSegmentGroups();
             }
-            Collection<SegmentGroupGraphic> segmentGroups = lines.stream()
-                    .flatMap(line -> line.getSegmentGroups().stream())
+            Collection<BranchGraphic> branches = lines.stream()
+                    .flatMap(line -> line.getBranches().stream())
                     .collect(Collectors.toList());
 
             // one layer per base voltage, so split line segments per base voltage
-            Map<Integer, List<SegmentGroupGraphic>> orderedSegmentGroups = new TreeMap<>();
-            for (SegmentGroupGraphic segmentGroup : segmentGroups) {
-                orderedSegmentGroups.computeIfAbsent(segmentGroup.getLine().getDrawOrder(), k -> new ArrayList<>())
-                            .add(segmentGroup);
+            Map<Integer, List<BranchGraphic>> orderedBranches = new TreeMap<>();
+            for (BranchGraphic branch : branches) {
+                orderedBranches.computeIfAbsent(branch.getLine().getDrawOrder(), k -> new ArrayList<>())
+                            .add(branch);
             }
 
             // build indexes
             SubstationGraphicIndex substationIndex = SubstationGraphicIndex.build(substations.values());
-            SortedMap<Integer, SegmentGroupGraphicIndex> segmentGroupIndexes = orderedSegmentGroups.entrySet()
+            SortedMap<Integer, BranchGraphicIndex> branchesIndexes = orderedBranches.entrySet()
                     .stream()
                     .collect(Collectors.toMap(Map.Entry::getKey,
-                        e -> SegmentGroupGraphicIndex.build(e.getValue()),
+                        e -> BranchGraphicIndex.build(e.getValue()),
                         (v1, v2) -> { throw new AssertionError(); },
                         TreeMap::new));
 
             Platform.runLater(() -> {
                 view.addLayer(new SubtationDemoLayer(view, substationIndex));
-                view.addLayer(new LineDemoLayer(view, segmentGroupIndexes, taskQueue, config));
+                view.addLayer(new LineDemoLayer(view, branchesIndexes, taskQueue, config));
                 view.markDirty();
                 progressIndicator.setVisible(false);
                 mainPane.setDisable(false);

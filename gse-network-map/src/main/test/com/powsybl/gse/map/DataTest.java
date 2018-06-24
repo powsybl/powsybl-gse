@@ -8,7 +8,7 @@ public class DataTest {
         for (LineGraphic line : RteOpenData.parseLines()) {
             System.out.print(line.getId());
             line.updateSegmentGroups();
-            List<SegmentGroupGraphic> polySegments = line.getSegmentGroups();
+            List<BranchGraphic> polySegments = line.getBranches();
             System.out.println(" " + line.getSegments().size() + " " + polySegments.size());
         }
     }

@@ -30,7 +30,7 @@ public class LineGraphic {
 
     private final List<SegmentGraphic> segments = new ArrayList<>();
 
-    private final List<SegmentGroupGraphic> segmentGroups = new ArrayList<>();
+    private final List<BranchGraphic> branches = new ArrayList<>();
 
     public LineGraphic(String id, int drawOrder, Color color) {
         this.id = Objects.requireNonNull(id);
@@ -61,12 +61,12 @@ public class LineGraphic {
                 .filter(remaining::contains);
     }
 
-    private void restart(Set<PylonGraphic> remaining) {
+    private void startBranch(Set<PylonGraphic> remaining) {
         if (remaining.isEmpty()) {
             return;
         }
         PylonGraphic pylon = remaining.stream()
-                .filter(p -> getNeighborsStream(p, remaining).count() != 2)
+                .filter(p -> getNeighborsStream(p, remaining).count() != 2) // to start branch at a leaf or cross
                 .findFirst()
                 .orElseGet(() -> remaining.iterator().next());
         List<PylonGraphic> pylons = new ArrayList<>();
@@ -84,20 +84,20 @@ public class LineGraphic {
                 } else {
                     LOGGER.debug("Restart");
                     if (!pylons.isEmpty()) {
-                        segmentGroups.add(new SegmentGroupGraphic(pylons, this));
+                        branches.add(new BranchGraphic(pylons, this));
                     }
-                    restart(remaining);
+                    startBranch(remaining);
                 }
             }
         });
     }
 
-    public List<SegmentGroupGraphic> getSegmentGroups() {
-        return segmentGroups;
+    public List<BranchGraphic> getBranches() {
+        return branches;
     }
 
     public void updateSegmentGroups() {
-        segmentGroups.clear();
+        branches.clear();
 
         // index segment by position side 1 and 2
         Set<Coordinate> positions = new HashSet<>(segments.size());
@@ -119,7 +119,7 @@ public class LineGraphic {
 
         Set<PylonGraphic> remaining = new HashSet<>(pylons.values());
         while (!remaining.isEmpty()) {
-            restart(remaining);
+            startBranch(remaining);
         }
     }
 }

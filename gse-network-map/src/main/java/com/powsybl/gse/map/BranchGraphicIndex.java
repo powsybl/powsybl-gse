@@ -7,9 +7,7 @@
 package com.powsybl.gse.map;
 
 import com.github.davidmoten.rtree.RTree;
-import com.github.davidmoten.rtree.geometry.Geometries;
 import com.github.davidmoten.rtree.geometry.Geometry;
-import com.github.davidmoten.rtree.geometry.Rectangle;
 import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,32 +18,32 @@ import java.util.Objects;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public final class SegmentGroupGraphicIndex {
+public final class BranchGraphicIndex {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SegmentGroupGraphicIndex.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(BranchGraphicIndex.class);
 
-    private final RTree<SegmentGroupGraphic, Geometry> tree;
+    private final RTree<BranchGraphic, Geometry> tree;
 
-    private SegmentGroupGraphicIndex(RTree<SegmentGroupGraphic, Geometry> tree) {
+    private BranchGraphicIndex(RTree<BranchGraphic, Geometry> tree) {
         this.tree = Objects.requireNonNull(tree);
     }
 
-    public static SegmentGroupGraphicIndex build(Collection<SegmentGroupGraphic> segmentGroups) {
+    public static BranchGraphicIndex build(Collection<BranchGraphic> segmentGroups) {
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
 
-        RTree<SegmentGroupGraphic, Geometry> tree = RTree.star().maxChildren(6).create();
+        RTree<BranchGraphic, Geometry> tree = RTree.star().maxChildren(6).create();
 
-        for (SegmentGroupGraphic segmentGroup : segmentGroups) {
+        for (BranchGraphic segmentGroup : segmentGroups) {
             tree = tree.add(segmentGroup, segmentGroup.getBoundingBox());
         }
 
-        LOGGER.info("Line segment groups R-tree built in {} ms", stopWatch.getTime());
+        LOGGER.info("Line branches R-tree built in {} ms", stopWatch.getTime());
 
-        return new SegmentGroupGraphicIndex(tree);
+        return new BranchGraphicIndex(tree);
     }
 
-    public RTree<SegmentGroupGraphic, Geometry> getTree() {
+    public RTree<BranchGraphic, Geometry> getTree() {
         return tree;
     }
 }

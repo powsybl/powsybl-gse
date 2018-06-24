@@ -49,35 +49,35 @@ public class LineDemoLayer extends CanvasBasedLayer {
 
     private final Simplify<Point2D> simplify = new Simplify<>(new Point2D[0], POINT_EXTRACTOR);
 
-    private final SortedMap<Integer, SegmentGroupGraphicIndex> segmentGroupIndexes;
+    private final SortedMap<Integer, BranchGraphicIndex> branchesIndexes;
 
     private final CancellableGraphicTaskQueue taskQueue;
 
     private final NetworkMapConfig config;
 
-    public LineDemoLayer(MapView mapView, SortedMap<Integer, SegmentGroupGraphicIndex> segmentGroupIndexes,
+    public LineDemoLayer(MapView mapView, SortedMap<Integer, BranchGraphicIndex> branchesIndexes,
                          CancellableGraphicTaskQueue taskQueue, NetworkMapConfig config) {
         super(mapView);
-        this.segmentGroupIndexes = Objects.requireNonNull(segmentGroupIndexes);
+        this.branchesIndexes = Objects.requireNonNull(branchesIndexes);
         this.taskQueue = Objects.requireNonNull(taskQueue);
         this.config = Objects.requireNonNull(config);
     }
 
     @Override
     protected void onMapClick(Coordinate c) {
-        for (Map.Entry<Integer, SegmentGroupGraphicIndex> e : segmentGroupIndexes.entrySet()) {
-            SegmentGroupGraphicIndex index = e.getValue();
-            Observable<Entry<SegmentGroupGraphic, Geometry>> search = index.getTree().search(Geometries.pointGeographic(c.getLon(), c.getLat()));
-            search.toBlocking().forEach(new Action1<Entry<SegmentGroupGraphic, Geometry>>() {
+        for (Map.Entry<Integer, BranchGraphicIndex> e : branchesIndexes.entrySet()) {
+            BranchGraphicIndex index = e.getValue();
+            Observable<Entry<BranchGraphic, Geometry>> search = index.getTree().search(Geometries.pointGeographic(c.getLon(), c.getLat()));
+            search.toBlocking().forEach(new Action1<Entry<BranchGraphic, Geometry>>() {
                 @Override
-                public void call(Entry<SegmentGroupGraphic, Geometry> entry) {
+                public void call(Entry<BranchGraphic, Geometry> entry) {
                     System.out.println(entry.value().getLine().getId());
                 }
             });
         }
     }
 
-    private void draw(GraphicsContext gc, int drawOrder, SegmentGroupGraphicIndex segmentIndex,
+    private void draw(GraphicsContext gc, int drawOrder, BranchGraphicIndex segmentIndex,
                       double zoom, boolean showPylons) {
         LOGGER.trace("Drawing lines at order {}", drawOrder);
 
@@ -90,7 +90,7 @@ public class LineDemoLayer extends CanvasBasedLayer {
         double pylonSize = 5;
 
         segmentIndex.getTree().search(getMapBounds()).toBlocking().forEach(e -> {
-            SegmentGroupGraphic segmentGroup = e.value();
+            BranchGraphic segmentGroup = e.value();
 
             gc.setStroke(segmentGroup.getLine().getColor());
             gc.setFill(segmentGroup.getLine().getColor());
@@ -104,7 +104,7 @@ public class LineDemoLayer extends CanvasBasedLayer {
             }
 
             Point2D[] pointsToDraw;
-            if (zoom > PYLON_SHOW_ZOOM_THRESHOLD ) {
+            if (zoom > PYLON_SHOW_ZOOM_THRESHOLD) {
                 pointsToDraw = points;
             } else {
                 pointsToDraw = simplify.simplify(points, 1, true);
@@ -147,14 +147,14 @@ public class LineDemoLayer extends CanvasBasedLayer {
         GraphicsContext gc = canvas.getGraphicsContext2D();
         gc.setLineWidth(zoom >= 9 ? 2 : 1);
 
-        Iterator<Map.Entry<Integer, SegmentGroupGraphicIndex>> it = segmentGroupIndexes.entrySet().iterator();
+        Iterator<Map.Entry<Integer, BranchGraphicIndex>> it = branchesIndexes.entrySet().iterator();
         if (it.hasNext()) {
-            Map.Entry<Integer, SegmentGroupGraphicIndex> e = it.next();
+            Map.Entry<Integer, BranchGraphicIndex> e = it.next();
             draw(gc, e.getKey(), e.getValue(), zoom, showPylons);
         }
 
         while (it.hasNext()) {
-            Map.Entry<Integer, SegmentGroupGraphicIndex> e = it.next();
+            Map.Entry<Integer, BranchGraphicIndex> e = it.next();
             taskQueue.addTask(() -> draw(gc, e.getKey(), e.getValue(), zoom, showPylons));
         }
     }

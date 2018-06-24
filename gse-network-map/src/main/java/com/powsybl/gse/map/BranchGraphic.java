@@ -16,13 +16,13 @@ import java.util.Objects;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class SegmentGroupGraphic {
+public class BranchGraphic {
 
     private final List<PylonGraphic> pylons;
 
     private final LineGraphic line;
 
-    public SegmentGroupGraphic(List<PylonGraphic> pylons, LineGraphic line) {
+    public BranchGraphic(List<PylonGraphic> pylons, LineGraphic line) {
         this.pylons = Objects.requireNonNull(pylons);
         if (pylons.isEmpty()) {
             throw new PowsyblException("Empty poly segment");
