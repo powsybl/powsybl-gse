@@ -67,36 +67,28 @@ public class LineGraphic {
         }
         PylonGraphic pylon = remaining.stream()
                 .filter(p -> getNeighborsStream(p, remaining).count() != 2) // to start branch at a leaf or cross
-                .findFirst()
+                .min(Comparator.comparingDouble((PylonGraphic p) -> p.getCoordinate().getLon()) // for deterministics behaviour
+                        .thenComparingDouble(p -> p.getCoordinate().getLat()))
                 .orElseGet(() -> remaining.iterator().next());
         List<PylonGraphic> pylons = new ArrayList<>();
-        remaining.remove(pylon);
         traverse(pylon, pylons, remaining);
+        if (!pylons.isEmpty()) {
+            branches.add(new BranchGraphic(pylons, this));
+        }
     }
 
     private void traverse(PylonGraphic pylon, List<PylonGraphic> pylons, Set<PylonGraphic> remaining) {
         LOGGER.debug("Traverse pylon {}", pylon.getCoordinate());
         pylons.add(pylon);
-        getNeighborsStream(pylon, remaining).findFirst().ifPresent(next -> {
-            if (remaining.remove(next)) {
-                if (getNeighborsStream(next, remaining).count() == 1) {
-                    traverse(next, pylons, remaining);
-                } else {
-                    LOGGER.debug("Restart");
-                    if (!pylons.isEmpty()) {
-                        branches.add(new BranchGraphic(pylons, this));
-                    }
-                    startBranch(remaining);
-                }
-            }
-        });
+        remaining.remove(pylon);
+        getNeighborsStream(pylon, remaining).findFirst().ifPresent(next -> traverse(next, pylons, remaining));
     }
 
     public List<BranchGraphic> getBranches() {
         return branches;
     }
 
-    public void updateSegmentGroups() {
+    public void updateBranches() {
         branches.clear();
 
         // index segment by position side 1 and 2

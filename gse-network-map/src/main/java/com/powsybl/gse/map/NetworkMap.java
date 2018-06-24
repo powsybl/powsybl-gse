@@ -122,7 +122,7 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
             Map<String, SubstationGraphic> substations = RteOpenData.parseSubstations();
             Collection<LineGraphic> lines = RteOpenData.parseLines();
             for (LineGraphic line : lines) {
-                line.updateSegmentGroups();
+                line.updateBranches();
             }
             Collection<BranchGraphic> branches = lines.stream()
                     .flatMap(line -> line.getBranches().stream())
