@@ -16,7 +16,7 @@ import java.util.Objects;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class BranchGraphic {
+public class BranchGraphic implements IndexableGraphic {
 
     private final List<PylonGraphic> pylons;
 
@@ -38,6 +38,7 @@ public class BranchGraphic {
         return line;
     }
 
+    @Override
     public Rectangle getBoundingBox() {
         double minLon = Double.MAX_VALUE;
         double minLat = Double.MAX_VALUE;

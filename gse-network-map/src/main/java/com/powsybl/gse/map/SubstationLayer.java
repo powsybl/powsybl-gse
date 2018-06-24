@@ -20,13 +20,13 @@ import java.util.Objects;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class SubtationDemoLayer extends CanvasBasedLayer {
+public class SubstationLayer extends CanvasBasedLayer {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SubtationDemoLayer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SubstationLayer.class);
 
     private final SubstationGraphicIndex substationIndex;
 
-    public SubtationDemoLayer(MapView mapView, SubstationGraphicIndex substationIndex) {
+    public SubstationLayer(MapView mapView, SubstationGraphicIndex substationIndex) {
         super(mapView);
         this.substationIndex = Objects.requireNonNull(substationIndex);
     }

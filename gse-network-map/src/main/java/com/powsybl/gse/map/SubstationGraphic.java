@@ -6,6 +6,7 @@
  */
 package com.powsybl.gse.map;
 
+import com.github.davidmoten.rtree.geometry.Rectangle;
 import javafx.scene.paint.Color;
 
 import java.util.Objects;
@@ -13,7 +14,7 @@ import java.util.Objects;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class SubstationGraphic {
+public class SubstationGraphic implements IndexableGraphic {
 
     private final String id;
 
@@ -37,6 +38,11 @@ public class SubstationGraphic {
 
     public Coordinate getPosition() {
         return position;
+    }
+
+    @Override
+    public Rectangle getBoundingBox() {
+        throw new AssertionError("TODO");
     }
 
     @Override

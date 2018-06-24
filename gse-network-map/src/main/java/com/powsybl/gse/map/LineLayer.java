@@ -29,9 +29,9 @@ import java.util.SortedMap;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class LineDemoLayer extends CanvasBasedLayer {
+public class LineLayer extends CanvasBasedLayer {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(LineDemoLayer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(LineLayer.class);
 
     private static final int PYLON_SHOW_ZOOM_THRESHOLD = 10;
 
@@ -55,8 +55,8 @@ public class LineDemoLayer extends CanvasBasedLayer {
 
     private final NetworkMapConfig config;
 
-    public LineDemoLayer(MapView mapView, SortedMap<Integer, BranchGraphicIndex> branchesIndexes,
-                         CancellableGraphicTaskQueue taskQueue, NetworkMapConfig config) {
+    public LineLayer(MapView mapView, SortedMap<Integer, BranchGraphicIndex> branchesIndexes,
+                     CancellableGraphicTaskQueue taskQueue, NetworkMapConfig config) {
         super(mapView);
         this.branchesIndexes = Objects.requireNonNull(branchesIndexes);
         this.taskQueue = Objects.requireNonNull(taskQueue);

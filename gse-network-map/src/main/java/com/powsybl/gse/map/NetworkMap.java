@@ -145,8 +145,8 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
                         TreeMap::new));
 
             Platform.runLater(() -> {
-                view.addLayer(new SubtationDemoLayer(view, substationIndex));
-                view.addLayer(new LineDemoLayer(view, branchesIndexes, taskQueue, config));
+                view.addLayer(new SubstationLayer(view, substationIndex));
+                view.addLayer(new LineLayer(view, branchesIndexes, taskQueue, config));
                 view.markDirty();
                 progressIndicator.setVisible(false);
                 mainPane.setDisable(false);
