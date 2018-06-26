@@ -39,6 +39,8 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NetworkMap.class);
 
+    private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.NetworkMap");
+
     /**
      * Hack to fix layer refreshing issue
      */
@@ -60,7 +62,7 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
 
     private final Button zoomOutButton;
 
-    private final CheckBox showPylons = new CheckBox("Show pylons");
+    private final CheckBox showPylons = new CheckBox(RESOURCE_BUNDLE.getString("ShowPylons"));
 
     private final MapView2 view;
 
