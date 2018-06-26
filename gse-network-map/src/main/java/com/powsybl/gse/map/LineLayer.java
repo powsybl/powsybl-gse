@@ -71,7 +71,7 @@ public class LineLayer extends CanvasBasedLayer {
             search.toBlocking().forEach(new Action1<Entry<BranchGraphic, Geometry>>() {
                 @Override
                 public void call(Entry<BranchGraphic, Geometry> entry) {
-                    System.out.println(entry.value().getLine().getId());
+                    LOGGER.trace(entry.value().getLine().getId());
                 }
             });
         }
