@@ -6,6 +6,8 @@
  */
 package com.powsybl.gse.util;
 
+import com.powsybl.commons.config.ModuleConfig;
+import com.powsybl.commons.config.PlatformConfig;
 import com.powsybl.gse.spi.Savable;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
@@ -28,6 +30,11 @@ import org.controlsfx.dialog.ExceptionDialog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.net.Authenticator;
+import java.net.PasswordAuthentication;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.concurrent.Executor;
@@ -87,14 +94,12 @@ public final class GseUtil {
     public static <T> void setWaitingCellFactory(CheckListView<T> listView, T waitingValue, Function<T, String> itemToString) {
         Objects.requireNonNull(listView);
         Objects.requireNonNull(waitingValue);
-        listView.setCellFactory(l -> {
-            return new CheckBoxListCell<T>(listView::getItemBooleanProperty) {
-                @Override
-                public void updateItem(T item, boolean empty) {
-                    super.updateItem(item, empty);
-                    GseUtil.updateItem(this, item, empty, waitingValue, itemToString);
-                }
-            };
+        listView.setCellFactory(l -> new CheckBoxListCell<T>(listView::getItemBooleanProperty) {
+            @Override
+            public void updateItem(T item, boolean empty) {
+                super.updateItem(item, empty);
+                GseUtil.updateItem(this, item, empty, waitingValue, itemToString);
+            }
         });
     }
 
@@ -185,5 +190,32 @@ public final class GseUtil {
         // save accelerator
         registerAccelerator(scene, new KeyCodeCombination(KeyCode.S, KeyCombination.SHORTCUT_DOWN), Savable.class, Savable::save);
         registerAccelerator(scene, new KeyCodeCombination(KeyCode.R, KeyCombination.SHORTCUT_DOWN), Runnable.class, Runnable::run);
+    }
+
+    public static void setProxy() {
+        try {
+            URLConnection connection = new URL("http://www.google.com").openConnection();
+            connection.setConnectTimeout(1000);
+            connection.connect();
+        } catch (IOException e) {
+            // get proxy config
+            ModuleConfig proxyConfig = PlatformConfig.defaultConfig().getModuleConfig("proxy");
+            String host = proxyConfig.getStringProperty("host");
+            int port = proxyConfig.getIntProperty("port");
+            String user = proxyConfig.getStringProperty("user");
+            String password = proxyConfig.getStringProperty("password");
+            LOGGER.info("Set proxy host={}, port={}, user={}", host, port, user);
+
+            System.getProperties().put("http.proxyHost", host);
+            System.getProperties().put("http.proxyPort", Integer.toString(port));
+            Authenticator.setDefault(
+                    new Authenticator() {
+                        @Override
+                        public PasswordAuthentication getPasswordAuthentication() {
+                            return new PasswordAuthentication(user, password.toCharArray());
+                        }
+                    }
+            );
+        }
     }
 }
