@@ -13,21 +13,27 @@
     <artifactId>powsybl-gse-network-map</artifactId>
     <name>GSE network map</name>
 
+    <properties>
+        <maps.version>1.0.2</maps.version>
+        <rtree.version>0.8.5</rtree.version>
+        <simplify.version>1.0.0</simplify.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>com.gluonhq</groupId>
             <artifactId>maps</artifactId>
-            <version>1.0.2</version>
+            <version>${maps.version}</version>
         </dependency>
         <dependency>
             <groupId>com.github.davidmoten</groupId>
             <artifactId>rtree</artifactId>
-            <version>0.8.5</version>
+            <version>${rtree.version}</version>
         </dependency>
         <dependency>
             <groupId>com.goebl</groupId>
             <artifactId>simplify</artifactId>
-            <version>1.0.0</version>
+            <version>${simplify.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
