@@ -90,14 +90,14 @@ public class LineLayer extends CanvasBasedLayer {
         double pylonSize = 5;
 
         segmentIndex.getTree().search(getMapBounds()).toBlocking().forEach(e -> {
-            BranchGraphic segmentGroup = e.value();
+            BranchGraphic branch = e.value();
 
-            gc.setStroke(segmentGroup.getLine().getColor());
-            gc.setFill(segmentGroup.getLine().getColor());
+            gc.setStroke(branch.getLine().getColor());
+            gc.setFill(branch.getLine().getColor());
 
-            Point2D[] points = new Point2D[segmentGroup.getPylons().size()];
+            Point2D[] points = new Point2D[branch.getPylons().size()];
             int i = 0;
-            for (PylonGraphic pylon : segmentGroup.getPylons()) {
+            for (PylonGraphic pylon : branch.getPylons()) {
                 Coordinate c = pylon.getCoordinate();
                 Point2D point = baseMap.getMapPoint(c.getLat(), c.getLon());
                 points[i++] = point;

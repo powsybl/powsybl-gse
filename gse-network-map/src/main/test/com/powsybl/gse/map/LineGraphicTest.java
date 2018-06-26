@@ -7,6 +7,7 @@
 package com.powsybl.gse.map;
 
 import javafx.scene.paint.Color;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -66,5 +67,21 @@ public class LineGraphicTest {
                 branch1.getPylons().stream().map(PylonGraphic::getCoordinate).collect(Collectors.toList()));
         assertEquals(Arrays.asList(new Coordinate(1, 1), new Coordinate(1, 2), new Coordinate(1, 3)),
                 branch2.getPylons().stream().map(PylonGraphic::getCoordinate).collect(Collectors.toList()));
+    }
+
+    @Test
+    @Ignore
+    public void test4() {
+        LineGraphic line = new LineGraphic("l1", 0, Color.RED);
+        line.getSegments().add(new SegmentGraphic(new Coordinate(1, 1), new Coordinate(1, 2), line));
+        line.getSegments().add(new SegmentGraphic(new Coordinate(1, 2), new Coordinate(1, 3), line));
+        line.getSegments().add(new SegmentGraphic(new Coordinate(1, 3), new Coordinate(1, 4), line));
+        line.getSegments().add(new SegmentGraphic(new Coordinate(1, 4), new Coordinate(1, 2), line));
+        line.updateBranches();
+        List<BranchGraphic> branches = line.getBranches();
+        assertEquals(1, branches.size());
+        BranchGraphic branch = branches.get(0);
+        assertEquals(Arrays.asList(new Coordinate(1, 1), new Coordinate(1, 2), new Coordinate(1, 3), new Coordinate(1, 4), new Coordinate(1, 2)),
+                branch.getPylons().stream().map(PylonGraphic::getCoordinate).collect(Collectors.toList()));
     }
 }
