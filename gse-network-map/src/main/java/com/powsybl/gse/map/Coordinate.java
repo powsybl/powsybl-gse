@@ -6,6 +6,8 @@
  */
 package com.powsybl.gse.map;
 
+import java.util.Objects;
+
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
@@ -25,6 +27,20 @@ public class Coordinate {
 
     public double getLat() {
         return lat;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(lon, lat);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof Coordinate) {
+            Coordinate c = (Coordinate) obj;
+            return c.lon == lon && c.lat == lat;
+        }
+        return false;
     }
 
     @Override

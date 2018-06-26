@@ -17,9 +17,12 @@ public class SegmentGraphic {
 
     private final Coordinate coordinate2;
 
-    public SegmentGraphic(Coordinate coordinate1, Coordinate coordinate2) {
+    private final LineGraphic line;
+
+    public SegmentGraphic(Coordinate coordinate1, Coordinate coordinate2, LineGraphic line) {
         this.coordinate1 = Objects.requireNonNull(coordinate1);
         this.coordinate2 = Objects.requireNonNull(coordinate2);
+        this.line = Objects.requireNonNull(line);
     }
 
     public Coordinate getCoordinate1() {
@@ -28,6 +31,10 @@ public class SegmentGraphic {
 
     public Coordinate getCoordinate2() {
         return coordinate2;
+    }
+
+    public LineGraphic getLine() {
+        return line;
     }
 
     @Override
