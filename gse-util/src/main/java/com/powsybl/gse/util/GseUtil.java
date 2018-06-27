@@ -199,23 +199,25 @@ public final class GseUtil {
             connection.connect();
         } catch (IOException e) {
             // get proxy config
-            ModuleConfig proxyConfig = PlatformConfig.defaultConfig().getModuleConfig("proxy");
-            String host = proxyConfig.getStringProperty("host");
-            int port = proxyConfig.getIntProperty("port");
-            String user = proxyConfig.getStringProperty("user");
-            String password = proxyConfig.getStringProperty("password");
-            LOGGER.info("Set proxy host={}, port={}, user={}", host, port, user);
+            ModuleConfig proxyConfig = PlatformConfig.defaultConfig().getModuleConfigIfExists("proxy");
+            if (proxyConfig != null) {
+                String host = proxyConfig.getStringProperty("host");
+                int port = proxyConfig.getIntProperty("port");
+                String user = proxyConfig.getStringProperty("user");
+                String password = proxyConfig.getStringProperty("password");
+                LOGGER.info("Set proxy host={}, port={}, user={}", host, port, user);
 
-            System.getProperties().put("http.proxyHost", host);
-            System.getProperties().put("http.proxyPort", Integer.toString(port));
-            Authenticator.setDefault(
-                    new Authenticator() {
-                        @Override
-                        public PasswordAuthentication getPasswordAuthentication() {
-                            return new PasswordAuthentication(user, password.toCharArray());
+                System.getProperties().put("http.proxyHost", host);
+                System.getProperties().put("http.proxyPort", Integer.toString(port));
+                Authenticator.setDefault(
+                        new Authenticator() {
+                            @Override
+                            public PasswordAuthentication getPasswordAuthentication() {
+                                return new PasswordAuthentication(user, password.toCharArray());
+                            }
                         }
-                    }
-            );
+                );
+            }
         }
     }
 }
