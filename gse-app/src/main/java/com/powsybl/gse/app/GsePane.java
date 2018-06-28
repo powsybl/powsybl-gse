@@ -8,6 +8,7 @@ package com.powsybl.gse.app;
 
 import com.powsybl.afs.AppData;
 import com.powsybl.afs.Project;
+import com.powsybl.afs.ws.client.utils.UserSession;
 import com.powsybl.gse.spi.BrandingConfig;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.GseException;
@@ -43,7 +44,7 @@ public class GsePane extends StackPane {
 
     private final GseContext context;
 
-    private final AppData appData;
+    private final AppData data;
 
     private final BrandingConfig brandingConfig = BrandingConfig.find();
 
@@ -52,9 +53,9 @@ public class GsePane extends StackPane {
     private final Preferences preferences;
     private final Application javaxApplication;
 
-    public GsePane(GseContext context, AppData appData, Application app) {
+    public GsePane(GseContext context, AppData data, Application app) {
         this.context = Objects.requireNonNull(context);
-        this.appData = Objects.requireNonNull(appData);
+        this.data = Objects.requireNonNull(data);
         this.javaxApplication = Objects.requireNonNull(app);
         mainPane = new BorderPane();
         mainPane.setTop(createAppBar());
@@ -73,7 +74,7 @@ public class GsePane extends StackPane {
                 List<String> projectPaths = Arrays.asList(preferences.get(OPENED_PROJECTS, "").split(","));
                 if (!projectPaths.isEmpty()) {
                     projectPaths.stream()
-                            .map(appData::getNode)
+                            .map(data::getNode)
                             .filter(Optional::isPresent)
                             .map(Optional::get)
                             .map(Project.class::cast)
@@ -110,16 +111,22 @@ public class GsePane extends StackPane {
         popup.show(getScene().getWindow());
     }
 
-    private GseAppBar createAppBar() {
-        GseAppBar appBar = new GseAppBar(appData, brandingConfig);
+    private void setUserSession(UserSession userSession) {
+        data.setTokenProvider(() -> userSession != null ? userSession.getToken() : null);
+    }
 
+    private GseAppBar createAppBar() {
+        GseAppBar appBar = new GseAppBar(context, brandingConfig);
+        if (appBar.getUserSessionPane() != null) {
+            appBar.getUserSessionPane().sessionProperty().addListener((observable, oldUserSession, newUserSession) -> setUserSession(newUserSession));
+        }
         appBar.getCreateButton().setOnAction(event -> {
-            Optional<Project> project = NewProjectPane.showAndWaitDialog(getScene().getWindow(), appData, context);
+            Optional<Project> project = NewProjectPane.showAndWaitDialog(getScene().getWindow(), data, context);
             project.ifPresent(this::addProject);
         });
 
         appBar.getOpenButton().setOnAction(event -> {
-            Optional<Project> project = NodeChooser.showAndWaitDialog(getScene().getWindow(), appData, context, Project.class);
+            Optional<Project> project = NodeChooser.showAndWaitDialog(getScene().getWindow(), data, context, Project.class);
             project.ifPresent(this::addProject);
         });
 

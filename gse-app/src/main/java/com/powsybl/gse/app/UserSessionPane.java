@@ -6,10 +6,13 @@
  */
 package com.powsybl.gse.app;
 
-import com.powsybl.afs.AppData;
 import com.powsybl.afs.ws.client.utils.UserSession;
+import com.powsybl.afs.ws.utils.UserProfile;
 import com.powsybl.gse.spi.GseAuthenticator;
+import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.util.Glyph;
+import com.powsybl.gse.util.GseUtil;
+import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Pos;
@@ -32,7 +35,7 @@ class UserSessionPane extends StackPane {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.GseAppBar");
 
-    private final AppData data;
+    private final GseContext context;
 
     private final GseAuthenticator authenticator;
 
@@ -46,8 +49,8 @@ class UserSessionPane extends StackPane {
 
     private final ObjectProperty<UserSession> sessionProperty = new SimpleObjectProperty<>();
 
-    UserSessionPane(AppData data, GseAuthenticator authenticator) {
-        this.data = Objects.requireNonNull(data);
+    UserSessionPane(GseContext context, GseAuthenticator authenticator) {
+        this.context = Objects.requireNonNull(context);
         this.authenticator = Objects.requireNonNull(authenticator);
 
         Text signInGlyph = Glyph.createAwesomeFont('\uf090');
@@ -76,6 +79,10 @@ class UserSessionPane extends StackPane {
         sessionProperty.addListener((observable, oldSession, newSession) -> setUserSession(newSession));
     }
 
+    public ObjectProperty<UserSession> sessionProperty() {
+        return sessionProperty;
+    }
+
     private void showUserMenu() {
         menu.show(chevronDownButton, Side.BOTTOM, 0, 0);
     }
@@ -84,19 +91,30 @@ class UserSessionPane extends StackPane {
         if (userSession == null) {
             userName.setText(null);
             getChildren().setAll(signInButton);
-            data.setTokenProvider(() -> null);
         } else {
             userName.setText(userSession.getProfile().getFirstName() + " " + userSession.getProfile().getLastName());
             HBox sessionBox = new HBox(userName, chevronDownButton);
             sessionBox.setAlignment(Pos.CENTER_LEFT);
             getChildren().setAll(sessionBox);
-            data.setTokenProvider(userSession::getToken);
         }
     }
 
     private void signIn() {
         LoginDialog loginDialog = new LoginDialog(null, null);
-        loginDialog.showAndWait().ifPresent(credentials -> sessionProperty.set(authenticator.signIn(credentials.getKey(), credentials.getValue())));
+        loginDialog.showAndWait().ifPresent(credentials -> {
+            sessionProperty.set(new UserSession(new UserProfile("...", ""), null));
+            context.getExecutor().execute(() -> {
+                try {
+                    UserSession userSession = authenticator.signIn(credentials.getKey(), credentials.getValue());
+                    Platform.runLater(() -> sessionProperty.set(userSession));
+                } catch (Throwable t) {
+                    Platform.runLater(() -> {
+                        sessionProperty.set(null);
+                        GseUtil.showDialogError(t);
+                    });
+                }
+            });
+        });
     }
 
     private void signOut() {

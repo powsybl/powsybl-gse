@@ -6,9 +6,9 @@
  */
 package com.powsybl.gse.app;
 
-import com.powsybl.afs.AppData;
-import com.powsybl.gse.spi.GseAuthenticator;
 import com.powsybl.gse.spi.BrandingConfig;
+import com.powsybl.gse.spi.GseAuthenticator;
+import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.util.Glyph;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -35,7 +35,9 @@ public class GseAppBar extends HBox {
 
     private final Button helpButton;
 
-    public GseAppBar(AppData data, BrandingConfig brandingConfig) {
+    private UserSessionPane userSessionPane;
+
+    public GseAppBar(GseContext context, BrandingConfig brandingConfig) {
         getStyleClass().add("gse-app-bar");
         setPadding(new Insets(3, 5, 3, 5));
         setAlignment(Pos.CENTER_LEFT);
@@ -57,7 +59,10 @@ public class GseAppBar extends HBox {
         setHgrow(gluePanel, Priority.ALWAYS);
 
         getChildren().addAll(logo, createButton, openButton, gluePanel);
-        GseAuthenticator.find().ifPresent(authenticator -> getChildren().add(new UserSessionPane(data, authenticator)));
+        GseAuthenticator.find().ifPresent(authenticator -> {
+            userSessionPane = new UserSessionPane(context, authenticator);
+            getChildren().add(userSessionPane);
+        });
         getChildren().add(helpButton);
     }
 
@@ -77,5 +82,9 @@ public class GseAppBar extends HBox {
 
     public Button getHelpButton() {
         return helpButton;
+    }
+
+    public UserSessionPane getUserSessionPane() {
+        return userSessionPane;
     }
 }
