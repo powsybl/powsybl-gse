@@ -85,6 +85,7 @@ public class GseApp extends Application {
     }
 
     public static void main(String[] args) {
+        GseUtil.setProxy();
         launch(GseApp.class, args);
     }
 }
