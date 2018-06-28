@@ -325,7 +325,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
                     "                        ]",
                     "                    }",
                     "                    +",
-                    "                    it.nodeBreakerView.switches.collect {",
+                    "                    it.switches.collect {",
                     "                        [",
                     "                            type: 'SWITCH',",
                     "                            idAndName: [",
