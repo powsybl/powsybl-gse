@@ -9,3 +9,7 @@
 /gse-spi/target/
 /gse-util/target/
 /target/
+/gse-distribution/target/
+
+# Compilation settings
+install.cfg
