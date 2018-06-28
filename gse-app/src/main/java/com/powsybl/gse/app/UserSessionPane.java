@@ -101,6 +101,7 @@ class UserSessionPane extends StackPane {
 
     private void signIn() {
         LoginDialog loginDialog = new LoginDialog(null, null);
+        loginDialog.initOwner(getScene().getWindow());
         loginDialog.showAndWait().ifPresent(credentials -> {
             sessionProperty.set(new UserSession(new UserProfile("...", ""), null));
             context.getExecutor().execute(() -> {

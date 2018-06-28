@@ -78,6 +78,7 @@ public class GsePane extends StackPane {
                             .filter(Optional::isPresent)
                             .map(Optional::get)
                             .map(Project.class::cast)
+                            .filter(project -> !isProjectOpen(project))
                             .forEach(project -> Platform.runLater(() -> addProject(project)));
                 }
             } catch (Throwable t) {
@@ -100,6 +101,27 @@ public class GsePane extends StackPane {
         tabPane.getSelectionModel().select(projectPane);
     }
 
+    private boolean isProjectOpen(Project project) {
+        Objects.requireNonNull(project);
+        for (Tab tab : tabPane.getTabs()) {
+            ProjectPane projectPane = (ProjectPane) tab;
+            if (projectPane.getProject().getId().equals(project.getId())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void cleanProjects() {
+        Iterator<Tab> it = tabPane.getTabs().iterator();
+        while (it.hasNext()) {
+            ProjectPane projectPane = (ProjectPane) it.next();
+            if (projectPane.getProject().getFileSystem().isClosed()) {
+                it.remove();
+            }
+        }
+    }
+
     private void showAbout() {
         Popup popup = new Popup();
         popup.setAutoHide(true);
@@ -118,7 +140,15 @@ public class GsePane extends StackPane {
     private GseAppBar createAppBar() {
         GseAppBar appBar = new GseAppBar(context, brandingConfig);
         if (appBar.getUserSessionPane() != null) {
-            appBar.getUserSessionPane().sessionProperty().addListener((observable, oldUserSession, newUserSession) -> setUserSession(newUserSession));
+            appBar.getUserSessionPane().sessionProperty().addListener((observable, oldUserSession, newUserSession) -> {
+                setUserSession(newUserSession);
+                if (newUserSession != null) {
+                    loadPreferences();
+                } else {
+                    // clean remote projects
+                    cleanProjects();
+                }
+            });
         }
         appBar.getCreateButton().setOnAction(event -> {
             Optional<Project> project = NewProjectPane.showAndWaitDialog(getScene().getWindow(), data, context);
