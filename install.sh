@@ -10,7 +10,7 @@ sourceDir=$(dirname $(readlink -f $0))
 
 ## install default settings
 ###############################################################################
-gse_prefix=$HOME/powsybl-gse
+gse_prefix=$HOME/powsybl
 gse_package_version=` mvn -f "$sourceDir/pom.xml" org.apache.maven.plugins:maven-help-plugin:evaluate -Dexpression=project.version | grep -v "Download" | grep -v "\["`
 gse_package_name=powsybl-gse-$gse_package_version
 gse_package_type=zip
