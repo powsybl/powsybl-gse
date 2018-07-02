@@ -112,7 +112,7 @@ public class GsePane extends StackPane {
         return false;
     }
 
-    private void cleanProjects() {
+    private void cleanClosedProjects() {
         Iterator<Tab> it = tabPane.getTabs().iterator();
         while (it.hasNext()) {
             ProjectPane projectPane = (ProjectPane) it.next();
@@ -146,7 +146,7 @@ public class GsePane extends StackPane {
                     loadPreferences();
                 } else {
                     // clean remote projects
-                    cleanProjects();
+                    cleanClosedProjects();
                 }
             });
         }
