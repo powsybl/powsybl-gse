@@ -177,7 +177,9 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
                     .stream()
                     .collect(Collectors.toMap(Map.Entry::getKey,
                         e -> BranchGraphicIndex.build(e.getValue()),
-                        (v1, v2) -> { throw new AssertionError(); },
+                        (v1, v2) -> {
+                            throw new AssertionError();
+                        },
                         TreeMap::new));
 
             Platform.runLater(() -> {
