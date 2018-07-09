@@ -171,11 +171,13 @@ public class LineLayer extends CanvasBasedLayer {
         }
 
         Line l = branch.getLine().getModel();
+        boolean reverse = l != null && l.getTerminal1().getP() >= 0;
 
         stats.segmentCount += points.length - 1;
         stats.drawnSegmentCount += pointsToDraw.length - 1;
 
-        return new PointsToDraw(pointsToDraw, branch.getLine().getColor(), branch.getLine().getColor(), l != null && l.getTerminal1().getP() < 0);
+
+        return new PointsToDraw(pointsToDraw, branch.getLine().getColor(), branch.getLine().getColor(), reverse);
     }
 
     private static final double arrowsSpacing = 50; // spacing between 2 arrows
@@ -184,47 +186,63 @@ public class LineLayer extends CanvasBasedLayer {
 
     private void drawArrows(Canvas canvas, List<PointsToDraw> pointsList, double progress) {
         cleanCanvas(canvas);
+        ArrowDrawingContext context = new ArrowDrawingContext();
         for (PointsToDraw points : pointsList) {
-            drawArrows(slowArrowsCanvas.getGraphicsContext2D(), points, progress);
+            drawArrows(slowArrowsCanvas.getGraphicsContext2D(), points, context, progress);
         }
     }
 
-    public static void drawArrows(GraphicsContext g, PointsToDraw points, double progress) {
+    static class ArrowDrawingContext {
+        double lastSegmentDistance;
+        double residualSpacing;
+    }
+
+    private static void drawArrows(GraphicsContext g, Point2D point1, Point2D point2, ArrowDrawingContext context) {
+        double x1 = point1.getX();
+        double y1 = point1.getY();
+        double x2 = point2.getX();
+        double y2 = point2.getY();
+        double dxSegment = x2 - x1;
+        double dySegment = y2 - y1;
+        double segmentLength = Math.hypot(dxSegment, dySegment);
+        double a = Math.atan2(dySegment, dxSegment);
+        double ap = Math.PI / 2 - a;
+        double dxArrowBase = Math.cos(ap) * arrowBaseSize;
+        double dyArrowBase = Math.sin(ap) * arrowBaseSize;
+        double dxArrowHead = Math.cos(a) * arrowHeadSize;
+        double dyArrowHead = Math.sin(a) * arrowHeadSize;
+        double distance = context.lastSegmentDistance + context.residualSpacing;
+        while (distance < context.lastSegmentDistance + segmentLength) {
+            double xArrow = x1 + Math.cos(a) * (distance - context.lastSegmentDistance);
+            double yArrow = y1 + Math.sin(a) * (distance - context.lastSegmentDistance);
+
+            // draw arrow
+            g.beginPath();
+            g.moveTo(xArrow - dxArrowBase, yArrow + dyArrowBase);
+            g.lineTo(xArrow + dxArrowBase, yArrow - dyArrowBase);
+            g.lineTo(xArrow + dxArrowHead, yArrow + dyArrowHead);
+            g.closePath();
+            g.fill();
+
+            distance += arrowsSpacing;
+        }
+        context.residualSpacing = distance - context.lastSegmentDistance - segmentLength;
+        context.lastSegmentDistance += segmentLength;
+    }
+
+    public static void drawArrows(GraphicsContext g, PointsToDraw points, ArrowDrawingContext context, double progress) {
         g.setFill(points.fill);
 
-        double lastSegmentDistance = 0;
-        double residualSpacing = progress * arrowsSpacing;
-        for (int i = 1; i < points.array.length; i++) {
-            double x1 = points.array[i - 1].getX();
-            double y1 = points.array[i - 1].getY();
-            double x2 = points.array[i].getX();
-            double y2 = points.array[i].getY();
-            double dxSegment = x2 - x1;
-            double dySegment = y2 - y1;
-            double segmentLength = Math.hypot(dxSegment, dySegment);
-            double a = Math.atan2(dySegment, dxSegment);
-            double ap = Math.PI / 2 - a;
-            double dxArrowBase = Math.cos(ap) * arrowBaseSize;
-            double dyArrowBase = Math.sin(ap) * arrowBaseSize;
-            double dxArrowHead = Math.cos(a) * arrowHeadSize;
-            double dyArrowHead = Math.sin(a) * arrowHeadSize;
-            double distance = lastSegmentDistance + residualSpacing;
-            while (distance < lastSegmentDistance + segmentLength) {
-                double xArrow = x1 + Math.cos(a) * (distance - lastSegmentDistance);
-                double yArrow = y1 + Math.sin(a) * (distance - lastSegmentDistance);
-
-                // draw arrow
-                g.beginPath();
-                g.moveTo(xArrow - dxArrowBase, yArrow + dyArrowBase);
-                g.lineTo(xArrow + dxArrowBase, yArrow - dyArrowBase);
-                g.lineTo(xArrow + dxArrowHead, yArrow + dyArrowHead);
-                g.closePath();
-                g.fill();
-
-                distance += arrowsSpacing;
+        context.lastSegmentDistance = 0;
+        context.residualSpacing = progress * arrowsSpacing;
+        if (points.reverse) {
+            for (int i = points.array.length - 1;  i >= 1; i--) {
+                drawArrows(g, points.array[i], points.array[i - 1], context);
             }
-            residualSpacing = distance - lastSegmentDistance - segmentLength;
-            lastSegmentDistance += segmentLength;
+        } else {
+            for (int i = 1; i < points.array.length; i++) {
+                drawArrows(g, points.array[i -1], points.array[i], context);
+            }
         }
     }
 
