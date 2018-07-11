@@ -65,21 +65,34 @@ public class LineLayer extends CanvasBasedLayer {
         }
     }
 
+    static class ArrowConfig {
+        final double arrowsSpacing; // spacing between 2 arrows
+        final double arrowBaseSize;
+        final double arrowHeadSize;
+        final Color color;
+        final boolean reverse;
+
+        ArrowConfig(double arrowsSpacing, double arrowBaseSize, double arrowHeadSize, Color color, boolean reverse) {
+            this.arrowsSpacing = arrowsSpacing;
+            this.arrowBaseSize = arrowBaseSize;
+            this.arrowHeadSize = arrowHeadSize;
+            this.color = color;
+            this.reverse = reverse;
+        }
+    }
+
     public static class PointsToDraw {
 
         final Point2D[] array;
 
-        final Color stroke;
+        final Color lineColor;
 
-        final Color fill;
+        final ArrowConfig arrowConfig;
 
-        final boolean reverse;
-
-        public PointsToDraw(Point2D[] array, Color stroke, Color fill, boolean reverse) {
+        public PointsToDraw(Point2D[] array, Color lineColor, ArrowConfig arrowConfig) {
             this.array = array;
-            this.stroke = stroke;
-            this.fill = fill;
-            this.reverse = reverse;
+            this.lineColor = lineColor;
+            this.arrowConfig = arrowConfig;
         }
     }
 
@@ -176,13 +189,15 @@ public class LineLayer extends CanvasBasedLayer {
         stats.segmentCount += points.length - 1;
         stats.drawnSegmentCount += pointsToDraw.length - 1;
 
+        ArrowConfig arrowConfig = null;
+        if (zoom >= 9) {
+            arrowConfig = new ArrowConfig(50, 5, 10, branch.getLine().getColor(), reverse);
+        } else if (zoom >= 8) {
+            arrowConfig = new ArrowConfig(50, 3, 6, branch.getLine().getColor(), reverse);
+        }
 
-        return new PointsToDraw(pointsToDraw, branch.getLine().getColor(), branch.getLine().getColor(), reverse);
+        return new PointsToDraw(pointsToDraw, branch.getLine().getColor(), arrowConfig);
     }
-
-    private static final double arrowsSpacing = 50; // spacing between 2 arrows
-    private static final double arrowBaseSize = 5;
-    private static final double arrowHeadSize = 10;
 
     private void drawArrows(Canvas canvas, List<PointsToDraw> pointsList, double progress) {
         cleanCanvas(canvas);
@@ -197,7 +212,8 @@ public class LineLayer extends CanvasBasedLayer {
         double residualSpacing;
     }
 
-    private static void drawArrows(GraphicsContext g, Point2D point1, Point2D point2, ArrowDrawingContext context) {
+    private static void drawArrows(GraphicsContext g, Point2D point1, Point2D point2, ArrowDrawingContext context,
+                                   ArrowConfig arrowConfig) {
         double x1 = point1.getX();
         double y1 = point1.getY();
         double x2 = point2.getX();
@@ -207,10 +223,10 @@ public class LineLayer extends CanvasBasedLayer {
         double segmentLength = Math.hypot(dxSegment, dySegment);
         double a = Math.atan2(dySegment, dxSegment);
         double ap = Math.PI / 2 - a;
-        double dxArrowBase = Math.cos(ap) * arrowBaseSize;
-        double dyArrowBase = Math.sin(ap) * arrowBaseSize;
-        double dxArrowHead = Math.cos(a) * arrowHeadSize;
-        double dyArrowHead = Math.sin(a) * arrowHeadSize;
+        double dxArrowBase = Math.cos(ap) * arrowConfig.arrowBaseSize;
+        double dyArrowBase = Math.sin(ap) * arrowConfig.arrowBaseSize;
+        double dxArrowHead = Math.cos(a) * arrowConfig.arrowHeadSize;
+        double dyArrowHead = Math.sin(a) * arrowConfig.arrowHeadSize;
         double distance = context.lastSegmentDistance + context.residualSpacing;
         while (distance < context.lastSegmentDistance + segmentLength) {
             double xArrow = x1 + Math.cos(a) * (distance - context.lastSegmentDistance);
@@ -224,24 +240,25 @@ public class LineLayer extends CanvasBasedLayer {
             g.closePath();
             g.fill();
 
-            distance += arrowsSpacing;
+            distance += arrowConfig.arrowsSpacing;
         }
         context.residualSpacing = distance - context.lastSegmentDistance - segmentLength;
         context.lastSegmentDistance += segmentLength;
     }
 
     public static void drawArrows(GraphicsContext g, PointsToDraw points, ArrowDrawingContext context, double progress) {
-        g.setFill(points.fill);
+        ArrowConfig arrowConfig = points.arrowConfig;
+        g.setFill(arrowConfig.color);
 
         context.lastSegmentDistance = 0;
-        context.residualSpacing = progress * arrowsSpacing;
-        if (points.reverse) {
+        context.residualSpacing = progress * arrowConfig.arrowsSpacing;
+        if (arrowConfig.reverse) {
             for (int i = points.array.length - 1;  i >= 1; i--) {
-                drawArrows(g, points.array[i], points.array[i - 1], context);
+                drawArrows(g, points.array[i], points.array[i - 1], context, arrowConfig);
             }
         } else {
             for (int i = 1; i < points.array.length; i++) {
-                drawArrows(g, points.array[i -1], points.array[i], context);
+                drawArrows(g, points.array[i - 1], points.array[i], context, arrowConfig);
             }
         }
     }
@@ -262,8 +279,8 @@ public class LineLayer extends CanvasBasedLayer {
 
             PointsToDraw points = computePointsToDraw(branch, zoom, stats);
 
-            gc.setStroke(points.stroke);
-            gc.setFill(points.fill);
+            gc.setStroke(points.lineColor);
+            gc.setFill(points.lineColor);
 
             Point2D prev = null;
             for (Point2D point : points.array) {
@@ -281,18 +298,20 @@ public class LineLayer extends CanvasBasedLayer {
             }
 
             // draw flows
-            Line l = branch.getLine().getModel();
-            if (l != null &&
-                    !Double.isNaN(l.getTerminal1().getI()) &&
-                    l.getCurrentLimits1() != null &&
-                    !Double.isNaN(l.getCurrentLimits1().getPermanentLimit())) {
-                double rate = l.getTerminal1().getI() / l.getCurrentLimits1().getPermanentLimit();
-                if (rate < 0.2) {
-                    slowArrowsPointsList.add(points);
-                } else if (rate < 0.5) {
-                    mediumArrowsPointsList.add(points);
-                } else {
-                    fastArrowsPointsList.add(points);
+            if (points.arrowConfig != null) {
+                Line l = branch.getLine().getModel();
+                if (l != null &&
+                        !Double.isNaN(l.getTerminal1().getI()) &&
+                        l.getCurrentLimits1() != null &&
+                        !Double.isNaN(l.getCurrentLimits1().getPermanentLimit())) {
+                    double rate = l.getTerminal1().getI() / l.getCurrentLimits1().getPermanentLimit();
+                    if (rate < 0.2) {
+                        slowArrowsPointsList.add(points);
+                    } else if (rate < 0.5) {
+                        mediumArrowsPointsList.add(points);
+                    } else {
+                        fastArrowsPointsList.add(points);
+                    }
                 }
             }
         });
