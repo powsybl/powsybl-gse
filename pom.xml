@@ -44,6 +44,7 @@
         <maven.buildnumber.version>1.4</maven.buildnumber.version>
         <maven.checkstyle.version>3.0.0</maven.checkstyle.version>
         <maven.compiler.version>3.7.0</maven.compiler.version>
+        <maven.enforcer.version>3.0.0-M2</maven.enforcer.version>
         <maven.templating.version>1.0.0</maven.templating.version>
 
         <autoservice.version>1.0-rc2</autoservice.version>
@@ -58,7 +59,7 @@
         <mockito.version>1.10.19</mockito.version>
         <richtextfx.version>0.8.2</richtextfx.version>
         <slf4j.version>1.7.22</slf4j.version>
-        <tiwulfx.version>2.0-SNAPSHOT</tiwulfx.version>
+        <tiwulfx.version>2.0</tiwulfx.version>
 
         <powsyblcore.version>1.2.0-SNAPSHOT</powsyblcore.version>
 
@@ -149,6 +150,25 @@
                                     <consoleOutput>true</consoleOutput>
                                     <failsOnError>true</failsOnError>
                                     <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-enforcer-plugin</artifactId>
+                        <version>${maven.enforcer.version}</version>
+                        <executions>
+                            <execution>
+                                <phase>validate</phase>
+                                <goals>
+                                    <goal>enforce</goal>
+                                </goals>
+                                <configuration>
+                                    <fail>false</fail>
+                                    <rules>
+                                        <dependencyConvergence/>
+                                    </rules>
                                 </configuration>
                             </execution>
                         </executions>
