@@ -41,6 +41,11 @@
             <artifactId>powsybl-afs-core</artifactId>
             <version>${powsyblcore.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-afs-ws-client-utils</artifactId>
+            <version>${powsyblcore.version}</version>
+        </dependency>
     </dependencies>
 
 </project>

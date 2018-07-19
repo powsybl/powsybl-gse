@@ -25,6 +25,16 @@
     -fx-font-size: 1.2em;
 }
 
+.gse-app-bar-user-name {
+    -fx-fill: -gse-app-bar-text-color;
+    -fx-font-size: 1.1em;
+}
+
+.gse-app-bar-user-menu-icon {
+    -fx-fill: -gse-app-bar-text-color;
+    -fx-font-size: 1.1em;
+}
+
 .gse-app-bar-text:hover {
     -fx-text-fill: lightgrey;
 }
