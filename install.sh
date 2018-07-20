@@ -47,7 +47,7 @@ usage() {
     echo "  package                  Compile GSE modules and create a distributable package"
     echo "  install                  Compile GSE modules and install it (default target)"
     echo "  help                     Display this help"
-    echo "  docs                     Generate the documentation (Doxygen/Javadoc)"
+    echo "  docs                     Generate the documentation (Javadoc)"
     echo ""
     echo "GSE options:"
     echo "  --help                   Display this help"
