@@ -52,6 +52,7 @@
         <module>gse-afs-ext-base</module>
         <module>gse-app</module>
         <module>gse-demo</module>
+        <module>gse-distribution</module>
         <module>gse-network-map</module>
         <module>gse-spi</module>
         <module>gse-util</module>
