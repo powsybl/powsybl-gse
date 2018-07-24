@@ -19,11 +19,15 @@
     </parent>
 
     <artifactId>powsybl-gse-util</artifactId>
-
     <name>GSE utilities</name>
+    <description>A set of utility classes for the GSE</description>
 
     <dependencies>
         <!-- Compilation dependencies -->
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-afs-ext-base</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -39,12 +43,6 @@
         <dependency>
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy-all</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-afs-ext-base</artifactId>
-            <version>${powsyblcore.version}</version>
         </dependency>
 
         <dependency>
