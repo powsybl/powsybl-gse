@@ -139,6 +139,27 @@
                 </executions>
             </plugin>
         </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>${maven.javadoc.version}</version>
+                    <configuration>
+                        <doclet>org.umlgraph.doclet.UmlGraphDoc</doclet>
+                        <docletArtifact>
+                            <groupId>org.umlgraph</groupId>
+                            <artifactId>umlgraph</artifactId>
+                            <version>5.6</version>
+                        </docletArtifact>
+                        <additionalOptions>-views -all</additionalOptions>
+                        <additionalOptions>-Xdoclint:none</additionalOptions>
+                        <useStandardDocletOptions>false</useStandardDocletOptions>
+                        <docfilessubdirs>true</docfilessubdirs>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 
     <profiles>
