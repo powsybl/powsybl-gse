@@ -13,17 +13,40 @@
 
     <groupId>com.powsybl</groupId>
     <artifactId>powsybl-gse</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Grid Study Environment</name>
+    <description>A JavaFX UI for powsybl framework</description>
     <url>http://www.powsybl.com</url>
+
+    <licenses>
+        <license>
+            <name>Mozilla Public License, Version 2.0</name>
+            <url>https://www.mozilla.org/en-US/MPL/2.0/</url>
+        </license>
+    </licenses>
 
     <scm>
         <connection>scm:git:https://github.com/powsybl/powsybl-gse.git</connection>
         <developerConnection>scm:git:https://github.com/powsybl/powsybl-gse.git</developerConnection>
         <url>https://github.com/powsybl/powsybl-gse</url>
     </scm>
+
+    <developers>
+        <developer>
+            <name>Mathieu BAGUE</name>
+            <email>mathieu.bague@rte-france.com</email>
+            <organization>RTE</organization>
+            <organizationUrl>http://www.rte-france.com</organizationUrl>
+        </developer>
+        <developer>
+            <name>Geoffroy JAMGOTCHIAN</name>
+            <email>geoffroy.jamgotchian@rte-france.com</email>
+            <organization>RTE</organization>
+            <organizationUrl>http://www.rte-france.com</organizationUrl>
+        </developer>
+    </developers>
 
     <modules>
         <module>gse-afs-ext-base</module>
@@ -46,9 +69,14 @@
         <maven.checkstyle.version>3.0.0</maven.checkstyle.version>
         <maven.compiler.version>3.7.0</maven.compiler.version>
         <maven.enforcer.version>3.0.0-M2</maven.enforcer.version>
+        <maven.gpg.version>1.6</maven.gpg.version>
+        <maven.javadoc.version>3.0.1</maven.javadoc.version>
+        <maven.source.version>3.0.1</maven.source.version>
         <maven.templating.version>1.0.0</maven.templating.version>
 
         <autoservice.version>1.0-rc2</autoservice.version>
+        <commonscodec.version>1.9</commonscodec.version>
+        <commonslogging.version>1.2</commonslogging.version>
         <controlfx.version>8.40.14</controlfx.version>
         <groovy.version>2.4.12</groovy.version>
         <guava.version>20.0</guava.version>
@@ -57,32 +85,18 @@
         <jodatime.version>2.9.7</jodatime.version>
         <junit.version>4.12</junit.version>
         <logback.version>1.1.8</logback.version>
+        <maps.version>1.0.2</maps.version>
         <mockito.version>1.10.19</mockito.version>
+        <poi.version>3.15</poi.version>
         <richtextfx.version>0.8.2</richtextfx.version>
+        <rtree.version>0.8.5</rtree.version>
+        <simplify.version>1.0.0</simplify.version>
         <slf4j.version>1.7.22</slf4j.version>
         <tiwulfx.version>2.0</tiwulfx.version>
 
-        <powsyblcore.version>1.2.0-SNAPSHOT</powsyblcore.version>
+        <powsyblcore.version>2.1.0-SNAPSHOT</powsyblcore.version>
 
     </properties>
-
-    <licenses>
-        <license>
-            <name>Mozilla Public License, Version 2.0</name>
-            <url>https://www.mozilla.org/media/MPL/2.0/index.815ca599c9df.txt</url>
-            <distribution>repo</distribution>
-        </license>
-    </licenses>
-
-    <repositories>
-        <repository>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </repository>
-    </repositories>
 
     <build>
         <plugins>
@@ -177,29 +191,90 @@
                 </plugins>
             </build>
         </profile>
+        <profile>
+            <id>release</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>${maven.gpg.version}</version>
+                        <executions>
+                            <execution>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>${maven.javadoc.version}</version>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>${maven.source.version}</version>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                    <goal>test-jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+            <distributionManagement>
+                <snapshotRepository>
+                    <id>ossrh</id>
+                    <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+                </snapshotRepository>
+                <repository>
+                    <id>ossrh</id>
+                    <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+                </repository>
+            </distributionManagement>
+        </profile>
     </profiles>
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>com.panemu</groupId>
-                <artifactId>tiwulfx</artifactId>
-                <version>${tiwulfx.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-api</artifactId>
-                <version>${slf4j.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>jul-to-slf4j</artifactId>
-                <version>${slf4j.version}</version>
-            </dependency>
+            <!-- Compilation dependencies -->
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
                 <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.davidmoten</groupId>
+                <artifactId>rtree</artifactId>
+                <version>${rtree.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.gluonhq</groupId>
+                <artifactId>maps</artifactId>
+                <version>${maps.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.goebl</groupId>
+                <artifactId>simplify</artifactId>
+                <version>${simplify.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
@@ -212,9 +287,46 @@
                 <version>${autoservice.version}</version>
             </dependency>
             <dependency>
+                <groupId>com.panemu</groupId>
+                <artifactId>tiwulfx</artifactId>
+                <version>${tiwulfx.version}</version>
+                <exclusions>
+                    <!-- Conflicts with powsybl-afs-ws-client-utils -->
+                    <exclusion>
+                        <groupId>commons-codec</groupId>
+                        <artifactId>commons-codec</artifactId>
+                    </exclusion>
+                    <!-- Conflicts with powsybl-afs-ws-client-utils -->
+                    <exclusion>
+                        <groupId>commons-logging</groupId>
+                        <artifactId>commons-logging</artifactId>
+                    </exclusion>
+                    <!-- Conflicts with powsybl-entsoe-util -->
+                    <exclusion>
+                        <groupId>org.apache.poi</groupId>
+                        <artifactId>poi</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>commons-codec</groupId>
+                <artifactId>commons-codec</artifactId>
+                <version>${commonscodec.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
+                <version>${commonslogging.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>joda-time</groupId>
                 <artifactId>joda-time</artifactId>
                 <version>${jodatime.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.poi</groupId>
+                <artifactId>poi</artifactId>
+                <version>${poi.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.codehaus.groovy</groupId>
@@ -231,7 +343,98 @@
                 <artifactId>richtextfx</artifactId>
                 <version>${richtextfx.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>jul-to-slf4j</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
 
+            <!-- powsybl-core dependencies -->
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-action-dsl</artifactId>
+                <version>${powsyblcore.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-afs-core</artifactId>
+                <version>${powsyblcore.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-afs-ext-base</artifactId>
+                <version>${powsyblcore.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-iidm-api</artifactId>
+                <version>${powsyblcore.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-iidm-xml-converter</artifactId>
+                <version>${powsyblcore.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-security-analysis-afs</artifactId>
+                <version>${powsyblcore.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-afs-ws-client-utils</artifactId>
+                <version>${powsyblcore.version}</version>
+            </dependency>
+
+            <!-- Runtime dependencies -->
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-afs-local</artifactId>
+                <version>${powsyblcore.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-afs-mapdb</artifactId>
+                <version>${powsyblcore.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-cim1-converter</artifactId>
+                <version>${powsyblcore.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-iidm-impl</artifactId>
+                <version>${powsyblcore.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-security-analysis-afs-local</artifactId>
+                <version>${powsyblcore.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-ucte-converter</artifactId>
+                <version>${powsyblcore.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+
+            <!-- Test dependencies -->
             <dependency>
                 <groupId>com.google.jimfs</groupId>
                 <artifactId>jimfs</artifactId>
