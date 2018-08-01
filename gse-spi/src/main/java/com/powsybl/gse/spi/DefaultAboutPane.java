@@ -6,15 +6,17 @@
  */
 package com.powsybl.gse.spi;
 
-import com.powsybl.commons.Version;
+import com.powsybl.tools.Version;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import org.apache.commons.lang3.SystemUtils;
 
 import java.util.Collections;
@@ -37,6 +39,7 @@ public class DefaultAboutPane extends BorderPane {
 
     public DefaultAboutPane() {
         setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
+//        setPrefSize(600, 400);
 
         PowsyblLogo powsyblLogo = new PowsyblLogo(LOGO_SIZE, LOGO_SIZE);
 
@@ -45,15 +48,14 @@ public class DefaultAboutPane extends BorderPane {
         logoPane.setPadding(new Insets(5, 5, 5, 5));
         setTop(logoPane);
         TextArea infos = new TextArea();
+        infos.setStyle("-fx-font-family:monospace;-fx-font-size:18px");
         infos.setEditable(false);
-        infos.setWrapText(true);
         infos.setPrefRowCount(20);
         infos.setText(String.join(System.lineSeparator() + System.lineSeparator(),
                                   "Java version: " + SystemUtils.JAVA_VERSION,
-                                  "Powsybl core version: " + Version.VERSION,
-                                  "Powsybl GSE version: " + com.powsybl.gse.spi.PowsyblGseVersion.INSTANCE) +
+                                  Version.getTableString()) +
                       System.lineSeparator() + System.lineSeparator() +
                       String.join(System.lineSeparator() + System.lineSeparator(), getAdditionalInfos()));
-        setCenter(infos);
+        setCenter(new ScrollPane(infos));
     }
 }
