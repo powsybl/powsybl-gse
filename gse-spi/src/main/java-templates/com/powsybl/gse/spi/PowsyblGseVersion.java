@@ -6,9 +6,17 @@
  */
 package com.powsybl.gse.spi;
 
-import com.powsybl.commons.Version;
+import com.google.auto.service.AutoService;
+import com.powsybl.tools.AbstractVersion;
+import com.powsybl.tools.Version;
 
-public class PowsyblGseVersion {
+/**
+ * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
+ */
+@AutoService(Version.class)
+public class PowsyblGseVersion extends AbstractVersion {
 
-    public static final Version INSTANCE = new Version("${project.version}", "${buildNumber}", "${scmBranch}", Long.parseLong("${timestamp}"));
+    public PowsyblGseVersion() {
+        super("powsybl-gse", "${project.version}", "${buildNumber}", "${scmBranch}", Long.parseLong("${timestamp}"));
+    }
 }
