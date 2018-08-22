@@ -20,6 +20,10 @@ public interface ProjectFileExecutionTaskExtension<T extends ProjectFile, C> {
 
     String getMenuText();
 
+    default boolean isMenuEnabled(T file) {
+        return true;
+    }
+
     ExecutionTaskConfigurator<C> createConfigurator(T projectFile, Scene scene, GseContext context);
 
     void execute(T projectFile, C config);

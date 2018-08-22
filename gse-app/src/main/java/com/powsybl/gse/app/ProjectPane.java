@@ -568,6 +568,7 @@ public class ProjectPane extends Tab {
                     GseUtil.execute(context.getExecutor(), () -> executionTaskExtension.execute(file, null));
                 }
             });
+            menuItem.setDisable(!executionTaskExtension.isMenuEnabled(file));
             menu.getItems().add(menuItem);
         }
 
