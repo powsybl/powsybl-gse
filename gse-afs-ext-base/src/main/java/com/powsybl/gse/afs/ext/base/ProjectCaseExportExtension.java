@@ -53,7 +53,7 @@ public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExten
     }
 
     @Override
-    public String getMenuText() {
+    public String getMenuText(ProjectFile projectCase) {
         return RESOURCE_BUNDLE.getString("CaseExport");
     }
 
@@ -100,9 +100,7 @@ public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExten
                 });
 
                 zipCheckBox.setSelected(config.isZipped());
-                zipCheckBox.setOnAction(event -> {
-                    config.setZipped(zipCheckBox.isSelected());
-                });
+                zipCheckBox.setOnAction(event -> config.setZipped(zipCheckBox.isSelected()));
             }
 
             @Override

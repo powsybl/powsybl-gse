@@ -12,13 +12,11 @@ import javafx.scene.Scene;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public interface ProjectFileEditorExtension<T extends ProjectFile> {
+public interface ProjectFileEditorExtension<T extends ProjectFile> extends ProjectFileMenuConfigurableExtension<T> {
 
     Class<T> getProjectFileType();
 
     Class<?> getAdditionalType();
-
-    String getMenuText(T file);
 
     ProjectFileEditor newEditor(T file, Scene scene, GseContext context);
 }
