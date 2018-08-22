@@ -19,7 +19,6 @@ import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.collections.ListChangeListener;
-import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
@@ -39,9 +38,9 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
-import javafx.scene.input.Dragboard ;
-import javafx.scene.input.TransferMode ;
-import javafx.scene.input.ClipboardContent ;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
+import javafx.scene.input.ClipboardContent;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -212,59 +211,58 @@ public class ProjectPane extends Tab {
                             setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
 
                             setOnDragDetected(event -> {
-                            source = getItem();
-                             sourceTreeItem = getTreeItem();
-                              sourceparentTreeItem = sourceTreeItem.getParent();
+                                source = getItem();
+                                sourceTreeItem = getTreeItem();
+                                sourceparentTreeItem = sourceTreeItem.getParent();
                                 if (value instanceof ProjectFile || value instanceof ProjectFolder) {
-                                        Dragboard db= treeView.startDragAndDrop(TransferMode.ANY);
-                                        ClipboardContent cb =new ClipboardContent();
-                                        if(value instanceof  ProjectFile){
-                                            cb.putString(((ProjectFile) value).getName());}
-                                        else if(value instanceof  ProjectFolder){
-                                            cb.putString(((ProjectFolder) value).getName());}
-                                        db.setContent(cb)  ;
-                                        event.consume();
+                                    Dragboard db = treeView.startDragAndDrop(TransferMode.ANY);
+                                    ClipboardContent cb = new ClipboardContent();
+                                    if (value instanceof ProjectFile) {
+                                        cb.putString(((ProjectFile) value).getName());
+                                    } else if (value instanceof ProjectFolder) {
+                                        cb.putString(((ProjectFolder) value).getName());
                                     }
-                            });
-                            if(node instanceof ProjectFolder){
-                                ProjectFolder projectFolder =  (ProjectFolder) node;
-                           setOnDragOver(event -> {
-                                if(event.getGestureSource() != this   && event.getDragboard().hasString()){  //à modifier hasString
-                                    event.acceptTransferModes(TransferMode.ANY);
-
+                                    db.setContent(cb);
+                                    event.consume();
                                 }
-                                event.consume();
-
                             });
-                           setOnDragDropped(event -> {
-                            //getItem récupère l'objet , getTreeItem récupère le treeItem
-                                 TreeItem treeItemaccepteur =getTreeItem();
-                               System.out.println("Bienvenue dans le dossier "+getItem().toString().toUpperCase());
-                              if(getItem() == null){
-                                  return ;
-                              }
-                               Dragboard db=event.getDragboard();
+                            if (node instanceof ProjectFolder) {
+                                ProjectFolder projectFolder = (ProjectFolder) node;
+                                setOnDragOver(event -> {
+                                    if (event.getGestureSource() != this && event.getDragboard().hasString()) {  //à modifier hasString
+                                        event.acceptTransferModes(TransferMode.ANY);
 
-                               boolean success=false;
-                               if (db.hasString() ) {
-                                if(source instanceof ProjectNode)
-                                {
-                                    ProjectNode monfichier = (ProjectNode) source;
-                                    monfichier.moveTo(projectFolder);
+                                    }
+                                    event.consume();
 
-                                    refresh(sourceparentTreeItem);
-                                    refresh(treeItemaccepteur );  //B
+                                });
+                                setOnDragDropped(event -> {
+                                    //getItem récupère l'objet , getTreeItem récupère le treeItem
+                                    TreeItem treeItemaccepteur = getTreeItem();
+                                    System.out.println("Bienvenue dans le dossier " + getItem().toString().toUpperCase());
+                                    if (getItem() == null) {
+                                        return;
+                                    }
+                                    Dragboard db = event.getDragboard();
 
-                                    success=true;
-                                }
+                                    boolean success = false;
+                                    if (db.hasString()) {
+                                        if (source instanceof ProjectNode) {
+                                            ProjectNode monfichier = (ProjectNode) source;
+                                            monfichier.moveTo(projectFolder);
 
-                               }
-                               else{
-                                   System.out.println("rien");
-                               }
-                               event.setDropCompleted(success);
-                               event.consume();
-                           });
+                                            refresh(sourceparentTreeItem);
+                                            refresh(treeItemaccepteur);  //B
+
+                                            success = true;
+                                        }
+
+                                    } else {
+                                        System.out.println("rien");
+                                    }
+                                    event.setDropCompleted(success);
+                                    event.consume();
+                                });
 
                             }
 
@@ -299,7 +297,7 @@ public class ProjectPane extends Tab {
                 }
             }
         });
-    DetachableTabPane ctrlTabPane1 = new DetachableTabPane();
+        DetachableTabPane ctrlTabPane1 = new DetachableTabPane();
         DetachableTabPane ctrlTabPane2 = new DetachableTabPane();
         ctrlTabPane1.setScope("Control");
         ctrlTabPane2.setScope("Control");
@@ -374,7 +372,6 @@ public class ProjectPane extends Tab {
     }
 
 
-
     private TreeItem<Object> createNodeTreeItem(ProjectNode node) {
         return node.isFolder() ? createFolderTreeItem((ProjectFolder) node)
                 : createFileTreeItem((ProjectFile) node);
@@ -444,7 +441,7 @@ public class ProjectPane extends Tab {
 
     // extension search
 
-    private static List<ProjectFileCreatorExtension> findCreatorExtension(Class<? extends  ProjectFile> type) {
+    private static List<ProjectFileCreatorExtension> findCreatorExtension(Class<? extends ProjectFile> type) {
         return CREATOR_EXTENSION_LOADER.getServices().stream()
                 .filter(extension -> extension.getProjectFileType().isAssignableFrom(type))
                 .collect(Collectors.toList());
