@@ -26,6 +26,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -152,6 +153,92 @@ public class ProjectPane extends Tab {
         }
     }
 
+    private void treeViewChangeListener(ListChangeListener.Change<? extends TreeItem<Object>> c) {
+        if (c.getList().isEmpty()) {
+            treeView.setContextMenu(null);
+        } else if (c.getList().size() == 1) {
+            TreeItem<Object> selectedTreeItem = c.getList().get(0);
+            Object value = selectedTreeItem.getValue();
+            if (value instanceof ProjectFolder) {
+                treeView.setContextMenu(createFolderContextMenu(selectedTreeItem));
+            } else if (value instanceof ProjectFile) {
+                treeView.setContextMenu(createFileContextMenu(selectedTreeItem));
+            } else {
+                // TODO show contextual menu to reach advanced task status ?
+                treeView.setContextMenu(null);
+            }
+        } else {
+            treeView.setContextMenu(createMultipleContextMenu(c.getList()));
+        }
+    }
+
+    private TreeCell<Object> treeViewCellFactory(TreeView<Object> item) {
+        return new TreeCell<Object>() {
+            private void fillCellInfosForObject(Object value) {
+                if (value == null) {
+                    GseUtil.setWaitingText(this);
+                } else {
+                    if (value instanceof String) {
+                        setText((String) value);
+                        setGraphic(getTreeItem().getGraphic());
+                        setTextFill(Color.BLACK);
+                        setOpacity(1);
+                    } else if (value instanceof ProjectNode) {
+                        ProjectNode node = (ProjectNode) value;
+                        setText(node.getName());
+                        setGraphic(getTreeItem().getGraphic());
+                        setTextFill(Color.BLACK);
+                        setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
+                    } else {
+                        throw new AssertionError("Unexpected type for value: " + value.getClass().getName());
+                    }
+                }
+            }
+
+            @Override
+            protected void updateItem(Object value, boolean empty) {
+                super.updateItem(value, empty);
+                if (empty) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    fillCellInfosForObject(value);
+                }
+            }
+        };
+    }
+
+    private void runDefaultActionAfterDoubleClick(TreeItem<Object> selectedTreeItem) {
+        Objects.requireNonNull(selectedTreeItem);
+        Object value = selectedTreeItem.getValue();
+        if (value instanceof ProjectFile) {
+            List<ProjectFileEditorExtension> editorExtensions = findEditorExtensions((ProjectFile) value);
+            if (!editorExtensions.isEmpty()) {
+                String tabName = getTabName(selectedTreeItem);
+                showProjectItemEditorDialog((ProjectFile) value, editorExtensions.get(0), tabName);
+            } else {
+                List<ProjectFileViewerExtension> viewerExtensions = findViewerExtensions((ProjectFile) value);
+                if (!viewerExtensions.isEmpty()) {
+                    ProjectFileViewerExtension viewerExtension = viewerExtensions.get(0);
+                    String tabName = getTabName(selectedTreeItem);
+                    viewFile((ProjectFile) value, viewerExtension, tabName);
+                }
+            }
+        } else {
+            // TODO show advanced task status ?
+        }
+    }
+
+    private void treeViewMouseClickHandler(MouseEvent mouseEvent) {
+        if (mouseEvent.getClickCount() == 2) {
+            TreeItem<Object> selectedTreeItem = treeView.getSelectionModel().getSelectedItem();
+            if (selectedTreeItem != null) {
+                runDefaultActionAfterDoubleClick(selectedTreeItem);
+            }
+        }
+    }
+
+
     private final CreationTaskList tasks = new CreationTaskList();
 
     public ProjectPane(Scene scene, Project project, GseContext context) {
@@ -163,77 +250,9 @@ public class ProjectPane extends Tab {
 
         treeView = new TreeView<>();
         treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        treeView.getSelectionModel().getSelectedItems().addListener((ListChangeListener<TreeItem<Object>>) c -> {
-            if (c.getList().isEmpty()) {
-                treeView.setContextMenu(null);
-            } else if (c.getList().size() == 1) {
-                TreeItem<Object> selectedTreeItem = c.getList().get(0);
-                Object value = selectedTreeItem.getValue();
-                if (value instanceof ProjectFolder) {
-                    treeView.setContextMenu(createFolderContextMenu(selectedTreeItem));
-                } else if (value instanceof ProjectFile) {
-                    treeView.setContextMenu(createFileContextMenu(selectedTreeItem));
-                } else {
-                    // TODO show contextual menu to reach advanced task status ?
-                    treeView.setContextMenu(null);
-                }
-            } else {
-                treeView.setContextMenu(createMultipleContextMenu(c.getList()));
-            }
-        });
-        treeView.setCellFactory(item -> new TreeCell<Object>() {
-            @Override
-            protected void updateItem(Object value, boolean empty) {
-                super.updateItem(value, empty);
-                if (empty) {
-                    setText(null);
-                    setGraphic(null);
-                } else {
-                    if (value == null) {
-                        GseUtil.setWaitingText(this);
-                    } else {
-                        if (value instanceof String) {
-                            setText((String) value);
-                            setGraphic(getTreeItem().getGraphic());
-                            setTextFill(Color.BLACK);
-                            setOpacity(1);
-                        } else if (value instanceof ProjectNode) {
-                            ProjectNode node = (ProjectNode) value;
-                            setText(node.getName());
-                            setGraphic(getTreeItem().getGraphic());
-                            setTextFill(Color.BLACK);
-                            setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
-                        } else {
-                            throw new AssertionError();
-                        }
-                    }
-                }
-            }
-        });
-        treeView.setOnMouseClicked(mouseEvent -> {
-            if (mouseEvent.getClickCount() == 2) {
-                TreeItem<Object> selectedTreeItem = treeView.getSelectionModel().getSelectedItem();
-                if (selectedTreeItem != null) {
-                    Object value = selectedTreeItem.getValue();
-                    if (value instanceof ProjectFile) {
-                        List<ProjectFileEditorExtension> editorExtensions = findEditorExtensions((ProjectFile) value);
-                        if (!editorExtensions.isEmpty()) {
-                            String tabName = getTabName(selectedTreeItem);
-                            showProjectItemEditorDialog((ProjectFile) value, editorExtensions.get(0), tabName);
-                        } else {
-                            List<ProjectFileViewerExtension> viewerExtensions = findViewerExtensions((ProjectFile) value);
-                            if (!viewerExtensions.isEmpty()) {
-                                ProjectFileViewerExtension viewerExtension = viewerExtensions.get(0);
-                                String tabName = getTabName(selectedTreeItem);
-                                viewFile((ProjectFile) value, viewerExtension, tabName);
-                            }
-                        }
-                    } else {
-                        // TODO show advanced task status ?
-                    }
-                }
-            }
-        });
+        treeView.getSelectionModel().getSelectedItems().addListener(this::treeViewChangeListener);
+        treeView.setCellFactory(this::treeViewCellFactory);
+        treeView.setOnMouseClicked(this::treeViewMouseClickHandler);
 
         DetachableTabPane ctrlTabPane1 = new DetachableTabPane();
         DetachableTabPane ctrlTabPane2 = new DetachableTabPane();
@@ -512,6 +531,40 @@ public class ProjectPane extends Tab {
         viewer.view();
     }
 
+    private MenuItem initMenuItem(ProjectFileMenuConfigurableExtension menuConfigurable, ProjectFile file) {
+        Node graphic = menuConfigurable.getMenuGraphic(file);
+        MenuItem menuItem = new MenuItem(menuConfigurable.getMenuText(file), graphic);
+        menuItem.setDisable(!menuConfigurable.isMenuEnabled(file));
+        return menuItem;
+    }
+
+    private void executionTaskLaunch(ProjectFileExecutionTaskExtension executionTaskExtension, ProjectFile file) {
+        ExecutionTaskConfigurator configurator = executionTaskExtension.createConfigurator(file, getContent().getScene(), context);
+        if (configurator != null) {
+            Dialog<Boolean> dialog = new Dialog<>();
+            try {
+                dialog.setTitle(configurator.getTitle());
+                dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+                Button button = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+                button.disableProperty().bind(configurator.configProperty().isNull());
+                dialog.getDialogPane().setContent(configurator.getContent());
+                dialog.setResizable(true);
+                dialog.initOwner(getContent().getScene().getWindow());
+                dialog.setResultConverter(buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE);
+                dialog.showAndWait().ifPresent(ok -> {
+                    if (ok) {
+                        GseUtil.execute(context.getExecutor(), () -> executionTaskExtension.execute(file, configurator.configProperty().get()));
+                    }
+                });
+            } finally {
+                dialog.close();
+                configurator.dispose();
+            }
+        } else {
+            GseUtil.execute(context.getExecutor(), () -> executionTaskExtension.execute(file, null));
+        }
+    }
+
     private ContextMenu createFileContextMenu(TreeItem<Object> selectedTreeItem) {
         ProjectFile file = (ProjectFile) selectedTreeItem.getValue();
 
@@ -521,53 +574,27 @@ public class ProjectPane extends Tab {
         // add editor extensions
         List<ProjectFileEditorExtension> editorExtensions = findEditorExtensions(file);
         for (ProjectFileEditorExtension editorExtension : editorExtensions) {
-            MenuItem menuItem = new MenuItem(editorExtension.getMenuText(file));
+            MenuItem menuItem = initMenuItem(editorExtension, file);
             String tabName = getTabName(selectedTreeItem);
             menuItem.setOnAction(event -> showProjectItemEditorDialog(file, editorExtension, tabName));
+            menuItem.setDisable(!editorExtension.isMenuEnabled(file));
             menu.getItems().add(menuItem);
         }
 
         // add viewer extensions
         List<ProjectFileViewerExtension> viewerExtensions = findViewerExtensions(file);
         for (ProjectFileViewerExtension viewerExtension : viewerExtensions) {
-            Node graphic = viewerExtension.getMenuGraphic(file);
-            MenuItem menuItem = new MenuItem(viewerExtension.getMenuText(file), graphic);
+            MenuItem menuItem = initMenuItem(viewerExtension, file);
             String tabName = getTabName(selectedTreeItem);
             menuItem.setOnAction(event -> viewFile(file, viewerExtension, tabName));
-            menuItem.setDisable(!viewerExtension.isMenuEnabled(file));
             menu.getItems().add(menuItem);
         }
 
         // add task extensions
         List<ProjectFileExecutionTaskExtension> executionTaskExtensions = findExecutionTaskExtensions(file);
         for (ProjectFileExecutionTaskExtension executionTaskExtension : executionTaskExtensions) {
-            MenuItem menuItem = new MenuItem(executionTaskExtension.getMenuText() + "...");
-            menuItem.setOnAction(event -> {
-                ExecutionTaskConfigurator configurator = executionTaskExtension.createConfigurator(file, getContent().getScene(), context);
-                if (configurator != null) {
-                    Dialog<Boolean> dialog = new Dialog<>();
-                    try {
-                        dialog.setTitle(configurator.getTitle());
-                        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-                        Button button = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
-                        button.disableProperty().bind(configurator.configProperty().isNull());
-                        dialog.getDialogPane().setContent(configurator.getContent());
-                        dialog.setResizable(true);
-                        dialog.initOwner(getContent().getScene().getWindow());
-                        dialog.setResultConverter(buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE);
-                        dialog.showAndWait().ifPresent(ok -> {
-                            if (ok) {
-                                GseUtil.execute(context.getExecutor(), () -> executionTaskExtension.execute(file, configurator.configProperty().get()));
-                            }
-                        });
-                    } finally {
-                        dialog.close();
-                        configurator.dispose();
-                    }
-                } else {
-                    GseUtil.execute(context.getExecutor(), () -> executionTaskExtension.execute(file, null));
-                }
-            });
+            MenuItem menuItem = initMenuItem(executionTaskExtension, file);
+            menuItem.setOnAction(event -> executionTaskLaunch(executionTaskExtension, file));
             menu.getItems().add(menuItem);
         }
 
