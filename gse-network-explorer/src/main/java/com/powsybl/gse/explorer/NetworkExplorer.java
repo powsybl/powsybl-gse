@@ -297,11 +297,11 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private void refreshSubstationsView() {
         substationIds.setAll(BUSY);
         String query = "network.substations.collect { [id: it.id, name: it.name] }";
-        queryNetwork(query, idAndNameListType, (List<IdAndName> substationIds) -> {
-            if (substationIds == null) {
-                this.substationIds.clear();
+        queryNetwork(query, idAndNameListType, (List<IdAndName> ids) -> {
+            if (ids == null) {
+                substationIds.clear();
             } else {
-                this.substationIds.setAll(substationIds.stream().sorted(getIdAndNameComparator()).collect(Collectors.toList()));
+                substationIds.setAll(ids.stream().sorted(getIdAndNameComparator()).collect(Collectors.toList()));
             }
         }, substationExecutor);
     }
