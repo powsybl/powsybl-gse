@@ -15,12 +15,16 @@ import com.powsybl.commons.json.JsonUtil;
 import com.powsybl.gse.explorer.icons.*;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileViewer;
+import com.powsybl.gse.util.Glyph;
 import com.powsybl.gse.util.GseUtil;
 import com.powsybl.gse.util.LastTaskOnlyExecutor;
 import com.powsybl.iidm.network.Identifiable;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.*;
@@ -28,6 +32,8 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
+import org.controlsfx.control.textfield.CustomTextField;
+import org.controlsfx.control.textfield.TextFields;
 
 import java.util.Comparator;
 import java.util.List;
@@ -138,7 +144,10 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
 
     private final LastTaskOnlyExecutor substationDetailsExecutor;
 
-    private final ListView<IdAndName> substationsView = new ListView<>();
+    private final ObservableList<IdAndName> substationIds = FXCollections.observableArrayList();
+    private final FilteredList<IdAndName> filteredSubstationIds = substationIds.filtered(s -> true);
+    private final ListView<IdAndName> substationsView = new ListView<>(filteredSubstationIds);
+    private final TextField substationFilterInput = TextFields.createClearableTextField();
     private final TreeView<IdAndName> substationDetailedView = new TreeView<>();
     private final FlowPane equipmentView = new FlowPane();
     private final SplitPane splitPane;
@@ -162,7 +171,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         splitPane = new SplitPane(substationsView, substationDetailedView, equipmentView);
         splitPane.setDividerPositions(0.2, 0.6);
 
-        FlowPane toolBar = new FlowPane(showName);
+        FlowPane toolBar = new FlowPane(5, 0, substationFilterInput, showName);
         toolBar.setPadding(new Insets(5, 5, 5, 5));
 
         setCenter(splitPane);
@@ -176,6 +185,22 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
             substationsView.refresh();
             substationDetailedView.refresh();
         });
+
+        substationFilterInput.textProperty().addListener(obs -> {
+            String filter = substationFilterInput.getText();
+            if (filter == null || filter.length() == 0) {
+                filteredSubstationIds.setPredicate(s -> true);
+            } else {
+                filteredSubstationIds.setPredicate(s -> s.getId().toLowerCase().contains(filter.toLowerCase()));
+            }
+
+            // select first
+            if (substationsView.getItems().size() > 0) {
+                substationsView.getSelectionModel().selectFirst();
+            }
+        });
+        Text searchGlyph = Glyph.createAwesomeFont('\uf002').size("1.4em");
+        ((CustomTextField) substationFilterInput).setLeft(searchGlyph);
 
         substationsView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> refreshSubstationDetailView(newValue));
 
@@ -270,16 +295,13 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     }
 
     private void refreshSubstationsView() {
-        substationsView.getItems().setAll(BUSY);
+        substationIds.setAll(BUSY);
         String query = "network.substations.collect { [id: it.id, name: it.name] }";
-        queryNetwork(query, idAndNameListType, (List<IdAndName> substationIds) -> {
-            if (substationIds == null) {
-                substationsView.getItems().clear();
+        queryNetwork(query, idAndNameListType, (List<IdAndName> ids) -> {
+            if (ids == null) {
+                substationIds.clear();
             } else {
-                substationsView.getItems().setAll(substationIds.stream().sorted(getIdAndNameComparator()).collect(Collectors.toList()));
-                if (substationsView.getItems().size() > 0) {
-                    substationsView.getSelectionModel().selectFirst();
-                }
+                substationIds.setAll(ids.stream().sorted(getIdAndNameComparator()).collect(Collectors.toList()));
             }
         }, substationExecutor);
     }
