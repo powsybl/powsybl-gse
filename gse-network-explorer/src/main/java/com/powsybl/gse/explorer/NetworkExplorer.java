@@ -15,10 +15,7 @@ import com.powsybl.commons.json.JsonUtil;
 import com.powsybl.gse.explorer.icons.*;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileViewer;
-import com.powsybl.gse.util.Glyph;
-import com.powsybl.gse.util.GseUtil;
-import com.powsybl.gse.util.LastTaskOnlyExecutor;
-import com.powsybl.iidm.network.Identifiable;
+import com.powsybl.gse.util.*;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -28,6 +25,9 @@ import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.paint.Color;
@@ -50,78 +50,17 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.NetworkExplorer");
 
-    private static final IdAndName BUSY = new IdAndName("...", "...");
+    private static final IdAndName LIST_BUSY = new IdAndName("...", "...");
+    private static final EquipmentInfo TREEVIEW_BUSY = new EquipmentInfo(new IdAndName("...", "..."), null);
 
     private static final Color ICON_COLOR = Color.BLACK;
     private static final double ICON_THICKNESS = 1;
-
-    private static class IdAndName {
-
-        private String id;
-        private String name;
-
-        public IdAndName() {
-        }
-
-        public IdAndName(String id, String name) {
-            this.id = Objects.requireNonNull(id);
-            this.name = Objects.requireNonNull(name);
-        }
-
-        public IdAndName(Identifiable identifiable) {
-            this(identifiable.getId(), identifiable.getName());
-        }
-
-        public String getId() {
-            return id;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        @Override
-        public String toString() {
-            return id;
-        }
-    }
-
-    private static class EquipmentQueryResult {
-
-        private IdAndName idAndName;
-
-        private String type;
-
-        public IdAndName getIdAndName() {
-            return idAndName;
-        }
-
-        public void setIdAndName(IdAndName idAndName) {
-            this.idAndName = idAndName;
-        }
-
-        public String getType() {
-            return type;
-        }
-
-        public void setType(String type) {
-            this.type = type;
-        }
-    }
 
     private static class VoltageLevelQueryResult {
 
         private IdAndName idAndName;
 
-        private List<EquipmentQueryResult> equipments;
+        private List<EquipmentInfo> equipments;
 
         public IdAndName getIdAndName() {
             return idAndName;
@@ -131,11 +70,11 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
             this.idAndName = idAndName;
         }
 
-        public List<EquipmentQueryResult> getEquipments() {
+        public List<EquipmentInfo> getEquipments() {
             return equipments;
         }
 
-        public void setEquipments(List<EquipmentQueryResult> equipments) {
+        public void setEquipments(List<EquipmentInfo> equipments) {
             this.equipments = equipments;
         }
     }
@@ -148,7 +87,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private final FilteredList<IdAndName> filteredSubstationIds = substationIds.filtered(s -> true);
     private final ListView<IdAndName> substationsView = new ListView<>(filteredSubstationIds);
     private final TextField substationFilterInput = TextFields.createClearableTextField();
-    private final TreeView<IdAndName> substationDetailedView = new TreeView<>();
+    private final TreeView<EquipmentInfo> substationDetailedView = new TreeView<>();
     private final FlowPane equipmentView = new FlowPane();
     private final SplitPane splitPane;
     private final CheckBox showName = new CheckBox(RESOURCE_BUNDLE.getString("ShowNames"));
@@ -177,9 +116,12 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         setCenter(splitPane);
         setTop(toolBar);
 
-        Function<IdAndName, String> toString = idAndName -> showName.isSelected() ? idAndName.getName() : idAndName.getId();
-        GseUtil.setWaitingCellFactory(substationsView, BUSY, toString);
-        GseUtil.setWaitingCellFactory(substationDetailedView, BUSY, toString);
+        Function<IdAndName, String> listViewToString = idAndName -> showName.isSelected() ? idAndName.getName()
+                                                                                          : idAndName.getId();
+        Function<EquipmentInfo, String> treeViewToString = equipmentInfo -> showName.isSelected() ? equipmentInfo.getIdAndName().getName()
+                                                                                                  : equipmentInfo.getIdAndName().getId();
+        GseUtil.setWaitingCellFactory(substationsView, LIST_BUSY, listViewToString);
+        GseUtil.setWaitingCellFactory(substationDetailedView, TREEVIEW_BUSY, treeViewToString);
 
         showName.selectedProperty().addListener((observable, oldValue, newValue) -> {
             substationsView.refresh();
@@ -204,11 +146,22 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
 
         substationsView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> refreshSubstationDetailView(newValue));
 
-        substationDetailedView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeItem<IdAndName>>() {
+        substationDetailedView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeItem<EquipmentInfo>>() {
             @Override
-            public void changed(ObservableValue<? extends TreeItem<IdAndName>> observable, TreeItem<IdAndName> oldValue, TreeItem<IdAndName> newValue) {
+            public void changed(ObservableValue<? extends TreeItem<EquipmentInfo>> observable, TreeItem<EquipmentInfo> oldValue, TreeItem<EquipmentInfo> newValue) {
                 refreshEquipmentView(newValue);
             }
+        });
+        substationDetailedView.setOnDragDetected(event -> {
+            EquipmentInfo selectedEquipmentInfo = substationDetailedView.getSelectionModel().getSelectedItem().getValue();
+
+            Dragboard db = substationDetailedView.startDragAndDrop(TransferMode.ANY);
+
+            ClipboardContent content = new ClipboardContent();
+            content.put(EquipmentInfo.DATA_FORMAT, selectedEquipmentInfo);
+            db.setContent(content);
+
+            event.consume();
         });
 
         voltageLevelQueryResultListType = mapper.getTypeFactory().constructCollectionType(List.class, VoltageLevelQueryResult.class);
@@ -287,15 +240,15 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         boolean selected = showName.isSelected();
         return (o1, o2) -> {
             if (selected) {
-                return Objects.compare(o1.name, o2.name, String::compareTo);
+                return Objects.compare(o1.getName(), o2.getName(), String::compareTo);
             } else {
-                return o1.id.compareTo(o2.id);
+                return o1.getId().compareTo(o2.getId());
             }
         };
     }
 
     private void refreshSubstationsView() {
-        substationIds.setAll(BUSY);
+        substationIds.setAll(LIST_BUSY);
         String query = "network.substations.collect { [id: it.id, name: it.name] }";
         queryNetwork(query, idAndNameListType, (List<IdAndName> ids) -> {
             if (ids == null) {
@@ -308,14 +261,14 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
 
     private void fillSubstationDetailViewWithQueryResults(IdAndName substationIdAndName, List<VoltageLevelQueryResult> voltageLevelQueryResults) {
         if (voltageLevelQueryResults != null) {
-            TreeItem<IdAndName> substationItem = new TreeItem<>(substationIdAndName);
+            TreeItem<EquipmentInfo> substationItem = new TreeItem<>(new EquipmentInfo(substationIdAndName, "SUBSTATION"));
             substationItem.setExpanded(true);
             for (VoltageLevelQueryResult voltageLevelQueryResult : voltageLevelQueryResults) {
-                TreeItem<IdAndName> voltageLevelItem = new TreeItem<>(voltageLevelQueryResult.getIdAndName());
+                TreeItem<EquipmentInfo> voltageLevelItem = new TreeItem<>(new EquipmentInfo(voltageLevelQueryResult.getIdAndName(), "VOLTAGE_LEVEL"));
                 substationItem.getChildren().add(voltageLevelItem);
-                for (EquipmentQueryResult equipmentQueryResult : voltageLevelQueryResult.getEquipments()) {
-                    Node icon = getIcon(equipmentQueryResult.getType());
-                    TreeItem<IdAndName> equipmentItem = new TreeItem<>(equipmentQueryResult.getIdAndName(), icon);
+                for (EquipmentInfo equipment : voltageLevelQueryResult.getEquipments()) {
+                    Node icon = getIcon(equipment.getType());
+                    TreeItem<EquipmentInfo> equipmentItem = new TreeItem<>(equipment, icon);
                     voltageLevelItem.getChildren().add(equipmentItem);
                 }
                 voltageLevelItem.setExpanded(true);
@@ -327,8 +280,8 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     }
 
     private void refreshSubstationDetailView(IdAndName substationIdAndName) {
-        if (substationIdAndName != null && substationIdAndName != BUSY) {
-            substationDetailedView.setRoot(new TreeItem<>(BUSY));
+        if (substationIdAndName != null && substationIdAndName != LIST_BUSY) {
+            substationDetailedView.setRoot(new TreeItem<>(TREEVIEW_BUSY));
             String query = String.join(System.lineSeparator(),
                     "def s = network.getSubstation('" + substationIdAndName.getId() + "')",
                     "s.voltageLevels.collect {",
@@ -367,7 +320,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         }
     }
 
-    private void refreshEquipmentView(TreeItem<IdAndName> equipmentIdAndName) {
+    private void refreshEquipmentView(TreeItem<EquipmentInfo> item) {
         //TODO to be used to fill per equipment details
     }
 
