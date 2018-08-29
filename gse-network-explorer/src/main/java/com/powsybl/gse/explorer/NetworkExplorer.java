@@ -84,7 +84,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private final LastTaskOnlyExecutor substationDetailsExecutor;
 
     private final ObservableList<IdAndName> substationIds = FXCollections.observableArrayList();
-    private final FilteredList<IdAndName> filteredSubstationIds = substationIds.filtered(s -> true);;
+    private final FilteredList<IdAndName> filteredSubstationIds = substationIds.filtered(s -> true);
     private final ListView<IdAndName> substationsView = new ListView<>(filteredSubstationIds);
     private final TextField substationFilterInput = TextFields.createClearableTextField();
     private final TreeView<EquipmentInfo> substationDetailedView = new TreeView<>();
