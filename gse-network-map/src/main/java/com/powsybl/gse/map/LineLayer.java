@@ -24,7 +24,6 @@ import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Observable;
-import rx.functions.Action1;
 
 import java.util.*;
 
@@ -158,12 +157,7 @@ public class LineLayer extends CanvasBasedLayer {
         for (Map.Entry<Integer, BranchGraphicIndex> e : branchesIndexes.entrySet()) {
             BranchGraphicIndex index = e.getValue();
             Observable<Entry<BranchGraphic, Geometry>> search = index.getTree().search(Geometries.pointGeographic(c.getLon(), c.getLat()));
-            search.toBlocking().forEach(new Action1<Entry<BranchGraphic, Geometry>>() {
-                @Override
-                public void call(Entry<BranchGraphic, Geometry> entry) {
-                    LOGGER.trace(entry.value().getLine().getId());
-                }
-            });
+            search.toBlocking().forEach(entry -> LOGGER.trace(entry.value().getLine().getId()));
         }
     }
 
@@ -263,6 +257,25 @@ public class LineLayer extends CanvasBasedLayer {
         }
     }
 
+    private void drawFlows(BranchGraphic branch, PointsToDraw points) {
+        if (points.arrowConfig != null) {
+            Line l = branch.getLine().getModel();
+            if (l != null &&
+                    !Double.isNaN(l.getTerminal1().getI()) &&
+                    l.getCurrentLimits1() != null &&
+                    !Double.isNaN(l.getCurrentLimits1().getPermanentLimit())) {
+                double rate = l.getTerminal1().getI() / l.getCurrentLimits1().getPermanentLimit();
+                if (rate < 0.2) {
+                    slowArrowsPointsList.add(points);
+                } else if (rate < 0.5) {
+                    mediumArrowsPointsList.add(points);
+                } else {
+                    fastArrowsPointsList.add(points);
+                }
+            }
+        }
+    }
+
     private void draw(GraphicsContext gc, int drawOrder, BranchGraphicIndex branchIndex,
                       double zoom, boolean showPylons) {
         LOGGER.trace("Drawing lines at order {}", drawOrder);
@@ -298,22 +311,7 @@ public class LineLayer extends CanvasBasedLayer {
             }
 
             // draw flows
-            if (points.arrowConfig != null) {
-                Line l = branch.getLine().getModel();
-                if (l != null &&
-                        !Double.isNaN(l.getTerminal1().getI()) &&
-                        l.getCurrentLimits1() != null &&
-                        !Double.isNaN(l.getCurrentLimits1().getPermanentLimit())) {
-                    double rate = l.getTerminal1().getI() / l.getCurrentLimits1().getPermanentLimit();
-                    if (rate < 0.2) {
-                        slowArrowsPointsList.add(points);
-                    } else if (rate < 0.5) {
-                        mediumArrowsPointsList.add(points);
-                    } else {
-                        fastArrowsPointsList.add(points);
-                    }
-                }
-            }
+            drawFlows(branch, points);
         });
 
         stopWatch.stop();
