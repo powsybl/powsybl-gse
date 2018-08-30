@@ -24,13 +24,13 @@ import java.util.*;
  * The 3 following file have to be downloaded in $HOME/.itools directory:
  * <ul>
  *     <li>
- *         <a href="https://rte-opendata.opendatasoft.com/explore/dataset/postes-electriques-rte-et-client/download/?format=csv&timezone=Europe/Berlin&use_labels_for_header=true">postes-electriques-rte-et-client.csv</a>
+ *         <a href="https://opendata.reseaux-energies.fr/explore/dataset/postes-electriques-rte/download/?format=csv&timezone=Europe/Berlin&use_labels_for_header=true">postes-electriques-rte.csv</a>
  *     </li>
  *     <li>
- *         <a href="https://rte-opendata.opendatasoft.com/explore/dataset/lignes-aeriennes/download/?format=csv&timezone=Europe/Berlin&use_labels_for_header=true">lignes-aeriennes.csv</a>
+ *         <a href="https://opendata.reseaux-energies.fr/explore/dataset/lignes-aeriennes-rte/download/?format=csv&timezone=Europe/Berlin&use_labels_for_header=true">lignes-aeriennes-rte.csv</a>
  *     </li>
  *     <li>
- *         <a href="https://rte-opendata.opendatasoft.com/explore/dataset/lignes-souterraines/download/?format=csv&timezone=Europe/Berlin&use_labels_for_header=true">lignes-souterraines.csv</a>
+ *         <a href="https://opendata.reseaux-energies.fr/explore/dataset/lignes-souterraines-rte/download/?format=csv&timezone=Europe/Berlin&use_labels_for_header=true">lignes-souterraines-rte.csv</a>
  *     </li>
  * </ul>
  *
@@ -119,7 +119,7 @@ public final class RteOpenData {
 
         int substationCount = 0;
 
-        try (BufferedReader reader = Files.newBufferedReader(PlatformConfig.defaultConfig().getConfigDir().resolve("postes-electriques-rte-et-client.csv"))) {
+        try (BufferedReader reader = Files.newBufferedReader(PlatformConfig.defaultConfig().getConfigDir().resolve("postes-electriques-rte.csv"))) {
             skipHeader(reader);
             String line;
             while ((line = reader.readLine()) != null) {
@@ -176,8 +176,8 @@ public final class RteOpenData {
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
 
-        int segmentCount = parseLine(lines, "lignes-aeriennes.csv", 8, 9, 10, 11);
-        segmentCount += parseLine(lines, "lignes-souterraines.csv", 9, 10, 11, 12);
+        int segmentCount = parseLine(lines, "lignes-aeriennes-rte.csv", 8, 9, 10, 11);
+        segmentCount += parseLine(lines, "lignes-souterraines-rte.csv", 9, 10, 11, 12);
 
         LOGGER.info("{} lines, {} segments read in {} ms", lines.size(), segmentCount, stopWatch.getTime());
 
