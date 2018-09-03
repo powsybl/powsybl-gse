@@ -19,6 +19,7 @@ import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
@@ -46,9 +47,15 @@ import javafx.scene.input.ClipboardContent;
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
 public class ProjectPane extends Tab {
-    Object source; //ajouté
-    TreeItem sourceTreeItem;
-    TreeItem sourceparentTreeItem;
+
+    private class MoveContext {
+        private Object source;
+        private TreeItem sourceTreeItem;
+        private TreeItem sourceparentTreeItem;
+    }
+
+    MoveContext moveContext;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(ProjectPane.class);
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ProjectPane");
@@ -211,9 +218,10 @@ public class ProjectPane extends Tab {
                             setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
 
                             setOnDragDetected(event -> {
-                                source = getItem();
-                                sourceTreeItem = getTreeItem();
-                                sourceparentTreeItem = sourceTreeItem.getParent();
+                                moveContext = new MoveContext();
+                                moveContext.source = getItem();
+                                moveContext.sourceTreeItem = getTreeItem();
+                                moveContext.sourceparentTreeItem = moveContext.sourceTreeItem.getParent();
                                 if (value instanceof ProjectFile || value instanceof ProjectFolder) {
                                     Dragboard db = treeView.startDragAndDrop(TransferMode.ANY);
                                     ClipboardContent cb = new ClipboardContent();
@@ -229,39 +237,76 @@ public class ProjectPane extends Tab {
                             if (node instanceof ProjectFolder) {
                                 ProjectFolder projectFolder = (ProjectFolder) node;
                                 setOnDragOver(event -> {
-                                    if (event.getGestureSource() != this && event.getDragboard().hasString()) {  //à modifier hasString
-                                        event.acceptTransferModes(TransferMode.ANY);
+                                    int count = 0;
+                                    TreeItem treeItemOvered = getTreeItem();
+                                    ObservableList<TreeItem<Object>> treeItemOveredChildrens = treeItemOvered.getChildren();
+                                    if (treeItemOveredChildrens.size() < 1) {
+                                        count = 0;
+                                    } else if (treeItemOveredChildrens.size() >= 1) {
+                                        for (TreeItem treeItem : treeItemOveredChildrens) {
+                                            if (treeItem.getValue() == null) {
+                                                break;
+                                            } else if (treeItem.getValue().toString().equals(moveContext.source.toString())) {
+                                                count++;
+                                            }
+                                        }
+                                    }
+                                    if (event.getGestureSource() != this && event.getDragboard().hasString()) {
+                                        if (count < 1) {
+                                            setTextFill(Color.CHOCOLATE);
+                                            setText(getText().toUpperCase());
+                                        }
 
+                                        event.acceptTransferModes(TransferMode.ANY);
                                     }
                                     event.consume();
-
                                 });
                                 setOnDragDropped(event -> {
-                                    //getItem récupère l'objet , getTreeItem récupère le treeItem
+                                    int count = 0;
                                     TreeItem treeItemaccepteur = getTreeItem();
-                                    System.out.println("Bienvenue dans le dossier " + getItem().toString().toUpperCase());
+                                    boolean success = false;
+                                    Dragboard db = event.getDragboard();
+
                                     if (getItem() == null) {
                                         return;
                                     }
-                                    Dragboard db = event.getDragboard();
-
-                                    boolean success = false;
-                                    if (db.hasString()) {
-                                        if (source instanceof ProjectNode) {
-                                            ProjectNode monfichier = (ProjectNode) source;
+                                    ObservableList<TreeItem<Object>> treeItemaccepteurchildrens = treeItemaccepteur.getChildren();
+                                    if (treeItemaccepteurchildrens.size() < 1) {
+                                        count = 0;
+                                    } else if (treeItemaccepteurchildrens.size() >= 1) {
+                                        for (TreeItem treeItem : treeItemaccepteurchildrens) {
+                                            if (treeItem.getValue() == null) {
+                                                break;
+                                            } else if (treeItem.getValue().toString().equals(moveContext.source.toString())) {
+                                                count++;
+                                            }
+                                        }
+                                    }
+                                    if (count >= 1) {
+                                        Alert alert = new Alert(Alert.AlertType.ERROR);
+                                        alert.setTitle("Erreur de Déplacement");
+                                        alert.setHeaderText("Erreur");
+                                        alert.setContentText("l'élément déplacé existe déja dans le dossier cible");
+                                        alert.showAndWait();
+                                    } else if (db.hasString() && count < 1) {
+                                        if (moveContext.source instanceof ProjectNode) {
+                                            ProjectNode monfichier = (ProjectNode) moveContext.source;
                                             monfichier.moveTo(projectFolder);
 
-                                            refresh(sourceparentTreeItem);
-                                            refresh(treeItemaccepteur);  //B
+                                            refresh(moveContext.sourceparentTreeItem);
+                                            refresh(treeItemaccepteur);
 
                                             success = true;
                                         }
 
                                     } else {
-                                        System.out.println("rien");
                                     }
                                     event.setDropCompleted(success);
                                     event.consume();
+                                });
+                                setOnDragExited(event -> {
+                                    setTextFill(Color.BLACK);
+                                    setText(getText().toLowerCase());
                                 });
 
                             }
@@ -272,7 +317,7 @@ public class ProjectPane extends Tab {
                     }
                 }
             }
-        });
+        });https://mail.rte-france.com/owa/#path=/mail
         treeView.setOnMouseClicked(mouseEvent -> {
             if (mouseEvent.getClickCount() == 2) {
                 TreeItem<Object> selectedTreeItem = treeView.getSelectionModel().getSelectedItem();
@@ -510,6 +555,26 @@ public class ProjectPane extends Tab {
         return menuItem;
     }
 
+    private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
+        MenuItem menuItem = new MenuItem("Renommer");
+        menuItem.setOnAction(event -> {
+            TextInputDialog dialog = new TextInputDialog("Nouveau nom");
+            dialog.setTitle("Renommer Dossier");
+            dialog.setHeaderText("Entrez nouveau nom:");
+            dialog.setContentText("Nom:");
+            Optional<String> result = dialog.showAndWait();
+            result.ifPresent(newname -> {
+                if (selectedTreeItem.getValue() instanceof ProjectNode) {
+                    ProjectNode selectedTreeNode = (ProjectNode) selectedTreeItem.getValue();
+                    selectedTreeNode.rename(newname);
+                    refresh(selectedTreeItem.getParent());
+                }
+            });
+
+        });
+        return menuItem;
+    }
+
     /**
      * Recursively find DetachableTabPane in the node hierarchy
      */
@@ -731,6 +796,8 @@ public class ProjectPane extends Tab {
         }
         if (selectedTreeItem != treeView.getRoot()) {
             items.add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+            items.add(createRenameProjectNodeItem(selectedTreeItem));
+
         }
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
