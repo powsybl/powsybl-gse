@@ -284,9 +284,9 @@ public class ProjectPane extends Tab {
                                     }
                                     if (count >= 1) {
                                         Alert alert = new Alert(Alert.AlertType.ERROR);
-                                        alert.setTitle("Erreur de Déplacement");
-                                        alert.setHeaderText("Erreur");
-                                        alert.setContentText("l'élément déplacé existe déja dans le dossier cible");
+                                        alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
+                                        alert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
+                                        alert.setContentText(RESOURCE_BUNDLE.getString("DragFileExists"));
                                         alert.showAndWait();
                                     } else if (db.hasString() && count < 1) {
                                         if (moveContext.source instanceof ProjectNode) {
@@ -556,12 +556,12 @@ public class ProjectPane extends Tab {
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
-        MenuItem menuItem = new MenuItem("Renommer");
+        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"));
         menuItem.setOnAction(event -> {
-            TextInputDialog dialog = new TextInputDialog("Nouveau nom");
-            dialog.setTitle("Renommer Dossier");
-            dialog.setHeaderText("Entrez nouveau nom:");
-            dialog.setContentText("Nom:");
+            TextInputDialog dialog = new TextInputDialog(RESOURCE_BUNDLE.getString("NewName"));
+            dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
+            dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
+            dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
             Optional<String> result = dialog.showAndWait();
             result.ifPresent(newname -> {
                 if (selectedTreeItem.getValue() instanceof ProjectNode) {
