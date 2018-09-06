@@ -7,27 +7,16 @@
 package com.powsybl.gse.spi;
 
 import com.powsybl.afs.ProjectFile;
-import javafx.scene.Node;
 import javafx.scene.Scene;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public interface ProjectFileViewerExtension<T extends ProjectFile> {
+public interface ProjectFileViewerExtension<T extends ProjectFile> extends ProjectFileMenuConfigurableExtension<T> {
 
     Class<T> getProjectFileType();
 
     Class<?> getAdditionalType();
-
-    default Node getMenuGraphic(T file) {
-        return null;
-    }
-
-    String getMenuText(T file);
-
-    default boolean isMenuEnabled(T file) {
-        return true;
-    }
 
     ProjectFileViewer newViewer(T file, Scene scene, GseContext context);
 }

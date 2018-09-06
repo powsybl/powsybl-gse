@@ -34,7 +34,7 @@ public class SecurityAnalysisExecutionTaskExtension implements ProjectFileExecut
     }
 
     @Override
-    public String getMenuText() {
+    public String getMenuText(SecurityAnalysisRunner runner) {
         return RESOURCE_BUNDLE.getString("RunSecurityAnalysis");
     }
 

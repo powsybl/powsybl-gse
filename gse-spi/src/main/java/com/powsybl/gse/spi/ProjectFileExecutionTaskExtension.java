@@ -12,13 +12,11 @@ import javafx.scene.Scene;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public interface ProjectFileExecutionTaskExtension<T extends ProjectFile, C> {
+public interface ProjectFileExecutionTaskExtension<T extends ProjectFile, C> extends ProjectFileMenuConfigurableExtension<T> {
 
     Class<T> getProjectFileType();
 
     Class<?> getAdditionalType();
-
-    String getMenuText();
 
     ExecutionTaskConfigurator<C> createConfigurator(T projectFile, Scene scene, GseContext context);
 
