@@ -54,7 +54,7 @@ public class ProjectPane extends Tab {
         private TreeItem sourceparentTreeItem;
     }
 
-   private MoveContext moveContext;
+    private MoveContext moveContext;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProjectPane.class);
 
