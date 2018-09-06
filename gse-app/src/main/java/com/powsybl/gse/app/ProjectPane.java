@@ -54,7 +54,7 @@ public class ProjectPane extends Tab {
         private TreeItem sourceparentTreeItem;
     }
 
-    MoveContext moveContext;
+   private MoveContext moveContext;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProjectPane.class);
 
@@ -317,7 +317,7 @@ public class ProjectPane extends Tab {
                     }
                 }
             }
-        });https://mail.rte-france.com/owa/#path=/mail
+        });
         treeView.setOnMouseClicked(mouseEvent -> {
             if (mouseEvent.getClickCount() == 2) {
                 TreeItem<Object> selectedTreeItem = treeView.getSelectionModel().getSelectedItem();
@@ -415,7 +415,6 @@ public class ProjectPane extends Tab {
             item.setExpanded(true);
         }
     }
-
 
     private TreeItem<Object> createNodeTreeItem(ProjectNode node) {
         return node.isFolder() ? createFolderTreeItem((ProjectFolder) node)
@@ -561,7 +560,7 @@ public class ProjectPane extends Tab {
             TextInputDialog dialog = new TextInputDialog(RESOURCE_BUNDLE.getString("NewName"));
             dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
             dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
-            dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
+            dialog.setContentText(RESOURCE_BUNDLE.getString("Names"));
             Optional<String> result = dialog.showAndWait();
             result.ifPresent(newname -> {
                 if (selectedTreeItem.getValue() instanceof ProjectNode) {
@@ -797,7 +796,6 @@ public class ProjectPane extends Tab {
         if (selectedTreeItem != treeView.getRoot()) {
             items.add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
             items.add(createRenameProjectNodeItem(selectedTreeItem));
-
         }
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
