@@ -19,6 +19,7 @@ import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
@@ -39,10 +40,22 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
+import javafx.scene.input.ClipboardContent;
+
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
 public class ProjectPane extends Tab {
+
+    private class MoveContext {
+        private Object source;
+        private TreeItem sourceTreeItem;
+        private TreeItem sourceparentTreeItem;
+    }
+
+   private MoveContext moveContext;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProjectPane.class);
 
@@ -202,7 +215,123 @@ public class ProjectPane extends Tab {
                     setText(null);
                     setGraphic(null);
                 } else {
+//<<<<<<< HEAD
                     fillCellInfosForObject(value);
+//=======
+                    if (value == null) {
+                        GseUtil.setWaitingText(this);
+                    } else {
+                        if (value instanceof String) {
+                            setText((String) value);
+                            setGraphic(getTreeItem().getGraphic());
+                            setTextFill(Color.BLACK);
+                            setOpacity(1);
+                        } else if (value instanceof ProjectNode) {
+                            ProjectNode node = (ProjectNode) value;
+                            setText(node.getName());
+                            setGraphic(getTreeItem().getGraphic());
+                            setTextFill(Color.BLACK);
+                            setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
+
+                            setOnDragDetected(event -> {
+                                moveContext = new MoveContext();
+                                moveContext.source = getItem();
+                                moveContext.sourceTreeItem = getTreeItem();
+                                moveContext.sourceparentTreeItem = moveContext.sourceTreeItem.getParent();
+                                if (value instanceof ProjectFile || value instanceof ProjectFolder) {
+                                    Dragboard db = treeView.startDragAndDrop(TransferMode.ANY);
+                                    ClipboardContent cb = new ClipboardContent();
+                                    if (value instanceof ProjectFile) {
+                                        cb.putString(((ProjectFile) value).getName());
+                                    } else if (value instanceof ProjectFolder) {
+                                        cb.putString(((ProjectFolder) value).getName());
+                                    }
+                                    db.setContent(cb);
+                                    event.consume();
+                                }
+                            });
+                            if (node instanceof ProjectFolder) {
+                                ProjectFolder projectFolder = (ProjectFolder) node;
+                                setOnDragOver(event -> {
+                                    int count = 0;
+                                    TreeItem treeItemOvered = getTreeItem();
+                                    ObservableList<TreeItem<Object>> treeItemOveredChildrens = treeItemOvered.getChildren();
+                                    if (treeItemOveredChildrens.size() < 1) {
+                                        count = 0;
+                                    } else if (treeItemOveredChildrens.size() >= 1) {
+                                        for (TreeItem treeItem : treeItemOveredChildrens) {
+                                            if (treeItem.getValue() == null) {
+                                                break;
+                                            } else if (treeItem.getValue().toString().equals(moveContext.source.toString())) {
+                                                count++;
+                                            }
+                                        }
+                                    }
+                                    if (event.getGestureSource() != this && event.getDragboard().hasString()) {
+                                        if (count < 1) {
+                                            setTextFill(Color.CHOCOLATE);
+                                            setText(getText().toUpperCase());
+                                        }
+
+                                        event.acceptTransferModes(TransferMode.ANY);
+                                    }
+                                    event.consume();
+                                });
+                                setOnDragDropped(event -> {
+                                    int count = 0;
+                                    TreeItem treeItemaccepteur = getTreeItem();
+                                    boolean success = false;
+                                    Dragboard db = event.getDragboard();
+
+                                    if (getItem() == null) {
+                                        return;
+                                    }
+                                    ObservableList<TreeItem<Object>> treeItemaccepteurchildrens = treeItemaccepteur.getChildren();
+                                    if (treeItemaccepteurchildrens.size() < 1) {
+                                        count = 0;
+                                    } else if (treeItemaccepteurchildrens.size() >= 1) {
+                                        for (TreeItem treeItem : treeItemaccepteurchildrens) {
+                                            if (treeItem.getValue() == null) {
+                                                break;
+                                            } else if (treeItem.getValue().toString().equals(moveContext.source.toString())) {
+                                                count++;
+                                            }
+                                        }
+                                    }
+                                    if (count >= 1) {
+                                        Alert alert = new Alert(Alert.AlertType.ERROR);
+                                        alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
+                                        alert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
+                                        alert.setContentText(RESOURCE_BUNDLE.getString("DragFileExists"));
+                                        alert.showAndWait();
+                                    } else if (db.hasString() && count < 1) {
+                                        if (moveContext.source instanceof ProjectNode) {
+                                            ProjectNode monfichier = (ProjectNode) moveContext.source;
+                                            monfichier.moveTo(projectFolder);
+
+                                            refresh(moveContext.sourceparentTreeItem);
+                                            refresh(treeItemaccepteur);
+
+                                            success = true;
+                                        }
+
+                                    } else {
+                                    }
+                                    event.setDropCompleted(success);
+                                    event.consume();
+                                });
+                                setOnDragExited(event -> {
+                                    setTextFill(Color.BLACK);
+                                    setText(getText().toLowerCase());
+                                });
+
+                            }
+
+                        } else {
+                            throw new AssertionError();
+                        }
+                    }
+//>>>>>>> drag_and_drop
                 }
             }
         };
@@ -224,6 +353,7 @@ public class ProjectPane extends Tab {
                     viewFile((ProjectFile) value, viewerExtension, tabName);
                 }
             }
+//<<<<<<< HEAD
         } else {
             // TODO show advanced task status ?
         }
@@ -254,6 +384,9 @@ public class ProjectPane extends Tab {
         treeView.setCellFactory(this::treeViewCellFactory);
         treeView.setOnMouseClicked(this::treeViewMouseClickHandler);
 
+/*=======
+        });
+>>>>>>> drag_and_drop*/
         DetachableTabPane ctrlTabPane1 = new DetachableTabPane();
         DetachableTabPane ctrlTabPane2 = new DetachableTabPane();
         ctrlTabPane1.setScope("Control");
@@ -397,7 +530,7 @@ public class ProjectPane extends Tab {
 
     // extension search
 
-    private static List<ProjectFileCreatorExtension> findCreatorExtension(Class<? extends  ProjectFile> type) {
+    private static List<ProjectFileCreatorExtension> findCreatorExtension(Class<? extends ProjectFile> type) {
         return CREATOR_EXTENSION_LOADER.getServices().stream()
                 .filter(extension -> extension.getProjectFileType().isAssignableFrom(type))
                 .collect(Collectors.toList());
@@ -462,6 +595,26 @@ public class ProjectPane extends Tab {
                     refresh(parentTreeItem);
                 }
             }
+        });
+        return menuItem;
+    }
+
+    private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
+        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"));
+        menuItem.setOnAction(event -> {
+            TextInputDialog dialog = new TextInputDialog(RESOURCE_BUNDLE.getString("NewName"));
+            dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
+            dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
+            dialog.setContentText(RESOURCE_BUNDLE.getString("Names"));
+            Optional<String> result = dialog.showAndWait();
+            result.ifPresent(newname -> {
+                if (selectedTreeItem.getValue() instanceof ProjectNode) {
+                    ProjectNode selectedTreeNode = (ProjectNode) selectedTreeItem.getValue();
+                    selectedTreeNode.rename(newname);
+                    refresh(selectedTreeItem.getParent());
+                }
+            });
+
         });
         return menuItem;
     }
@@ -695,6 +848,7 @@ public class ProjectPane extends Tab {
         }
         if (selectedTreeItem != treeView.getRoot()) {
             items.add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+            items.add(createRenameProjectNodeItem(selectedTreeItem));
         }
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
