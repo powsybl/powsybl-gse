@@ -215,9 +215,7 @@ public class ProjectPane extends Tab {
                     setText(null);
                     setGraphic(null);
                 } else {
-//<<<<<<< HEAD
                     fillCellInfosForObject(value);
-//=======
                     if (value == null) {
                         GseUtil.setWaitingText(this);
                     } else {
@@ -331,7 +329,6 @@ public class ProjectPane extends Tab {
                             throw new AssertionError();
                         }
                     }
-//>>>>>>> drag_and_drop
                 }
             }
         };
@@ -353,7 +350,6 @@ public class ProjectPane extends Tab {
                     viewFile((ProjectFile) value, viewerExtension, tabName);
                 }
             }
-//<<<<<<< HEAD
         } else {
             // TODO show advanced task status ?
         }
@@ -384,9 +380,6 @@ public class ProjectPane extends Tab {
         treeView.setCellFactory(this::treeViewCellFactory);
         treeView.setOnMouseClicked(this::treeViewMouseClickHandler);
 
-/*=======
-        });
->>>>>>> drag_and_drop*/
         DetachableTabPane ctrlTabPane1 = new DetachableTabPane();
         DetachableTabPane ctrlTabPane2 = new DetachableTabPane();
         ctrlTabPane1.setScope("Control");
@@ -605,7 +598,7 @@ public class ProjectPane extends Tab {
             TextInputDialog dialog = new TextInputDialog(RESOURCE_BUNDLE.getString("NewName"));
             dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
             dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
-            dialog.setContentText(RESOURCE_BUNDLE.getString("Names"));
+            dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
             Optional<String> result = dialog.showAndWait();
             result.ifPresent(newname -> {
                 if (selectedTreeItem.getValue() instanceof ProjectNode) {
