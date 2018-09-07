@@ -9,6 +9,10 @@ package com.powsybl.gse.map;
 import java.util.Objects;
 
 /**
+ * GPS coordinate.
+ *
+ * @see <a href="https://en.wikipedia.org/wiki/World_Geodetic_System"/>https://en.wikipedia.org/wiki/World_Geodetic_System</a>
+ *
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
 public class Coordinate {

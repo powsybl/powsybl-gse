@@ -22,12 +22,12 @@ public class MapView extends Region {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MapView.class);
 
-    private final TileManager tileManager;
+    private final TileView tileView;
 
-    private final Canvas canvas = new Canvas(500, 500);
+    private final Canvas canvas = new Canvas();
 
-    public MapView(TileManager tileManager) {
-        this.tileManager = Objects.requireNonNull(tileManager);
+    public MapView(TileView tileView) {
+        this.tileView = Objects.requireNonNull(tileView);
         getChildren().addAll(canvas);
     }
 
@@ -41,29 +41,27 @@ public class MapView extends Region {
         }
     }
 
-    private void drawTile(Tile tile, int x, int y) {
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                canvas.getGraphicsContext2D().fillText("Loading...",
-                                                       x + tileManager.getDescriptor().getWidth() / 2,
-                                                       y + tileManager.getDescriptor().getHeight() / 2);
-            }
-        });
-        tile.request()
+    private void drawTile(TilePoint tilePoint, int x, int y) {
+        Platform.runLater(() -> canvas.getGraphicsContext2D().fillText("Loading...",
+                                                                       x + tileView.getDescriptor().getWidth() / 2,
+                                                                       y + tileView.getDescriptor().getHeight() / 2));
+        tilePoint.request()
                 .observeOn(JavaFxScheduler.platform())
                 .subscribe(response -> drawTile(response, x, y),
-                           throwable -> LOGGER.error(throwable.toString(), throwable));
+                    throwable -> LOGGER.error(throwable.toString(), throwable));
     }
 
     private void drawTiles(int zoom) {
-        Tile tile = tileManager.getTile(new Coordinate(7.909167d, 47.968056d), zoom);
-        drawTile(tile, 0, 0);
+        TilePoint tilePoint = tileView.project(new Coordinate(7.909167d, 47.968056d), zoom);
+        drawTile(tilePoint, 0, 0);
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
                 if (i != 0 || j != 0) {
-                    Tile tile2 = new Tile(tile.getX() + i, tile.getY() + j, zoom, tileManager);
-                    drawTile(tile2, i * 256, j * 256);
+                    TilePoint tilePoint2 = new TilePoint((int) Math.floor(tilePoint.getX()) + i,
+                                                         (int) Math.floor(tilePoint.getY()) + j,
+                                                         zoom,
+                            tileView);
+                    drawTile(tilePoint2, i * 256, j * 256);
                 }
             }
         }

@@ -6,30 +6,32 @@ import org.asynchttpclient.Response;
 import java.util.Objects;
 
 /**
+ * A point in the tile view.
+ *
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-class Tile {
+class TilePoint {
 
-    private final int x;
+    private final double x;
 
-    private final int y;
+    private final double y;
 
     private final int zoom;
 
-    private final TileManager manager;
+    private final TileView view;
 
-    public Tile(int x, int y, int zoom, TileManager manager) {
+    public TilePoint(double x, double y, int zoom, TileView view) {
         this.x = x;
         this.y = y;
         this.zoom = zoom;
-        this.manager = Objects.requireNonNull(manager);
+        this.view = Objects.requireNonNull(view);
     }
 
-    public int getX() {
+    public double getX() {
         return x;
     }
 
-    public int getY() {
+    public double getY() {
         return y;
     }
 
@@ -38,11 +40,11 @@ class Tile {
     }
 
     public String getUrl() {
-        return manager.getDescriptor().getUrlTemplate().instanciate(this);
+        return view.getDescriptor().getUrlTemplate().instanciate(this);
     }
 
     public Maybe<Response> request() {
-        return manager.getHttpClient().request(this);
+        return view.getHttpClient().request(this);
     }
 
     public Coordinate getCoordinate() {

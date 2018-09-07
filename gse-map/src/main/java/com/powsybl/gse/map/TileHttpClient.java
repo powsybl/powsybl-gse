@@ -43,8 +43,8 @@ class TileHttpClient implements AutoCloseable {
         scheduler = Schedulers.from(executorService);
     }
 
-    Maybe<Response> request(Tile tile) {
-        String url = tile.getUrl();
+    Maybe<Response> request(TilePoint tilePoint) {
+        String url = tilePoint.getUrl();
         Request request = get(url)
                 .addHeader("User-Agent", "powsybl")
                 .build();
