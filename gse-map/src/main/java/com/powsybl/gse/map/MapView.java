@@ -41,9 +41,6 @@ public class MapView extends Region {
     }
 
     private void drawTile(Tile tile, int x, int y) {
-        Platform.runLater(() -> canvas.getGraphicsContext2D().fillText("Loading...",
-                                                                       x + tileSpace.getDescriptor().getWidth() / 2,
-                                                                       y + tileSpace.getDescriptor().getHeight() / 2));
         tile.request()
                 .observeOn(JavaFxScheduler.platform())
                 .subscribe(is -> drawTileImage(is, x, y),

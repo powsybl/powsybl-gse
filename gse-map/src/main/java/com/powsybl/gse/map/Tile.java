@@ -2,7 +2,7 @@ package com.powsybl.gse.map;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.reactivex.Maybe;
-import org.asynchttpclient.Response;
+import org.apache.commons.io.input.TeeInputStream;
 
 import java.io.InputStream;
 import java.util.Objects;
@@ -45,10 +45,14 @@ class Tile {
     }
 
     public Maybe<InputStream> request() {
-        return space.getCache().readImage(this)
+        return space.getCache().readTile(this)
                 .switchIfEmpty(space.getHttpClient()
                         .request(Tile.this)
                         .filter(response -> response.getStatusCode() == HttpResponseStatus.OK.code())
-                        .map(Response::getResponseBodyAsStream));
+                        .map(response ->
+                            // also write new downloaded tile to cache
+                            new TeeInputStream(response.getResponseBodyAsStream(),
+                                               space.getCache().writeTile(this))
+                        ));
     }
 }
