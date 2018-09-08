@@ -29,7 +29,7 @@ public class MapView extends Region {
         getChildren().addAll(canvas);
     }
 
-    private void drawTile(TileImage image, int x, int y) {
+    private void drawTileImage(TileImage image, int x, int y) {
         try (InputStream is = image.getInputStream().orElse(null)) {
             if (is != null) {
                 canvas.getGraphicsContext2D().drawImage(new Image(is), x, y);
@@ -39,27 +39,25 @@ public class MapView extends Region {
         }
     }
 
-    private void drawTile(TilePoint tilePoint, int x, int y) {
+    private void drawTile(Tile tile, int x, int y) {
         Platform.runLater(() -> canvas.getGraphicsContext2D().fillText("Loading...",
                                                                        x + tileSpace.getDescriptor().getWidth() / 2,
                                                                        y + tileSpace.getDescriptor().getHeight() / 2));
-        tilePoint.request()
+        tile.request()
                 .observeOn(JavaFxScheduler.platform())
-                .subscribe(image -> drawTile(image, x, y),
+                .subscribe(image -> drawTileImage(image, x, y),
                     throwable -> LOGGER.error(throwable.toString(), throwable));
     }
 
     private void drawTiles(int zoom) {
         TilePoint tilePoint = tileSpace.project(new Coordinate(7.909167d, 47.968056d), zoom);
-        drawTile(tilePoint, 0, 0);
+        Tile tile = tilePoint.getTile();
+        drawTile(tile, 0, 0);
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
                 if (i != 0 || j != 0) {
-                    TilePoint tilePoint2 = new TilePoint((int) Math.floor(tilePoint.getX()) + i,
-                                                         (int) Math.floor(tilePoint.getY()) + j,
-                                                         zoom,
-                            tileSpace);
-                    drawTile(tilePoint2, i * 256, j * 256);
+                    Tile tile2 = new Tile(tile.getX() + i, tile.getY() + j, zoom, tileSpace);
+                    drawTile(tile2, i * 256, j * 256);
                 }
             }
         }

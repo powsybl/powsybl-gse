@@ -16,10 +16,10 @@ class TileUrlTemplate {
         this.urlTemplate = urlTemplate;
     }
 
-    String instanciate(TilePoint tilePoint) {
+    String instanciate(Tile tile) {
         return urlTemplate
-                    .replace("${x}", Integer.toString((int) Math.floor(tilePoint.getX())))
-                    .replace("${y}", Integer.toString((int) Math.floor(tilePoint.getY())))
-                    .replace("${z}", Integer.toString(tilePoint.getZoom()));
+                    .replace("${x}", Integer.toString(tile.getX()))
+                    .replace("${y}", Integer.toString(tile.getY()))
+                    .replace("${z}", Integer.toString(tile.getZoom()));
     }
 }

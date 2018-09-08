@@ -7,5 +7,5 @@ import io.reactivex.Maybe;
  */
 interface TileCache {
 
-    Maybe<TileImage> getImage(TilePoint tilePoint);
+    Maybe<TileImage> readImage(Tile tile);
 }

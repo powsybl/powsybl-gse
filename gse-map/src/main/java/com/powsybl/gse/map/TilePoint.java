@@ -1,12 +1,6 @@
 package com.powsybl.gse.map;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.reactivex.Maybe;
-import org.asynchttpclient.Response;
-
-import java.io.InputStream;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * A point in the tile view.
@@ -42,25 +36,8 @@ class TilePoint {
         return zoom;
     }
 
-    public String getUrl() {
-        return space.getDescriptor().getUrlTemplate().instanciate(this);
-    }
-
-    private static Optional<InputStream> getResponseBodyAsStream(Response response) {
-        return response.getStatusCode() == HttpResponseStatus.OK.code()
-                ? Optional.of(response.getResponseBodyAsStream())
-                : Optional.empty();
-    }
-
-    private static TileImage getTileImage(Response response) {
-        return () -> getResponseBodyAsStream(response);
-    }
-
-    public Maybe<TileImage> request() {
-        return space.getCache().getImage(this)
-                              .switchIfEmpty(space.getHttpClient()
-                                      .request(TilePoint.this)
-                                      .map(TilePoint::getTileImage));
+    public Tile getTile() {
+        return new Tile((int) Math.floor(x), (int) Math.floor(y), zoom, space);
     }
 
     public Coordinate getCoordinate() {
