@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.util.Objects;
 
 /**
@@ -29,13 +28,15 @@ public class MapView extends Region {
         getChildren().addAll(canvas);
     }
 
-    private void drawTileImage(TileImage image, int x, int y) {
-        try (InputStream is = image.getInputStream().orElse(null)) {
-            if (is != null) {
-                canvas.getGraphicsContext2D().drawImage(new Image(is), x, y);
+    private void drawTileImage(InputStream is, int x, int y) {
+        try {
+            canvas.getGraphicsContext2D().drawImage(new Image(is), x, y);
+        } finally {
+            try {
+                is.close();
+            } catch (IOException e) {
+                LOGGER.error(e.toString(), e);
             }
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
         }
     }
 
@@ -45,7 +46,7 @@ public class MapView extends Region {
                                                                        y + tileSpace.getDescriptor().getHeight() / 2));
         tile.request()
                 .observeOn(JavaFxScheduler.platform())
-                .subscribe(image -> drawTileImage(image, x, y),
+                .subscribe(is -> drawTileImage(is, x, y),
                     throwable -> LOGGER.error(throwable.toString(), throwable));
     }
 

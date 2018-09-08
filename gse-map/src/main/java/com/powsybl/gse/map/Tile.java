@@ -6,7 +6,6 @@ import org.asynchttpclient.Response;
 
 import java.io.InputStream;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  *
@@ -45,20 +44,11 @@ class Tile {
         return space.getDescriptor().getUrlTemplate().instanciate(this);
     }
 
-    private static Optional<InputStream> getResponseBodyAsStream(Response response) {
-        return response.getStatusCode() == HttpResponseStatus.OK.code()
-                ? Optional.of(response.getResponseBodyAsStream())
-                : Optional.empty();
-    }
-
-    private static TileImage getTileImage(Response response) {
-        return () -> getResponseBodyAsStream(response);
-    }
-
-    public Maybe<TileImage> request() {
+    public Maybe<InputStream> request() {
         return space.getCache().readImage(this)
                 .switchIfEmpty(space.getHttpClient()
                         .request(Tile.this)
-                        .map(Tile::getTileImage));
+                        .filter(response -> response.getStatusCode() == HttpResponseStatus.OK.code())
+                        .map(Response::getResponseBodyAsStream));
     }
 }
