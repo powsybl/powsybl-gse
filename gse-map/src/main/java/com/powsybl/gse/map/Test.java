@@ -25,7 +25,10 @@ public class Test extends Application {
     public void start(Stage primaryStage) {
         primaryStage.setTitle("Map tile test");
         StackPane root = new StackPane();
-        root.getChildren().addAll(new MapView(tileSpace));
+        MapView mapView = new MapView(tileSpace);
+        mapView.zoomProperty().set(13);
+        mapView.centerProperty().set(new Coordinate(2.162, 48.801));
+        root.getChildren().add(mapView);
         primaryStage.setScene(new Scene(root, 800, 600));
         primaryStage.show();
     }
