@@ -1,6 +1,11 @@
 package com.powsybl.gse.map;
 
 /**
+ * Tile URL template.
+ * ${x} x tile
+ * ${y} y tile
+ * ${z} zoom level
+ *
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
 class TileUrlTemplate {

@@ -5,6 +5,8 @@ package com.powsybl.gse.map;
  */
 public class TileDescriptor {
 
+    public static final TileDescriptor DEFAULT = new TileDescriptor(new TileUrlTemplate("http://tile.openstreetmap.org/${z}/${x}/${y}.png"), 256, 256, 0, 19);
+
     private final TileUrlTemplate urlTemplate;
 
     private final double width;

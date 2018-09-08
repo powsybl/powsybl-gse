@@ -7,29 +7,34 @@ import java.util.Objects;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-class TileView implements AutoCloseable {
-
-    static final TileDescriptor DEFAULT_TILE_DESCRIPTOR = new TileDescriptor(new TileUrlTemplate("http://tile.openstreetmap.org/${z}/${x}/${y}.png"), 256, 256, 0, 19);
+class TileSpace implements AutoCloseable {
 
     private final TileDescriptor descriptor;
 
     private final TileHttpClient httpClient;
 
-    public TileView() {
-        this(DEFAULT_TILE_DESCRIPTOR);
+    private final TileCache cache;
+
+    public TileSpace() {
+        this(TileDescriptor.DEFAULT);
     }
 
-    public TileView(TileDescriptor descriptor) {
+    public TileSpace(TileDescriptor descriptor) {
         this(descriptor, new LocalFileSystemTileCache());
     }
 
-    public TileView(TileDescriptor descriptor, TileCache cache) {
+    public TileSpace(TileDescriptor descriptor, TileCache cache) {
         this.descriptor = Objects.requireNonNull(descriptor);
-        httpClient = new TileHttpClient(cache);
+        this.cache = Objects.requireNonNull(cache);
+        httpClient = new TileHttpClient();
     }
 
     public TileDescriptor getDescriptor() {
         return descriptor;
+    }
+
+    public TileCache getCache() {
+        return cache;
     }
 
     TileHttpClient getHttpClient() {
@@ -37,11 +42,11 @@ class TileView implements AutoCloseable {
     }
 
     /**
-     * Project a GPS coordinate to tile view
+     * Project a GPS coordinate to tile space
      *
      * @param c the GPS coordinate
      * @param zoom the zoom level
-     * @return the tile position in the tile view
+     * @return the tile point in the tile space
      */
     public TilePoint project(Coordinate c, int zoom) {
         // Project the coordinates to the Mercator projection (from EPSG:4326 to EPSG:3857)

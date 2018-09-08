@@ -14,24 +14,24 @@ public class Test extends Application {
         launch(args);
     }
 
-    private TileView tileView;
+    private TileSpace tileSpace;
 
     @Override
     public void init() {
-        tileView = new TileView();
+        tileSpace = new TileSpace();
     }
 
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setTitle("Map tile test");
         StackPane root = new StackPane();
-        root.getChildren().addAll(new MapView(tileView));
+        root.getChildren().addAll(new MapView(tileSpace));
         primaryStage.setScene(new Scene(root, 800, 600));
         primaryStage.show();
     }
 
     @Override
     public void stop() {
-        tileView.close();
+        tileSpace.close();
     }
 }

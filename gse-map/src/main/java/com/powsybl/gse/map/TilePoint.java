@@ -1,9 +1,12 @@
 package com.powsybl.gse.map;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.reactivex.Maybe;
 import org.asynchttpclient.Response;
 
+import java.io.InputStream;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * A point in the tile view.
@@ -18,13 +21,13 @@ class TilePoint {
 
     private final int zoom;
 
-    private final TileView view;
+    private final TileSpace space;
 
-    public TilePoint(double x, double y, int zoom, TileView view) {
+    public TilePoint(double x, double y, int zoom, TileSpace space) {
         this.x = x;
         this.y = y;
         this.zoom = zoom;
-        this.view = Objects.requireNonNull(view);
+        this.space = Objects.requireNonNull(space);
     }
 
     public double getX() {
@@ -40,11 +43,24 @@ class TilePoint {
     }
 
     public String getUrl() {
-        return view.getDescriptor().getUrlTemplate().instanciate(this);
+        return space.getDescriptor().getUrlTemplate().instanciate(this);
     }
 
-    public Maybe<Response> request() {
-        return view.getHttpClient().request(this);
+    private static Optional<InputStream> getResponseBodyAsStream(Response response) {
+        return response.getStatusCode() == HttpResponseStatus.OK.code()
+                ? Optional.of(response.getResponseBodyAsStream())
+                : Optional.empty();
+    }
+
+    private static TileImage getTileImage(Response response) {
+        return () -> getResponseBodyAsStream(response);
+    }
+
+    public Maybe<TileImage> request() {
+        return space.getCache().getImage(this)
+                              .switchIfEmpty(space.getHttpClient()
+                                      .request(TilePoint.this)
+                                      .map(TilePoint::getTileImage));
     }
 
     public Coordinate getCoordinate() {

@@ -7,10 +7,11 @@ import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.Request;
 import org.asynchttpclient.Response;
 import org.asynchttpclient.extras.rxjava2.RxHttpClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -21,7 +22,7 @@ import static org.asynchttpclient.Dsl.*;
  */
 class TileHttpClient implements AutoCloseable {
 
-    private final TileCache cache;
+    private static final Logger LOGGER = LoggerFactory.getLogger(TileHttpClient.class);
 
     private final AsyncHttpClient asyncHttpClient;
 
@@ -31,8 +32,7 @@ class TileHttpClient implements AutoCloseable {
 
     private final Scheduler scheduler;
 
-    public TileHttpClient(TileCache cache) {
-        this.cache = Objects.requireNonNull(cache);
+    public TileHttpClient() {
         asyncHttpClient = asyncHttpClient(config()
                 .setMaxConnections(500)
                 .setMaxConnectionsPerHost(200)
@@ -45,6 +45,7 @@ class TileHttpClient implements AutoCloseable {
 
     Maybe<Response> request(TilePoint tilePoint) {
         String url = tilePoint.getUrl();
+        LOGGER.info("Loading tile {}", url);
         Request request = get(url)
                 .addHeader("User-Agent", "powsybl")
                 .build();
