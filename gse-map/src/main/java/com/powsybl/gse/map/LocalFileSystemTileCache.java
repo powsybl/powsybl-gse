@@ -32,7 +32,8 @@ class LocalFileSystemTileCache implements TileCache {
     }
 
     private Path getXDir(Tile tile) {
-        return dir.resolve(Integer.toString(tile.getZoom()))
+        return dir.resolve(tile.getServerName())
+                  .resolve(Integer.toString(tile.getZoom()))
                   .resolve(Integer.toString(tile.getX()));
     }
 

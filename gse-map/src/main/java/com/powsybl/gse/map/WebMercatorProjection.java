@@ -8,6 +8,8 @@ package com.powsybl.gse.map;
 
 import javafx.geometry.Point2D;
 
+import java.util.Objects;
+
 /**
  * Utility class to project GPS coordinate to Web Mercator.
  *
@@ -21,8 +23,17 @@ public final class WebMercatorProjection {
     }
 
     public static Point2D project(Coordinate c) {
+        Objects.requireNonNull(c);
         double x = c.getLon();
         double y = Math.log(Math.tan(Math.toRadians(c.getLat())) + 1 / Math.cos(Math.toRadians(c.getLat())));
         return new Point2D(x, y);
+    }
+
+    public static Coordinate unproject(Point2D point) {
+        Objects.requireNonNull(point);
+        double lon = point.getX();
+        double latRad = Math.atan(Math.sinh(point.getY()));
+        double lat = latRad * 180.0 / Math.PI;
+        return new Coordinate(lon, lat);
     }
 }

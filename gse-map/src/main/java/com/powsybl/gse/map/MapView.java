@@ -5,6 +5,7 @@ import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.geometry.Point2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Region;
@@ -32,10 +33,34 @@ public class MapView extends Region {
 
     public MapView(TileSpace tileSpace) {
         this.tileSpace = Objects.requireNonNull(tileSpace);
-        zoom = new SimpleIntegerProperty(tileSpace.getDescriptor().getMinZoomLevel());
+        // bounded property to limit zoom level
+        zoom = new SimpleIntegerProperty(tileSpace.getServerInfo().getMinZoomLevel()) {
+            @Override
+            public void set(int newValue) {
+                if (newValue < tileSpace.getServerInfo().getMinZoomLevel()) {
+                    super.set(tileSpace.getServerInfo().getMinZoomLevel());
+                } else if (newValue > tileSpace.getServerInfo().getMaxZoomLevel()) {
+                    super.set(tileSpace.getServerInfo().getMaxZoomLevel());
+                } else {
+                    super.set(newValue);
+                }
+            }
+        };
         getChildren().addAll(canvas);
         zoom.addListener((observable, oldValue, newValue) -> requestLayout());
         center.addListener((observable, oldValue, newValue) -> requestLayout());
+
+        // panning
+        ObjectProperty<Point2D> mouseDown = new SimpleObjectProperty<>();
+        canvas.setOnMousePressed(event -> {
+            mouseDown.set(new Point2D(event.getX(), event.getY()));
+        });
+        canvas.setOnMouseDragged(event -> {
+            double dx = event.getX() - mouseDown.get().getX();
+            double dy = event.getY() - mouseDown.get().getY();
+            System.out.println(dx + " " + dy);
+            mouseDown.set(new Point2D(event.getX(), event.getY()));
+        });
     }
 
     public IntegerProperty zoomProperty() {
@@ -69,8 +94,8 @@ public class MapView extends Region {
         TilePoint tilePoint = tileSpace.project(center.get(), zoom.get());
         Tile tile = tilePoint.getTile();
 
-        double tileWidth = tileSpace.getDescriptor().getWidth();
-        double tileHeight = tileSpace.getDescriptor().getHeight();
+        double tileWidth = tileSpace.getServerInfo().getTileWidth();
+        double tileHeight = tileSpace.getServerInfo().getTileHeight();
 
         // draw center tile
         double x = getWidth() / 2 - tileWidth * (tilePoint.getX() - tile.getX());

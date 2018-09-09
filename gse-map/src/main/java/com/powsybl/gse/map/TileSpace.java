@@ -9,28 +9,36 @@ import java.util.Objects;
  */
 class TileSpace implements AutoCloseable {
 
-    private final TileDescriptor descriptor;
+    private TileServerInfo serverInfo;
 
     private final TileHttpClient httpClient;
 
     private final TileCache cache;
 
     public TileSpace() {
-        this(TileDescriptor.DEFAULT);
+        this(TileServerInfo.OSM_STANDARD);
     }
 
-    public TileSpace(TileDescriptor descriptor) {
-        this(descriptor, new LocalFileSystemTileCache());
+    public TileSpace(TileServerInfo serverInfo) {
+        this(serverInfo, new LocalFileSystemTileCache());
     }
 
-    public TileSpace(TileDescriptor descriptor, TileCache cache) {
-        this.descriptor = Objects.requireNonNull(descriptor);
+    public TileSpace(TileServerInfo serverInfo, TileCache cache) {
+        this(serverInfo, new TileHttpClient(), cache);
+    }
+
+    public TileSpace(TileServerInfo serverInfo, TileHttpClient httpClient, TileCache cache) {
+        this.serverInfo = Objects.requireNonNull(serverInfo);
+        this.httpClient = Objects.requireNonNull(httpClient);
         this.cache = Objects.requireNonNull(cache);
-        httpClient = new TileHttpClient();
     }
 
-    public TileDescriptor getDescriptor() {
-        return descriptor;
+    public TileServerInfo getServerInfo() {
+        return serverInfo;
+    }
+
+    public void setServer(TileServerInfo serverInfo) {
+        this.serverInfo = Objects.requireNonNull(serverInfo);
     }
 
     public TileCache getCache() {

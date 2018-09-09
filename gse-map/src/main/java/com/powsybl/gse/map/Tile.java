@@ -41,7 +41,11 @@ class Tile {
     }
 
     public String getUrl() {
-        return space.getDescriptor().getUrlTemplate().instanciate(this);
+        return space.getServerInfo().getUrlTemplate().instanciate(this);
+    }
+
+    public String getServerName() {
+        return space.getServerInfo().getServerName();
     }
 
     public Maybe<InputStream> request() {

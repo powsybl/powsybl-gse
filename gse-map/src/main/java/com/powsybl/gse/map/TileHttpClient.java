@@ -38,7 +38,7 @@ class TileHttpClient implements AutoCloseable {
                 .addHeader("User-Agent", "powsybl")
                 .build();
         return rxHttpClient.prepare(request)
-                .doOnSubscribe(disposable -> LOGGER.info("Loading tile {}", url))
+                .doOnEvent((response, throwable) -> LOGGER.info("Loading tile {} (status={})", url, response.getStatusCode()))
                 .subscribeOn(Schedulers.computation());
     }
 

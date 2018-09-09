@@ -1,5 +1,7 @@
 package com.powsybl.gse.map;
 
+import javafx.geometry.Point2D;
+
 import java.util.Objects;
 
 /**
@@ -41,6 +43,11 @@ class TilePoint {
     }
 
     public Coordinate getCoordinate() {
-        throw new AssertionError();
+        int n = 1 << zoom;
+
+        double x2 = x / n * 360 - 180;
+        double y2 = -(2 * y / n - 1) * Math.PI;
+
+        return WebMercatorProjection.unproject(new Point2D(x2, y2));
     }
 }
