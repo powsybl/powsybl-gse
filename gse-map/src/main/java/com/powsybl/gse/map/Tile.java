@@ -19,13 +19,13 @@ class Tile {
 
     private final int zoom;
 
-    private final TileSpace space;
+    private final TileManager manager;
 
-    public Tile(int x, int y, int zoom, TileSpace space) {
+    public Tile(int x, int y, int zoom, TileManager manager) {
         this.x = x;
         this.y = y;
         this.zoom = zoom;
-        this.space = Objects.requireNonNull(space);
+        this.manager = Objects.requireNonNull(manager);
     }
 
     public int getX() {
@@ -41,22 +41,22 @@ class Tile {
     }
 
     public String getUrl() {
-        return space.getServerInfo().getUrlTemplate().instanciate(this);
+        return manager.getServerInfo().getUrlTemplate().instanciate(this);
     }
 
     public String getServerName() {
-        return space.getServerInfo().getServerName();
+        return manager.getServerInfo().getServerName();
     }
 
     public Maybe<InputStream> request() {
-        return space.getCache().readTile(this)
-                .switchIfEmpty(space.getHttpClient()
+        return manager.getCache().readTile(this)
+                .switchIfEmpty(manager.getHttpClient()
                         .request(Tile.this)
                         .filter(response -> response.getStatusCode() == HttpResponseStatus.OK.code())
                         .map(response ->
                             // also write new downloaded tile to cache
                             new TeeInputStream(response.getResponseBodyAsStream(),
-                                               space.getCache().writeTile(this))
+                                               manager.getCache().writeTile(this))
                         ));
     }
 }

@@ -1,5 +1,7 @@
 package com.powsybl.gse.map;
 
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Point2D;
 
 import java.util.Objects;
@@ -7,38 +9,38 @@ import java.util.Objects;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-class TileSpace implements AutoCloseable {
+class TileManager implements AutoCloseable {
 
-    private TileServerInfo serverInfo;
+    private final ObjectProperty<TileServerInfo> serverInfo;
 
     private final TileHttpClient httpClient;
 
     private final TileCache cache;
 
-    public TileSpace() {
+    public TileManager() {
         this(TileServerInfo.OSM_STANDARD);
     }
 
-    public TileSpace(TileServerInfo serverInfo) {
+    public TileManager(TileServerInfo serverInfo) {
         this(serverInfo, new LocalFileSystemTileCache());
     }
 
-    public TileSpace(TileServerInfo serverInfo, TileCache cache) {
+    public TileManager(TileServerInfo serverInfo, TileCache cache) {
         this(serverInfo, new TileHttpClient(), cache);
     }
 
-    public TileSpace(TileServerInfo serverInfo, TileHttpClient httpClient, TileCache cache) {
-        this.serverInfo = Objects.requireNonNull(serverInfo);
+    public TileManager(TileServerInfo serverInfo, TileHttpClient httpClient, TileCache cache) {
+        this.serverInfo = new SimpleObjectProperty<>(Objects.requireNonNull(serverInfo));
         this.httpClient = Objects.requireNonNull(httpClient);
         this.cache = Objects.requireNonNull(cache);
     }
 
-    public TileServerInfo getServerInfo() {
+    public ObjectProperty<TileServerInfo> serverInfoProperty() {
         return serverInfo;
     }
 
-    public void setServer(TileServerInfo serverInfo) {
-        this.serverInfo = Objects.requireNonNull(serverInfo);
+    public TileServerInfo getServerInfo() {
+        return serverInfo.get();
     }
 
     public TileCache getCache() {

@@ -23,7 +23,7 @@ public class MapView extends Region {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MapView.class);
 
-    private final TileSpace tileSpace;
+    private final TileManager tileManager;
 
     private final Canvas canvas = new Canvas();
 
@@ -31,16 +31,16 @@ public class MapView extends Region {
 
     private final IntegerProperty zoom;
 
-    public MapView(TileSpace tileSpace) {
-        this.tileSpace = Objects.requireNonNull(tileSpace);
+    public MapView(TileManager tileManager) {
+        this.tileManager = Objects.requireNonNull(tileManager);
         // bounded property to limit zoom level
-        zoom = new SimpleIntegerProperty(tileSpace.getServerInfo().getMinZoomLevel()) {
+        zoom = new SimpleIntegerProperty(tileManager.getServerInfo().getMinZoomLevel()) {
             @Override
             public void set(int newValue) {
-                if (newValue < tileSpace.getServerInfo().getMinZoomLevel()) {
-                    super.set(tileSpace.getServerInfo().getMinZoomLevel());
-                } else if (newValue > tileSpace.getServerInfo().getMaxZoomLevel()) {
-                    super.set(tileSpace.getServerInfo().getMaxZoomLevel());
+                if (newValue < tileManager.getServerInfo().getMinZoomLevel()) {
+                    super.set(tileManager.getServerInfo().getMinZoomLevel());
+                } else if (newValue > tileManager.getServerInfo().getMaxZoomLevel()) {
+                    super.set(tileManager.getServerInfo().getMaxZoomLevel());
                 } else {
                     super.set(newValue);
                 }
@@ -49,6 +49,8 @@ public class MapView extends Region {
         getChildren().addAll(canvas);
         zoom.addListener((observable, oldValue, newValue) -> requestLayout());
         center.addListener((observable, oldValue, newValue) -> requestLayout());
+
+        tileManager.serverInfoProperty().addListener((observable, oldValue, newValue) -> requestLayout());
 
         // panning
         ObjectProperty<Point2D> mouseDown = new SimpleObjectProperty<>();
@@ -91,11 +93,11 @@ public class MapView extends Region {
     }
 
     private void drawTiles() {
-        TilePoint tilePoint = tileSpace.project(center.get(), zoom.get());
+        TilePoint tilePoint = tileManager.project(center.get(), zoom.get());
         Tile tile = tilePoint.getTile();
 
-        double tileWidth = tileSpace.getServerInfo().getTileWidth();
-        double tileHeight = tileSpace.getServerInfo().getTileHeight();
+        double tileWidth = tileManager.getServerInfo().getTileWidth();
+        double tileHeight = tileManager.getServerInfo().getTileHeight();
 
         // draw center tile
         double x = getWidth() / 2 - tileWidth * (tilePoint.getX() - tile.getX());
@@ -112,7 +114,7 @@ public class MapView extends Region {
         for (int i = -n1; i <= n2; i++) {
             for (int j = -m1; j <= m2; j++) {
                 if (i != 0 || j != 0) {
-                    drawTile(new Tile(tile.getX() + i, tile.getY() + j, zoom.get(), tileSpace),
+                    drawTile(new Tile(tile.getX() + i, tile.getY() + j, zoom.get(), tileManager),
                              x + i * tileWidth,
                              y + j * tileHeight);
                 }

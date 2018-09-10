@@ -17,13 +17,13 @@ class TilePoint {
 
     private final int zoom;
 
-    private final TileSpace space;
+    private final TileManager manager;
 
-    public TilePoint(double x, double y, int zoom, TileSpace space) {
+    public TilePoint(double x, double y, int zoom, TileManager manager) {
         this.x = x;
         this.y = y;
         this.zoom = zoom;
-        this.space = Objects.requireNonNull(space);
+        this.manager = Objects.requireNonNull(manager);
     }
 
     public double getX() {
@@ -39,7 +39,7 @@ class TilePoint {
     }
 
     public Tile getTile() {
-        return new Tile((int) Math.floor(x), (int) Math.floor(y), zoom, space);
+        return new Tile((int) Math.floor(x), (int) Math.floor(y), zoom, manager);
     }
 
     public Coordinate getCoordinate() {

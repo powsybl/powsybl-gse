@@ -17,18 +17,18 @@ public class Test extends Application {
         launch(args);
     }
 
-    private TileSpace tileSpace;
+    private TileManager tileManager;
 
     @Override
     public void init() {
-        tileSpace = new TileSpace();
+        tileManager = new TileManager();
     }
 
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setTitle("Map tile test");
         BorderPane root = new BorderPane();
-        MapView mapView = new MapView(tileSpace);
+        MapView mapView = new MapView(tileManager);
         mapView.zoomProperty().set(13);
         mapView.centerProperty().set(new Coordinate(2.162, 48.801));
         root.setCenter(mapView);
@@ -37,7 +37,10 @@ public class Test extends Application {
         Button zoomOut = new Button("-");
         zoomOut.setOnAction(event -> mapView.zoomProperty().set(mapView.zoomProperty().get() - 1));
         ComboBox<TileServerInfo> serverNames = new ComboBox<>();
-        serverNames.getItems().addAll(TileServerInfo.OSM_STANDARD, TileServerInfo.OPEN_CYCLE_MAP);
+        serverNames.getItems().addAll(TileServerInfo.OSM_STANDARD,
+                                      TileServerInfo.OPEN_CYCLE_MAP);
+        serverNames.getSelectionModel().select(0);
+        tileManager.serverInfoProperty().bind(serverNames.getSelectionModel().selectedItemProperty());
         ToolBar toolBar = new ToolBar(zoomIn, zoomOut, serverNames);
         root.setTop(toolBar);
         primaryStage.setScene(new Scene(root, 800, 600));
@@ -46,6 +49,6 @@ public class Test extends Application {
 
     @Override
     public void stop() {
-        tileSpace.close();
+        tileManager.close();
     }
 }
