@@ -31,8 +31,12 @@ public final class WebMercatorProjection {
 
     public static Coordinate unproject(Point2D point) {
         Objects.requireNonNull(point);
-        double lon = point.getX();
-        double latRad = Math.atan(Math.sinh(point.getY()));
+        return unproject(point.getX(), point.getY());
+    }
+
+    public static Coordinate unproject(double x, double y) {
+        double lon = x;
+        double latRad = Math.atan(Math.sinh(y));
         double lat = latRad * 180.0 / Math.PI;
         return new Coordinate(lon, lat);
     }

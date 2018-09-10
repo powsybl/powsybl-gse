@@ -25,7 +25,7 @@ public class MapView extends Region {
 
     private final TileManager tileManager;
 
-    private final Canvas canvas = new Canvas();
+    private final Canvas tileCanvas = new Canvas();
 
     private final ObjectProperty<Coordinate> center = new SimpleObjectProperty<>(new Coordinate(0, 0));
 
@@ -46,7 +46,7 @@ public class MapView extends Region {
                 }
             }
         };
-        getChildren().addAll(canvas);
+        getChildren().addAll(tileCanvas);
         zoom.addListener((observable, oldValue, newValue) -> requestLayout());
         center.addListener((observable, oldValue, newValue) -> requestLayout());
 
@@ -54,13 +54,21 @@ public class MapView extends Region {
 
         // panning
         ObjectProperty<Point2D> mouseDown = new SimpleObjectProperty<>();
-        canvas.setOnMousePressed(event -> {
+        tileCanvas.setOnMousePressed(event -> {
             mouseDown.set(new Point2D(event.getX(), event.getY()));
         });
-        canvas.setOnMouseDragged(event -> {
+        tileCanvas.setOnMouseDragged(event -> {
             double dx = event.getX() - mouseDown.get().getX();
             double dy = event.getY() - mouseDown.get().getY();
-            System.out.println(dx + " " + dy);
+
+            // shift center
+            TilePoint p1 = tileManager.project(center.get(), zoom.get());
+            TilePoint p2 = new TilePoint(p1.getX() - dx / tileManager.getServerInfo().getTileWidth(),
+                                         p1.getY() - dy / tileManager.getServerInfo().getTileHeight(),
+                                         zoom.get(),
+                                         tileManager);
+            center.set(p2.getCoordinate());
+
             mouseDown.set(new Point2D(event.getX(), event.getY()));
         });
     }
@@ -73,9 +81,17 @@ public class MapView extends Region {
         return center;
     }
 
+    public void addLayer(MapLayer layer) {
+        Objects.requireNonNull(layer);
+    }
+
+    public void removeLayer(MapLayer layer) {
+        Objects.requireNonNull(layer);
+    }
+
     private void drawTileImage(InputStream is, double x, double y) {
         try {
-            canvas.getGraphicsContext2D().drawImage(new Image(is), x, y);
+            tileCanvas.getGraphicsContext2D().drawImage(new Image(is), x, y);
         } finally {
             try {
                 is.close();
@@ -125,8 +141,8 @@ public class MapView extends Region {
     @Override
     protected void layoutChildren() {
         // resize canvas to fit the parent region
-        canvas.setWidth(getWidth());
-        canvas.setHeight(getHeight());
+        tileCanvas.setWidth(getWidth());
+        tileCanvas.setHeight(getHeight());
 
         // draw tiles
         drawTiles();

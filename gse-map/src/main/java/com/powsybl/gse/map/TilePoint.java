@@ -45,9 +45,11 @@ class TilePoint {
     public Coordinate getCoordinate() {
         int n = 1 << zoom;
 
+        // project from tile space point to web mercator space
         double x2 = x / n * 360 - 180;
         double y2 = -(2 * y / n - 1) * Math.PI;
 
-        return WebMercatorProjection.unproject(new Point2D(x2, y2));
+        // project from web mercator space to WGS84 (GPS) space
+        return WebMercatorProjection.unproject(x2, y2);
     }
 }
