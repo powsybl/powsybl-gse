@@ -6,8 +6,6 @@
  */
 package com.powsybl.gse.map;
 
-import io.reactivex.Maybe;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -16,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -44,17 +43,18 @@ class LocalFileSystemTileCache implements TileCache {
     }
 
     @Override
-    public Maybe<InputStream> readTile(Tile tile) {
+    public Optional<InputStream> readTile(Tile tile) {
         Objects.requireNonNull(tile);
-        return Maybe.create(maybeEmitter -> {
-            Path xDir = getXDir(tile);
-            Path yFile = getYFile(tile, xDir);
-            if (Files.exists(yFile)) {
-                maybeEmitter.onSuccess(Files.newInputStream(yFile));
-            } else {
-                maybeEmitter.onComplete();
+        Path xDir = getXDir(tile);
+        Path yFile = getYFile(tile, xDir);
+        if (Files.exists(yFile)) {
+            try {
+                return Optional.of(Files.newInputStream(yFile));
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
             }
-        });
+        }
+        return Optional.empty();
     }
 
     @Override

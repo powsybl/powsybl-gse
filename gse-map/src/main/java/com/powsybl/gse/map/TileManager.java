@@ -57,6 +57,11 @@ class TileManager implements AutoCloseable {
         return httpClient;
     }
 
+    public int getTileCount(int zoom) {
+        serverInfo.get().checkZoomLevel(zoom);
+        return 1 << zoom;
+    }
+
     /**
      * Project a GPS coordinate to tile space
      *
@@ -65,6 +70,9 @@ class TileManager implements AutoCloseable {
      * @return the tile point in the tile space
      */
     public TilePoint project(Coordinate c, int zoom) {
+        Objects.requireNonNull(c);
+        serverInfo.get().checkZoomLevel(zoom);
+
         // Project the coordinates to the Mercator projection (from EPSG:4326 to EPSG:3857)
         Point2D p = WebMercatorProjection.project(c);
 
@@ -73,13 +81,13 @@ class TileManager implements AutoCloseable {
         double y = (1 - (p.getY() / Math.PI)) / 2;
 
         // Calculate the number of tiles across the map, n, using 2^zoom
-        int n = 1 << zoom;
+        int n = getTileCount(zoom);
 
         // Multiply x and y by n
         double xTile = x * n;
         double yTile = y * n;
 
-        return new TilePoint(xTile, yTile, zoom, this);
+        return new TilePoint(xTile, yTile, zoom, serverInfo.get());
     }
 
     @Override

@@ -61,6 +61,12 @@ public class TileServerInfo {
         return maxZoomLevel;
     }
 
+    public void checkZoomLevel(int zoomLevel) {
+        if (zoomLevel < minZoomLevel || zoomLevel > maxZoomLevel) {
+            throw new IllegalArgumentException("Invalid zoom level: " + zoomLevel);
+        }
+    }
+
     @Override
     public String toString() {
         return serverName;

@@ -6,11 +6,6 @@
  */
 package com.powsybl.gse.map;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.reactivex.Maybe;
-import org.apache.commons.io.input.TeeInputStream;
-
-import java.io.InputStream;
 import java.util.Objects;
 
 /**
@@ -25,13 +20,13 @@ class Tile {
 
     private final int zoom;
 
-    private final TileManager manager;
+    private final TileServerInfo serverInfo;
 
-    public Tile(int x, int y, int zoom, TileManager manager) {
+    public Tile(int x, int y, int zoom, TileServerInfo serverInfo) {
         this.x = x;
         this.y = y;
         this.zoom = zoom;
-        this.manager = Objects.requireNonNull(manager);
+        this.serverInfo = Objects.requireNonNull(serverInfo);
     }
 
     public int getX() {
@@ -47,22 +42,30 @@ class Tile {
     }
 
     public String getUrl() {
-        return manager.getServerInfo().getUrlTemplate().instanciate(this);
+        return serverInfo.getUrlTemplate().instanciate(this);
     }
 
     public String getServerName() {
-        return manager.getServerInfo().getServerName();
+        return serverInfo.getServerName();
     }
 
-    public Maybe<InputStream> request() {
-        return manager.getCache().readTile(this)
-                .switchIfEmpty(manager.getHttpClient()
-                        .request(Tile.this)
-                        .filter(response -> response.getStatusCode() == HttpResponseStatus.OK.code())
-                        .map(response ->
-                            // also write new downloaded tile to cache
-                            new TeeInputStream(response.getResponseBodyAsStream(),
-                                               manager.getCache().writeTile(this))
-                        ));
+    @Override
+    public int hashCode() {
+        return Objects.hash(x, y, zoom, serverInfo.getServerName());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof Tile) {
+            Tile other = (Tile) obj;
+            return x == other.x && y == other.y && zoom == other.zoom
+                    && serverInfo.getServerName().equals(other.serverInfo.getServerName());
+        }
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        return "Tile(x=" + x + ", y=" + y + ", zoom=" + zoom + ", serverName=" + serverInfo.getServerName() + ")";
     }
 }

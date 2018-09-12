@@ -6,17 +6,16 @@
  */
 package com.powsybl.gse.map;
 
-import io.reactivex.Maybe;
-
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Optional;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
 interface TileCache {
 
-    Maybe<InputStream> readTile(Tile tile);
+    Optional<InputStream> readTile(Tile tile);
 
     OutputStream writeTile(Tile tile);
 }

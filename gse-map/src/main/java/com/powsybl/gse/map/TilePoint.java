@@ -21,13 +21,13 @@ class TilePoint {
 
     private final int zoom;
 
-    private final TileManager manager;
+    private final TileServerInfo serverInfo;
 
-    public TilePoint(double x, double y, int zoom, TileManager manager) {
+    public TilePoint(double x, double y, int zoom, TileServerInfo serverInfo) {
         this.x = x;
         this.y = y;
         this.zoom = zoom;
-        this.manager = Objects.requireNonNull(manager);
+        this.serverInfo = Objects.requireNonNull(serverInfo);
     }
 
     public double getX() {
@@ -43,7 +43,7 @@ class TilePoint {
     }
 
     public Tile getTile() {
-        return new Tile((int) Math.floor(x), (int) Math.floor(y), zoom, manager);
+        return new Tile((int) Math.floor(x), (int) Math.floor(y), zoom, serverInfo);
     }
 
     public Coordinate getCoordinate() {
@@ -55,5 +55,10 @@ class TilePoint {
 
         // project from web mercator space to WGS84 (GPS) space
         return WebMercatorProjection.unproject(x2, y2);
+    }
+
+    @Override
+    public String toString() {
+        return "TilePoint(x=" + x + ", y=" + y + ", zoom=" + zoom + ")";
     }
 }
