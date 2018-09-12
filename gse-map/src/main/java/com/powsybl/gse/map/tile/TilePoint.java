@@ -25,7 +25,7 @@ public class TilePoint {
 
     private final TileServerInfo serverInfo;
 
-    public TilePoint(double x, double y, int zoom, TileServerInfo serverInfo) {
+    TilePoint(double x, double y, int zoom, TileServerInfo serverInfo) {
         this.x = x;
         this.y = y;
         this.zoom = zoom;
@@ -42,6 +42,10 @@ public class TilePoint {
 
     public int getZoom() {
         return zoom;
+    }
+
+    public TilePoint move(double dx, double dy) {
+        return new TilePoint(x + dx, y + dy, zoom, serverInfo);
     }
 
     public Tile getTile() {

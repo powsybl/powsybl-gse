@@ -7,10 +7,10 @@
 package com.powsybl.gse.map;
 
 import com.google.common.io.ByteStreams;
-import com.powsybl.gse.map.util.Coordinate;
 import com.powsybl.gse.map.tile.Tile;
 import com.powsybl.gse.map.tile.TileManager;
 import com.powsybl.gse.map.tile.TilePoint;
+import com.powsybl.gse.map.util.Coordinate;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.reactivex.schedulers.Schedulers;
 import javafx.application.Platform;
@@ -73,22 +73,31 @@ public class MapView extends Region {
 
         tileManager.serverInfoProperty().addListener((observable, oldValue, newValue) -> requestLayout());
 
+        // zooming
+        tileCanvas.setOnScroll(event -> {
+            if (event.getDeltaY() > 0) {
+                TilePoint p = tileManager.project(center.get(), zoom.get())
+                                         .move((event.getX() - getWidth() / 2) / tileManager.getServerInfo().getTileWidth(),
+                                               (event.getY() - getHeight() / 2) / tileManager.getServerInfo().getTileHeight());
+                center.set(p.getCoordinate());
+                zoom.set(zoom.get() + 1);
+            } else {
+                zoom.set(zoom.get() - 1);
+            }
+        });
+
         // panning
         ObjectProperty<Point2D> mouseDown = new SimpleObjectProperty<>();
-        tileCanvas.setOnMousePressed(event -> {
-            mouseDown.set(new Point2D(event.getX(), event.getY()));
-        });
+        tileCanvas.setOnMousePressed(event -> mouseDown.set(new Point2D(event.getX(), event.getY())));
         tileCanvas.setOnMouseDragged(event -> {
             double dx = event.getX() - mouseDown.get().getX();
             double dy = event.getY() - mouseDown.get().getY();
 
             // shift center
-            TilePoint p1 = tileManager.project(center.get(), zoom.get());
-            TilePoint p2 = new TilePoint(p1.getX() - dx / tileManager.getServerInfo().getTileWidth(),
-                                         p1.getY() - dy / tileManager.getServerInfo().getTileHeight(),
-                                         zoom.get(),
-                                         tileManager.getServerInfo());
-            center.set(p2.getCoordinate());
+            TilePoint p = tileManager.project(center.get(), zoom.get())
+                                     .move(-dx / tileManager.getServerInfo().getTileWidth(),
+                                           -dy / tileManager.getServerInfo().getTileHeight());
+            center.set(p.getCoordinate());
 
             mouseDown.set(new Point2D(event.getX(), event.getY()));
         });
