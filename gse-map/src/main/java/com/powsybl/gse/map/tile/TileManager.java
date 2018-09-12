@@ -4,8 +4,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.gse.map;
+package com.powsybl.gse.map.tile;
 
+import com.powsybl.gse.map.util.Coordinate;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Point2D;
@@ -15,7 +16,7 @@ import java.util.Objects;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-class TileManager implements AutoCloseable {
+public class TileManager implements AutoCloseable {
 
     private final ObjectProperty<TileServerInfo> serverInfo;
 
@@ -53,7 +54,11 @@ class TileManager implements AutoCloseable {
         return cache;
     }
 
-    TileHttpClient getHttpClient() {
+    public Tile createTile(int x, int y, int zoom) {
+        return new Tile(x, y, zoom, serverInfo.get());
+    }
+
+    public TileHttpClient getHttpClient() {
         return httpClient;
     }
 

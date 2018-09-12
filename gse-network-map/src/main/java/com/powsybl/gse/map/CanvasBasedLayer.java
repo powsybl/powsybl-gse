@@ -10,6 +10,7 @@ import com.github.davidmoten.rtree.geometry.Geometries;
 import com.github.davidmoten.rtree.geometry.Rectangle;
 import com.gluonhq.maps.MapLayer;
 import com.gluonhq.maps.MapView;
+import com.powsybl.gse.map.util.Coordinate;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.Canvas;

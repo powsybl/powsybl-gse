@@ -6,6 +6,9 @@
  */
 package com.powsybl.gse.map;
 
+import com.powsybl.gse.map.util.Coordinate;
+import com.powsybl.gse.map.tile.TileManager;
+import com.powsybl.gse.map.tile.TileServerInfo;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;

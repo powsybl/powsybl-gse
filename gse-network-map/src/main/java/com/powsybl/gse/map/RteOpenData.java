@@ -8,6 +8,7 @@ package com.powsybl.gse.map;
 
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.config.PlatformConfig;
+import com.powsybl.gse.map.util.Coordinate;
 import javafx.scene.paint.Color;
 import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;

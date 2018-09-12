@@ -9,6 +9,7 @@ package com.powsybl.gse.map;
 import com.github.davidmoten.rtree.geometry.Geometries;
 import com.github.davidmoten.rtree.geometry.Rectangle;
 import com.powsybl.commons.PowsyblException;
+import com.powsybl.gse.map.util.Coordinate;
 
 import java.util.List;
 import java.util.Objects;

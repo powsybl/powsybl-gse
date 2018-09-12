@@ -6,6 +6,7 @@
  */
 package com.powsybl.gse.map;
 
+import com.powsybl.gse.map.util.Coordinate;
 import javafx.scene.paint.Color;
 import org.junit.Ignore;
 import org.junit.Test;

@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.gse.map;
+package com.powsybl.gse.map.tile;
 
 import io.reactivex.Maybe;
 import io.reactivex.schedulers.Schedulers;
@@ -24,7 +24,7 @@ import static org.asynchttpclient.Dsl.*;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-class TileHttpClient implements AutoCloseable {
+public class TileHttpClient implements AutoCloseable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TileHttpClient.class);
 
@@ -38,7 +38,7 @@ class TileHttpClient implements AutoCloseable {
         rxHttpClient = RxHttpClient.create(asyncHttpClient);
     }
 
-    Maybe<Response> request(Tile tile) {
+    public Maybe<Response> request(Tile tile) {
         String url = tile.getUrl();
         Request request = get(url)
                 .addHeader("User-Agent", "powsybl")

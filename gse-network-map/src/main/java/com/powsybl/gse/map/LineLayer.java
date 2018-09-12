@@ -12,6 +12,7 @@ import com.github.davidmoten.rtree.geometry.Geometry;
 import com.gluonhq.maps.MapView;
 import com.goebl.simplify.PointExtractor;
 import com.goebl.simplify.Simplify;
+import com.powsybl.gse.map.util.Coordinate;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.shape.ArcType;

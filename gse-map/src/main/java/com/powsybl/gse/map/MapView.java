@@ -7,6 +7,10 @@
 package com.powsybl.gse.map;
 
 import com.google.common.io.ByteStreams;
+import com.powsybl.gse.map.util.Coordinate;
+import com.powsybl.gse.map.tile.Tile;
+import com.powsybl.gse.map.tile.TileManager;
+import com.powsybl.gse.map.tile.TilePoint;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.reactivex.schedulers.Schedulers;
 import javafx.application.Platform;
@@ -106,7 +110,7 @@ public class MapView extends Region {
         Objects.requireNonNull(layer);
     }
 
-    private void loadAndDrawTile(GraphicsContext g, Tile tile) {
+    private void drawTileAsync(GraphicsContext g, Tile tile) {
         tileManager.getHttpClient().request(tile)
                 .subscribeOn(Schedulers.computation())
                 .subscribe(response -> {
@@ -121,8 +125,8 @@ public class MapView extends Region {
                         Platform.runLater(() -> {
                             Point2D pointScreen = tilesToDraw.remove(tile);
                             if (pointScreen != null) {
-                                try (InputStream is2 = tileManager.getCache().readTile(tile).orElseThrow(AssertionError::new)) {
-                                    g.drawImage(new Image(is2), pointScreen.getX(), pointScreen.getY());
+                                try (InputStream is = tileManager.getCache().readTile(tile).orElseThrow(AssertionError::new)) {
+                                    g.drawImage(new Image(is), pointScreen.getX(), pointScreen.getY());
                                 } catch (IOException e) {
                                     throw new UncheckedIOException(e);
                                 }
@@ -157,7 +161,7 @@ public class MapView extends Region {
         tilesToDraw.clear();
 
         // draw tiles
-        GraphicsContext g = tileCanvas.getGraphicsContext2D();
+        GraphicsContext gc = tileCanvas.getGraphicsContext2D();
         int n = tileManager.getTileCount(zoom.get());
         for (int i = -w1; i <= w2; i++) {
             for (int j = -h1; j <= h2; j++) {
@@ -166,21 +170,21 @@ public class MapView extends Region {
                 double xScreen = xScreenCenterTile + i * tileWidth;
                 double yScreen = yScreenCenterTile + j * tileHeight;
                 if (tileX < 0 || tileY < 0 || tileX > n - 1 || tileY > n - 1) {
-                    drawWhiteTile(g, xScreen, yScreen, tileWidth, tileHeight);
+                    drawWhiteTile(gc, xScreen, yScreen, tileWidth, tileHeight);
                 } else {
-                    Tile tile = new Tile(tileX, tileY, zoom.get(), tileManager.getServerInfo());
+                    Tile tile = tileManager.createTile(tileX, tileY, zoom.get());
                     try (InputStream is = tileManager.getCache().readTile(tile).orElse(null)) {
                         if (is != null) {
                             // tile is in the cache, we can draw it
-                            g.drawImage(new Image(is), xScreen, yScreen);
+                            gc.drawImage(new Image(is), xScreen, yScreen);
                         } else {
                             tilesToDraw.put(tile, new Point2D(xScreen, yScreen));
 
                             // paint white tile
-                            drawWhiteTile(g, xScreen, yScreen, tileWidth, tileHeight);
+                            drawWhiteTile(gc, xScreen, yScreen, tileWidth, tileHeight);
 
-                            // load tile in background
-                            loadAndDrawTile(g, tile);
+                            // load and draw tile
+                            drawTileAsync(gc, tile);
                         }
                     } catch (IOException e) {
                         throw new UncheckedIOException(e);

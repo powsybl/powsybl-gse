@@ -6,6 +6,8 @@
  */
 package com.powsybl.gse.map;
 
+import com.powsybl.gse.map.util.Coordinate;
+
 import java.util.*;
 
 /**
