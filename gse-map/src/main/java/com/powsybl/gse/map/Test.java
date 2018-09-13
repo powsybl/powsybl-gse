@@ -11,10 +11,13 @@ import com.powsybl.gse.map.tile.TileManager;
 import com.powsybl.gse.map.tile.TileServerInfo;
 import javafx.application.Application;
 import javafx.scene.Scene;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ToolBar;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 /**
@@ -38,6 +41,13 @@ public class Test extends Application {
         primaryStage.setTitle("Map tile test");
         BorderPane root = new BorderPane();
         MapView mapView = new MapView(tileManager);
+        mapView.addLayer(new MapLayer() {
+            @Override
+            public void update(Canvas canvas, MapViewPort viewPort) {
+                GraphicsContext gc = canvas.getGraphicsContext2D();
+                gc.setFill(Color.BLUE);
+            }
+        });
         mapView.zoomProperty().set(13);
         mapView.centerProperty().set(new Coordinate(2.162, 48.801));
         root.setCenter(mapView);

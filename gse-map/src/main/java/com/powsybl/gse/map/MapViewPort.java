@@ -6,12 +6,21 @@
  */
 package com.powsybl.gse.map;
 
-import javafx.scene.canvas.Canvas;
+import java.util.Objects;
 
 /**
+ *
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public interface MapLayer {
+public class MapViewPort {
 
-    void update(Canvas canvas, MapViewPort viewPort);
+    private final GeographicalBounds bounds;
+
+    public MapViewPort(GeographicalBounds bounds) {
+        this.bounds = Objects.requireNonNull(bounds);
+    }
+
+    public GeographicalBounds getBounds() {
+        return bounds;
+    }
 }

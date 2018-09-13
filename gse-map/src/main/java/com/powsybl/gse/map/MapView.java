@@ -32,6 +32,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -51,6 +52,8 @@ public class MapView extends Region {
     private final IntegerProperty zoom;
 
     private final Map<Tile, Point2D> tilesToDraw = new HashMap<>();
+
+    private final LinkedHashMap<MapLayer, Canvas> layers = new LinkedHashMap<>();
 
     public MapView(TileManager tileManager) {
         this.tileManager = Objects.requireNonNull(tileManager);
@@ -113,10 +116,17 @@ public class MapView extends Region {
 
     public void addLayer(MapLayer layer) {
         Objects.requireNonNull(layer);
+        Canvas layerCanvas = new Canvas();
+        getChildren().add(0, layerCanvas);
+        layers.put(layer, layerCanvas);
     }
 
     public void removeLayer(MapLayer layer) {
         Objects.requireNonNull(layer);
+        Canvas layerCanvas = layers.remove(layer);
+        if (layerCanvas != null) {
+            getChildren().remove(layerCanvas);
+        }
     }
 
     private void drawTileAsync(GraphicsContext g, Tile tile) {
@@ -150,8 +160,7 @@ public class MapView extends Region {
         g.fillRect(xScreen, yScreen, tileWidth, tileHeight);
     }
 
-    private void drawTiles() {
-        TilePoint centerTilePoint = tileManager.project(center.get(), zoom.get());
+    private void drawTiles(TilePoint centerTilePoint) {
         Tile centerTile = centerTilePoint.getTile();
 
         double tileWidth = tileManager.getServerInfo().getTileWidth();
@@ -205,11 +214,28 @@ public class MapView extends Region {
 
     @Override
     protected void layoutChildren() {
+        TilePoint centerTilePoint = tileManager.project(center.get(), zoom.get());
+
+        // map bounds
+        double dx = getWidth() / 2 / tileManager.getServerInfo().getTileWidth();
+        double dy = getHeight() / 2 / tileManager.getServerInfo().getTileHeight();
+        TilePoint tilePoint1 = centerTilePoint.move(-dx, -dy);
+        TilePoint tilePoint2 = centerTilePoint.move(dx, dy);
+        GeographicalBounds bounds = new GeographicalBounds(tilePoint1.getCoordinate(), tilePoint2.getCoordinate());
+
         // resize canvas to fit the parent region
         tileCanvas.setWidth(getWidth());
         tileCanvas.setHeight(getHeight());
+        MapViewPort viewPort = new MapViewPort(bounds);
+        for (Map.Entry<MapLayer, Canvas> e : layers.entrySet()) {
+            MapLayer layer = e.getKey();
+            Canvas layerCanvas = e.getValue();
+            layerCanvas.setWidth(getWidth());
+            layerCanvas.setHeight(getHeight());
+            layer.update(layerCanvas, viewPort);
+        }
 
         // draw tiles
-        drawTiles();
+        drawTiles(centerTilePoint);
     }
 }
