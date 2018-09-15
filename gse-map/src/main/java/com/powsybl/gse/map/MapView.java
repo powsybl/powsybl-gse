@@ -11,6 +11,7 @@ import com.powsybl.gse.map.tile.Tile;
 import com.powsybl.gse.map.tile.TileManager;
 import com.powsybl.gse.map.tile.TilePoint;
 import com.powsybl.gse.map.util.Coordinate;
+import com.powsybl.gse.map.util.GeographicalBounds;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.reactivex.schedulers.Schedulers;
 import javafx.application.Platform;

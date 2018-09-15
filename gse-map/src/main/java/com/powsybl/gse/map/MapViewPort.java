@@ -9,6 +9,7 @@ package com.powsybl.gse.map;
 import com.powsybl.gse.map.tile.TileManager;
 import com.powsybl.gse.map.tile.TilePoint;
 import com.powsybl.gse.map.util.Coordinate;
+import com.powsybl.gse.map.util.GeographicalBounds;
 import javafx.geometry.Point2D;
 
 import java.util.Objects;
