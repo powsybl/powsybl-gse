@@ -91,8 +91,8 @@ public class MapView extends Region {
 
         // panning
         ObjectProperty<Point2D> mouseDown = new SimpleObjectProperty<>();
-        tileCanvas.setOnMousePressed(event -> mouseDown.set(new Point2D(event.getX(), event.getY())));
-        tileCanvas.setOnMouseDragged(event -> {
+        setOnMousePressed(event -> mouseDown.set(new Point2D(event.getX(), event.getY())));
+        setOnMouseDragged(event -> {
             double dx = event.getX() - mouseDown.get().getX();
             double dy = event.getY() - mouseDown.get().getY();
 
@@ -106,6 +106,10 @@ public class MapView extends Region {
         });
     }
 
+    public TileManager getTileManager() {
+        return tileManager;
+    }
+
     public IntegerProperty zoomProperty() {
         return zoom;
     }
@@ -117,7 +121,7 @@ public class MapView extends Region {
     public void addLayer(MapLayer layer) {
         Objects.requireNonNull(layer);
         Canvas layerCanvas = new Canvas();
-        getChildren().add(0, layerCanvas);
+        getChildren().add(layerCanvas);
         layers.put(layer, layerCanvas);
     }
 
@@ -221,17 +225,24 @@ public class MapView extends Region {
         double dy = getHeight() / 2 / tileManager.getServerInfo().getTileHeight();
         TilePoint tilePoint1 = centerTilePoint.move(-dx, -dy);
         TilePoint tilePoint2 = centerTilePoint.move(dx, dy);
-        GeographicalBounds bounds = new GeographicalBounds(tilePoint1.getCoordinate(), tilePoint2.getCoordinate());
+        GeographicalBounds geographicalBounds = new GeographicalBounds(tilePoint1.getCoordinate(), tilePoint2.getCoordinate());
 
         // resize canvas to fit the parent region
         tileCanvas.setWidth(getWidth());
         tileCanvas.setHeight(getHeight());
-        MapViewPort viewPort = new MapViewPort(bounds);
+        MapViewPort viewPort = new MapViewPort(this, geographicalBounds, centerTilePoint);
         for (Map.Entry<MapLayer, Canvas> e : layers.entrySet()) {
             MapLayer layer = e.getKey();
             Canvas layerCanvas = e.getValue();
+
+            // resize
             layerCanvas.setWidth(getWidth());
             layerCanvas.setHeight(getHeight());
+
+            // clear
+            layerCanvas.getGraphicsContext2D().clearRect(0, 0, getWidth(), getHeight());
+
+            // update
             layer.update(layerCanvas, viewPort);
         }
 

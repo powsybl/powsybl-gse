@@ -10,6 +10,7 @@ import com.powsybl.gse.map.util.Coordinate;
 import com.powsybl.gse.map.tile.TileManager;
 import com.powsybl.gse.map.tile.TileServerInfo;
 import javafx.application.Application;
+import javafx.geometry.Point2D;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -42,10 +43,17 @@ public class Test extends Application {
         BorderPane root = new BorderPane();
         MapView mapView = new MapView(tileManager);
         mapView.addLayer(new MapLayer() {
+
+            final Coordinate c = new Coordinate(2.162, 48.801);
+
             @Override
             public void update(Canvas canvas, MapViewPort viewPort) {
-                GraphicsContext gc = canvas.getGraphicsContext2D();
-                gc.setFill(Color.BLUE);
+                if (viewPort.getGeographicalBounds().contains(c)) {
+                    GraphicsContext gc = canvas.getGraphicsContext2D();
+                    gc.setFill(Color.BLUE);
+                    Point2D p = viewPort.getPoint(c);
+                    gc.fillRect(p.getX(), p.getY(), 50, 50);
+                }
             }
         });
         mapView.zoomProperty().set(13);

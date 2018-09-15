@@ -6,6 +6,11 @@
  */
 package com.powsybl.gse.map;
 
+import com.powsybl.gse.map.tile.TileManager;
+import com.powsybl.gse.map.tile.TilePoint;
+import com.powsybl.gse.map.util.Coordinate;
+import javafx.geometry.Point2D;
+
 import java.util.Objects;
 
 /**
@@ -14,13 +19,28 @@ import java.util.Objects;
  */
 public class MapViewPort {
 
-    private final GeographicalBounds bounds;
+    private final MapView mapView;
 
-    public MapViewPort(GeographicalBounds bounds) {
-        this.bounds = Objects.requireNonNull(bounds);
+    private final GeographicalBounds geographicalBounds;
+
+    private final TilePoint centerTilePoint;
+
+    public MapViewPort(MapView mapView, GeographicalBounds geographicalBounds, TilePoint centerTilePoint) {
+        this.mapView = Objects.requireNonNull(mapView);
+        this.geographicalBounds = Objects.requireNonNull(geographicalBounds);
+        this.centerTilePoint = Objects.requireNonNull(centerTilePoint);
     }
 
-    public GeographicalBounds getBounds() {
-        return bounds;
+    public GeographicalBounds getGeographicalBounds() {
+        return geographicalBounds;
+    }
+
+    public Point2D getPoint(Coordinate c) {
+        Objects.requireNonNull(c);
+        int zoom = mapView.zoomProperty().get();
+        TileManager tileManager = mapView.getTileManager();
+        TilePoint tilePoint = tileManager.project(c, zoom);
+        return new Point2D(mapView.getWidth() / 2 + (tilePoint.getX() - centerTilePoint.getX()) * tileManager.getServerInfo().getTileWidth(),
+                           mapView.getHeight() / 2 + (tilePoint.getY() - centerTilePoint.getY()) * tileManager.getServerInfo().getTileHeight());
     }
 }

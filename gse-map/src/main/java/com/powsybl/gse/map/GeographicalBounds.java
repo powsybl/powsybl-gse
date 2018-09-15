@@ -33,6 +33,16 @@ public class GeographicalBounds {
         return c2;
     }
 
+    public boolean contains(Coordinate c) {
+        Objects.requireNonNull(c);
+        double minLon = Math.min(c1.getLon(), c2.getLon());
+        double minLat = Math.min(c1.getLat(), c2.getLat());
+        double maxLon = Math.max(c1.getLon(), c2.getLon());
+        double maxLat = Math.max(c1.getLat(), c2.getLat());
+        return c.getLon() >= minLon && c.getLon() <= maxLon
+                && c.getLat() > minLat && c.getLat() <= maxLat;
+    }
+
     @Override
     public String toString() {
         return "GeographicalBounds(c1=" + c1 + ", c2=" + c2 + ")";
