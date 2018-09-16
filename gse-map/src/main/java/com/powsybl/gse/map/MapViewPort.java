@@ -49,11 +49,24 @@ public class MapViewPort {
 
     public Polyline getPoints(List<Coordinate> coordinates) {
         Objects.requireNonNull(coordinates);
-        int zoom = mapView.zoomProperty().get();
         TileManager tileManager = mapView.getTileManager();
+
         double[] x = new double[coordinates.size()];
         double[] y = new double[coordinates.size()];
+
+        // project to tile space
+        int zoom = mapView.zoomProperty().get();
         tileManager.project(coordinates, zoom, x, y);
+
+        // then project to canvas
+        double width = mapView.getWidth();
+        double height = mapView.getHeight();
+        double tileWidth = tileManager.getServerInfo().getTileWidth();
+        double tileHeight = tileManager.getServerInfo().getTileHeight();
+        for (int i = 0; i < x.length; i++) {
+            x[i] = width / 2 + (x[i]- centerTilePoint.getX()) * tileWidth;
+            y[i] = height / 2 + (y[i] - centerTilePoint.getY()) * tileHeight;
+        }
         return new Polyline(x, y);
     }
 }

@@ -78,12 +78,21 @@ public class MapView extends Region {
         tileManager.serverInfoProperty().addListener((observable, oldValue, newValue) -> requestLayout());
 
         // zooming
-        tileCanvas.setOnScroll(event -> {
+        setOnScroll(event -> {
             if (event.getDeltaY() > 0) {
-                TilePoint p = tileManager.project(center.get(), zoom.get())
-                                         .move((event.getX() - getWidth() / 2) / tileManager.getServerInfo().getTileWidth(),
-                                               (event.getY() - getHeight() / 2) / tileManager.getServerInfo().getTileHeight());
-                center.set(p.getCoordinate());
+                // mouse shift from center in tile space
+                double dx = (event.getX() - getWidth() / 2) / tileManager.getServerInfo().getTileWidth();
+                double dy = (event.getY() - getHeight() / 2) / tileManager.getServerInfo().getTileHeight();
+
+                Coordinate mouse = tileManager.project(center.get(), zoom.get())
+                                              .move(dx, dy)
+                                              .getCoordinate();
+
+                Coordinate newCenter = tileManager.project(mouse, zoom.get() + 1)
+                                                  .move(-dx, -dy)
+                                                  .getCoordinate();
+                center.set(newCenter);
+
                 zoom.set(zoom.get() + 1);
             } else {
                 zoom.set(zoom.get() - 1);
