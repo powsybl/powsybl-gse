@@ -11,6 +11,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Point2D;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -93,6 +94,23 @@ public class TileManager implements AutoCloseable {
         double yTile = y * n;
 
         return new TilePoint(xTile, yTile, zoom, serverInfo.get());
+    }
+
+    public void project(List<Coordinate> coordinates, int zoom, double[] x, double[] y) {
+        Objects.requireNonNull(coordinates);
+        serverInfo.get().checkZoomLevel(zoom);
+
+        // Calculate the number of tiles across the map, n, using 2^zoom
+        int n = getTileCount(zoom);
+
+        // Project the coordinates to the Mercator projection (from EPSG:4326 to EPSG:3857)
+        WebMercatorProjection.project(coordinates, x, y);
+
+        // Transform range of x and y to 0 – 1 and shift origin to top left corner
+        for (int i = 0; i < coordinates.size(); i++) {
+            x[i] = (x[i] + 180) / 360 * n;
+            y[i] = (1 - (y[i] / Math.PI)) / 2 * n;
+        }
     }
 
     @Override

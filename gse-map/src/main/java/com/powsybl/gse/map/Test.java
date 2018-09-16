@@ -47,6 +47,10 @@ public class Test extends Application {
             final Coordinate c = new Coordinate(2.162, 48.801);
 
             @Override
+            public void init() {
+            }
+
+            @Override
             public void update(Canvas canvas, MapViewPort viewPort) {
                 if (viewPort.getGeographicalBounds().contains(c)) {
                     GraphicsContext gc = canvas.getGraphicsContext2D();

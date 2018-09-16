@@ -11,7 +11,7 @@ import com.powsybl.gse.map.util.Coordinate;
 import java.util.Objects;
 
 /**
- * A point in the tile view.
+ * A point in the tile space.
  *
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */

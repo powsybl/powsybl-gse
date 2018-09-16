@@ -9,6 +9,7 @@ package com.powsybl.gse.map.tile;
 import com.powsybl.gse.map.util.Coordinate;
 import javafx.geometry.Point2D;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -28,6 +29,15 @@ public final class WebMercatorProjection {
         double x = c.getLon();
         double y = Math.log(Math.tan(Math.toRadians(c.getLat())) + 1 / Math.cos(Math.toRadians(c.getLat())));
         return new Point2D(x, y);
+    }
+
+    public static void project(List<Coordinate> coordinates, double[] x, double[] y) {
+        Objects.requireNonNull(coordinates);
+        for (int i = 0; i < coordinates.size(); i++) {
+            Coordinate c = coordinates.get(i);
+            x[i] = c.getLon();
+            y[i] = Math.log(Math.tan(Math.toRadians(c.getLat())) + 1 / Math.cos(Math.toRadians(c.getLat())));
+        }
     }
 
     public static Coordinate unproject(Point2D point) {

@@ -121,6 +121,7 @@ public class MapView extends Region {
 
     public void addLayer(MapLayer layer) {
         Objects.requireNonNull(layer);
+        layer.init();
         Canvas layerCanvas = new Canvas();
         getChildren().add(layerCanvas);
         layers.put(layer, layerCanvas);

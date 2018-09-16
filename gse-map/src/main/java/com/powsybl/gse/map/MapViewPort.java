@@ -10,8 +10,10 @@ import com.powsybl.gse.map.tile.TileManager;
 import com.powsybl.gse.map.tile.TilePoint;
 import com.powsybl.gse.map.util.Coordinate;
 import com.powsybl.gse.map.util.GeographicalBounds;
+import com.powsybl.gse.map.util.Polyline;
 import javafx.geometry.Point2D;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -43,5 +45,15 @@ public class MapViewPort {
         TilePoint tilePoint = tileManager.project(c, zoom);
         return new Point2D(mapView.getWidth() / 2 + (tilePoint.getX() - centerTilePoint.getX()) * tileManager.getServerInfo().getTileWidth(),
                            mapView.getHeight() / 2 + (tilePoint.getY() - centerTilePoint.getY()) * tileManager.getServerInfo().getTileHeight());
+    }
+
+    public Polyline getPoints(List<Coordinate> coordinates) {
+        Objects.requireNonNull(coordinates);
+        int zoom = mapView.zoomProperty().get();
+        TileManager tileManager = mapView.getTileManager();
+        double[] x = new double[coordinates.size()];
+        double[] y = new double[coordinates.size()];
+        tileManager.project(coordinates, zoom, x, y);
+        return new Polyline(x, y);
     }
 }

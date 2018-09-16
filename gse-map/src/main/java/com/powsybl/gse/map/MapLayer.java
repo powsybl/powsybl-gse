@@ -13,5 +13,7 @@ import javafx.scene.canvas.Canvas;
  */
 public interface MapLayer {
 
+    void init();
+
     void update(Canvas canvas, MapViewPort viewPort);
 }
