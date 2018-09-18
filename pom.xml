@@ -13,7 +13,7 @@
 
     <groupId>com.powsybl</groupId>
     <artifactId>powsybl-gse</artifactId>
-    <version>1.1.0-SNAPSHOT</version>
+    <version>1.1.0</version>
     <packaging>pom</packaging>
 
     <name>Grid Study Environment</name>
@@ -95,7 +95,7 @@
         <slf4j.version>1.7.22</slf4j.version>
         <tiwulfx.version>2.0</tiwulfx.version>
 
-        <powsyblcore.version>2.1.0-SNAPSHOT</powsyblcore.version>
+        <powsyblcore.version>2.1.0</powsyblcore.version>
 
     </properties>
 
