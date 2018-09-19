@@ -62,11 +62,11 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <java.version>1.8</java.version>
+        <java.version>11</java.version>
 
         <maven.buildnumber.version>1.4</maven.buildnumber.version>
         <maven.checkstyle.version>3.0.0</maven.checkstyle.version>
-        <maven.compiler.version>3.7.0</maven.compiler.version>
+        <maven.compiler.version>3.8.0</maven.compiler.version>
         <maven.enforcer.version>3.0.0-M2</maven.enforcer.version>
         <maven.gpg.version>1.6</maven.gpg.version>
         <maven.jar.version>3.1.0</maven.jar.version>
@@ -78,7 +78,7 @@
         <autoservice.version>1.0-rc2</autoservice.version>
         <commonscodec.version>1.9</commonscodec.version>
         <commonslogging.version>1.2</commonslogging.version>
-        <controlfx.version>8.40.14</controlfx.version>
+        <controlfx.version>9.0.0</controlfx.version>
         <groovy.version>2.4.12</groovy.version>
         <guava.version>20.0</guava.version>
         <jackson.version>2.8.7</jackson.version>
@@ -284,6 +284,14 @@
             </distributionManagement>
         </profile>
     </profiles>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>11</version>
+        </dependency>
+    </dependencies>
 
     <dependencyManagement>
         <dependencies>

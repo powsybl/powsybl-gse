@@ -13,9 +13,6 @@ import com.powsybl.afs.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.*;
 import com.powsybl.gse.util.*;
-import com.sun.javafx.scene.control.behavior.TabPaneBehavior;
-import com.sun.javafx.scene.control.skin.TabPaneSkin;
-import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.collections.ListChangeListener;
@@ -31,6 +28,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,15 +87,16 @@ public class ProjectPane extends Tab {
         }
 
         public void requestClose() {
-            TabPaneBehavior behavior = getBehavior();
-            if (behavior.canCloseTab(this)) {
-                behavior.closeTab(this);
-            }
+// https://bugs.openjdk.java.net/browse/JDK-8091261
+//            TabPaneBehavior behavior = getBehavior();
+//            if (behavior.canCloseTab(this)) {
+//                behavior.closeTab(this);
+//            }
         }
 
-        private TabPaneBehavior getBehavior() {
-            return ((TabPaneSkin) getTabPane().getSkin()).getBehavior();
-        }
+//        private TabPaneBehavior getBehavior() {
+//            return ((TabPaneSkin) getTabPane().getSkin()).getBehavior();
+//        }
     }
 
     private final Project project;
@@ -473,9 +472,9 @@ public class ProjectPane extends Tab {
         List<DetachableTabPane> detachableTabPanes = new ArrayList<>();
         findDetachableTabPanes(viewPane, detachableTabPanes);
         // also scan for DetachableTabPane in floating windows
-        for (Stage stage : StageHelper.getStages()) {
-            if (stage.getScene() instanceof FloatingScene) {
-                findDetachableTabPanes(stage.getScene().getRoot(), detachableTabPanes);
+        for (Window window : Window.getWindows()) {
+            if (window.getScene() instanceof FloatingScene) {
+                findDetachableTabPanes(window.getScene().getRoot(), detachableTabPanes);
             }
         }
         return detachableTabPanes;
