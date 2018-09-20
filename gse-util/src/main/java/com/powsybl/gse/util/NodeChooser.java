@@ -270,10 +270,12 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                         } else {
                             if (item == null) {
                                 GseUtil.setWaitingText(this);
+                                setGraphic(null);
                             } else {
                                 setText(treeModel.getName(item));
                                 setTextFill(Color.BLACK);
                                 setOpacity(item.getClass() == treeModel.getUnknownFileClass() ? 0.5 : 1);
+                                setGraphic(NodeGraphics.getGraphic(item));
                             }
                         }
                     }
@@ -409,7 +411,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                     } else {
                         F file = (F) child;
                         if (filter.apply(file, treeModel)) {
-                            childItems.add(new TreeItem<>(child, NodeGraphics.getGraphic(file)));
+                            childItems.add(new TreeItem<>(child));
                         }
                     }
                 }
@@ -421,7 +423,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private TreeItem<N> createCollapsedFolderItem(D folder) {
-        TreeItem<N> item = new TreeItem<>(folder, NodeGraphics.getGraphic(folder));
+        TreeItem<N> item = new TreeItem<>(folder);
         item.getChildren().setAll(new TreeItem<>()); // dummy leaf
         item.setExpanded(false);
         item.expandedProperty().addListener((observable, oldValue, newValue) -> {
