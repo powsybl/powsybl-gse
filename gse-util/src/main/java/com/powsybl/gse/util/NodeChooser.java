@@ -270,6 +270,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                         } else {
                             if (item == null) {
                                 GseUtil.setWaitingText(this);
+
                             } else {
                                 setText(treeModel.getName(item));
                                 setTextFill(Color.BLACK);
