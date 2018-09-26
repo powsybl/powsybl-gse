@@ -8,14 +8,22 @@ package com.powsybl.gse.explorer;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.powsybl.afs.ext.base.ProjectCase;
 import com.powsybl.afs.ext.base.ProjectCaseListener;
 import com.powsybl.afs.ext.base.ScriptType;
 import com.powsybl.commons.json.JsonUtil;
 import com.powsybl.gse.explorer.icons.*;
+import com.powsybl.gse.explorer.query.LineQueryResult;
+import com.powsybl.gse.explorer.query.VoltageLevelQueryResult;
 import com.powsybl.gse.spi.GseContext;
+import com.powsybl.gse.spi.GseException;
 import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.util.*;
+import freemarker.template.Configuration;
+import freemarker.template.Template;
+import freemarker.template.TemplateException;
+import freemarker.template.Version;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -23,6 +31,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
+import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.ClipboardContent;
@@ -35,10 +44,11 @@ import javafx.scene.text.Text;
 import org.controlsfx.control.textfield.CustomTextField;
 import org.controlsfx.control.textfield.TextFields;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.ResourceBundle;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -56,32 +66,17 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private static final Color ICON_COLOR = Color.BLACK;
     private static final double ICON_THICKNESS = 1;
 
-    private static class VoltageLevelQueryResult {
-
-        private IdAndName idAndName;
-
-        private List<EquipmentInfo> equipments;
-
-        public IdAndName getIdAndName() {
-            return idAndName;
-        }
-
-        public void setIdAndName(IdAndName idAndName) {
-            this.idAndName = idAndName;
-        }
-
-        public List<EquipmentInfo> getEquipments() {
-            return equipments;
-        }
-
-        public void setEquipments(List<EquipmentInfo> equipments) {
-            this.equipments = equipments;
-        }
-    }
+    private static final String GENERATOR = "GENERATOR";
+    private static final String LOAD = "LOAD";
+    private static final String TWO_WINDINGS_TRANSFORMER = "TWO_WINDINGS_TRANSFORMER";
+    private static final String CAPACITOR = "CAPACITOR";
+    private static final String INDUCTOR = "INDUCTOR";
+    private static final String LINE = "LINE";
+    private static final String SWITCH = "SWITCH";
 
     private final LastTaskOnlyExecutor substationExecutor;
-
     private final LastTaskOnlyExecutor substationDetailsExecutor;
+    private final LastTaskOnlyExecutor equipmentExecutor;
 
     private final ObservableList<IdAndName> substationIds = FXCollections.observableArrayList();
     private final FilteredList<IdAndName> filteredSubstationIds = substationIds.filtered(s -> true);
@@ -96,8 +91,14 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private final ObjectMapper mapper = JsonUtil.createObjectMapper();
     private final JavaType voltageLevelQueryResultListType;
     private final JavaType idAndNameListType;
+    private final JavaType lineType;
 
     private final double rem;
+
+    private final Configuration cfg;
+    private final Template substationTemplate;
+    private final Template voltageLevelTemplate;
+    private final Template lineTemplate;
 
     private ProjectCase projectCase;
 
@@ -106,6 +107,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
 
         substationExecutor = new LastTaskOnlyExecutor(context.getExecutor());
         substationDetailsExecutor = new LastTaskOnlyExecutor(context.getExecutor());
+        equipmentExecutor = new LastTaskOnlyExecutor(context.getExecutor());
 
         splitPane = new SplitPane(substationsView, substationDetailedView, equipmentView);
         splitPane.setDividerPositions(0.2, 0.6);
@@ -166,8 +168,20 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
 
         voltageLevelQueryResultListType = mapper.getTypeFactory().constructCollectionType(List.class, VoltageLevelQueryResult.class);
         idAndNameListType = mapper.getTypeFactory().constructCollectionType(List.class, IdAndName.class);
+        lineType = mapper.getTypeFactory().constructType(LineQueryResult.class);
 
         rem = Math.rint(new Text("").getLayoutBounds().getHeight());
+
+        cfg = new Configuration(new Version(2, 3, 28));
+        cfg.setClassForTemplateLoading(NetworkExplorer.class, "/ftl");
+        cfg.setDefaultEncoding(StandardCharsets.UTF_8.name());
+        try {
+            substationTemplate = cfg.getTemplate("substationQuery.ftl");
+            voltageLevelTemplate = cfg.getTemplate("voltageLevelQuery.ftl");
+            lineTemplate = cfg.getTemplate("lineQuery.ftl");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
 
         projectCase.addListener(this);
     }
@@ -202,31 +216,31 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private Node getIcon(String type) {
         Node icon = null;
         switch (type) {
-            case "GENERATOR":
+            case GENERATOR:
                 icon = new GeneratorIcon(ICON_COLOR, ICON_THICKNESS, rem);
                 break;
 
-            case "LOAD":
+            case LOAD:
                 icon = new LoadIcon(ICON_COLOR, ICON_THICKNESS, rem);
                 break;
 
-            case "TWO_WINDINGS_TRANSFORMER":
+            case TWO_WINDINGS_TRANSFORMER:
                 icon = new TransformerIcon(ICON_COLOR, ICON_THICKNESS, rem);
                 break;
 
-            case "CAPACITOR":
+            case CAPACITOR:
                 icon = new CapacitorIcon(ICON_COLOR, ICON_THICKNESS, rem);
                 break;
 
-            case "INDUCTOR":
+            case INDUCTOR:
                 icon = new InductorIcon(ICON_COLOR, ICON_THICKNESS, rem);
                 break;
 
-            case "LINE":
+            case LINE:
                 icon = new LineIcon(ICON_COLOR, ICON_THICKNESS, rem);
                 break;
 
-            case "SWITCH":
+            case SWITCH:
                 icon = new SwitchIcon(ICON_COLOR, ICON_THICKNESS, rem);
                 break;
 
@@ -247,9 +261,21 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         };
     }
 
+    private static String processTemplate(Template template, Map<String, Object> templateData) {
+        try (StringWriter out = new StringWriter()) {
+            template.process(templateData, out);
+            out.flush();
+            return out.getBuffer().toString();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        } catch (TemplateException e) {
+            throw new GseException(e);
+        }
+    }
+
     private void refreshSubstationsView() {
         substationIds.setAll(LIST_BUSY);
-        String query = "network.substations.collect { [id: it.id, name: it.name] }";
+        String query = processTemplate(substationTemplate, Collections.emptyMap());
         queryNetwork(query, idAndNameListType, (List<IdAndName> ids) -> {
             if (ids == null) {
                 substationIds.clear();
@@ -282,36 +308,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private void refreshSubstationDetailView(IdAndName substationIdAndName) {
         if (substationIdAndName != null && substationIdAndName != LIST_BUSY) {
             substationDetailedView.setRoot(new TreeItem<>(TREEVIEW_BUSY));
-            String query = String.join(System.lineSeparator(),
-                    "def s = network.getSubstation('" + substationIdAndName.getId() + "')",
-                    "s.voltageLevels.collect {",
-                    "    [",
-                    "        idAndName: [",
-                    "                       id: it.id,",
-                    "                       name: it.name",
-                    "                    ],",
-                    "        equipments: it.connectables.collect {",
-                    "                        [",
-                    "                            type: it.type.name() == 'SHUNT_COMPENSATOR' ? (it.getbPerSection() > 0 ? 'CAPACITOR' : 'INDUCTOR'): it.type,",
-                    "                            idAndName: [",
-                    "                                           id: it.id,",
-                    "                                           name: it.name",
-                    "                                       ]",
-                    "                        ]",
-                    "                    }",
-                    "                    +",
-                    "                    it.switches.collect {",
-                    "                        [",
-                    "                            type: 'SWITCH',",
-                    "                            idAndName: [",
-                    "                                           id: it.id,",
-                    "                                           name: it.name",
-                    "                                       ]",
-                    "                        ]",
-                    "                    }",
-                    "    ]",
-                    "}",
-                    "");
+            String query = processTemplate(voltageLevelTemplate, ImmutableMap.of("substationId", substationIdAndName.getId()));
             queryNetwork(query, voltageLevelQueryResultListType,
                 (List<VoltageLevelQueryResult> voltageLevelQueryResults) -> fillSubstationDetailViewWithQueryResults(substationIdAndName, voltageLevelQueryResults),
                 substationDetailsExecutor);
@@ -320,8 +317,33 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         }
     }
 
+    private void refreshLineView(EquipmentInfo equipment) {
+        String query = processTemplate(lineTemplate, ImmutableMap.of("lineId", equipment.getIdAndName().getId()));
+        queryNetwork(query, lineType, (LineQueryResult result) -> {
+            System.out.println(result.getR());
+            System.out.println(result.getX());
+            System.out.println(result.getG1());
+            System.out.println(result.getG2());
+            System.out.println(result.getB1());
+            System.out.println(result.getB2());
+            System.out.println(result.getVoltageLevel1());
+            System.out.println(result.getVoltageLevel2());
+            Group group = new Group();
+
+            equipmentView.getChildren().add(group);
+        }, equipmentExecutor);
+    }
+
     private void refreshEquipmentView(TreeItem<EquipmentInfo> item) {
-        //TODO to be used to fill per equipment details
+        equipmentView.getChildren().clear();
+        if (item != null) {
+            EquipmentInfo equipment = item.getValue();
+            switch (equipment.getType()) {
+                case LINE:
+                    refreshLineView(equipment);
+                    break;
+            }
+        }
     }
 
     @Override
