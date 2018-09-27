@@ -116,8 +116,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                                 setOnDragOver(this::dragOverEvent);
                                 setOnDragDropped(event -> dragDroppedEvent(getItem(), getTreeTableRow().getTreeItem(), event, node));
                                 setOnDragExited(event -> setTextFill(Color.BLACK));
-                            }
-                            else{
+                            } else{
                                 setText(treeModel.getName(item));
                                 setTextFill(Color.BLACK);
                                 setOpacity(item.getClass() == treeModel.getUnknownFileClass() ? 0.5 : 1);
