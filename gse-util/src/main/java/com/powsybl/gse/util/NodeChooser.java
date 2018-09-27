@@ -37,220 +37,25 @@ import java.util.stream.Collectors;
  */
 public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridPane {
 
-    private class MoveContext {
-        private Object source;
-        private TreeItem sourceTreeItem;
-        private TreeItem sourceparentTreeItem;
-    }
-
-    private MoveContext moveContext;
-
-    private int counter;
-
-    private boolean success;
-
     private static final Logger LOGGER = LoggerFactory.getLogger(NodeChooser.class);
-
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.NodeChooser");
-
-    public interface TreeModel<N, F, D> {
-
-        Collection<N> getChildren(D folder);
-
-        boolean isFolder(N node);
-
-        boolean isWritable(D folder);
-
-        String getName(N node);
-
-        Collection<D> getRootFolders();
-
-        D getFolder(String path);
-
-        NodePath getPath(N node);
-
-        Class<N> getNodeClass();
-
-        String getLastSelectedPathKey();
-
-        String getDescription(F file);
-
-        Class<? extends F> getUnknownFileClass();
-
-        Optional<D> showCreateFolderDialog(Window window, D parent);
-    }
-
-    private static class TreeModelImpl implements TreeModel<Node, File, Folder> {
-
-        private final AppData appData;
-
-        public TreeModelImpl(AppData appData) {
-            this.appData = Objects.requireNonNull(appData);
-        }
-
-        @Override
-        public Collection<Node> getChildren(Folder folder) {
-            return folder.getChildren();
-        }
-
-        @Override
-        public boolean isFolder(Node node) {
-            return node != null ? node.isFolder() : true;
-        }
-
-        @Override
-        public boolean isWritable(Folder folder) {
-            return folder.isWritable();
-        }
-
-        @Override
-        public String getName(Node node) {
-            return node != null ? node.getName() : RESOURCE_BUNDLE.getString("scanning") + "...";
-        }
-
-        @Override
-        public Collection<Folder> getRootFolders() {
-            return appData.getFileSystems().stream().map(AppFileSystem::getRootFolder).collect(Collectors.toList());
-        }
-
-        @Override
-        public Folder getFolder(String path) {
-            return appData.getNode(path)
-                    .filter(Node::isFolder)
-                    .map(Folder.class::cast)
-                    .orElse(null);
-        }
-
-        @Override
-        public NodePath getPath(Node node) {
-            return node.getPath();
-        }
-
-        @Override
-        public Class<Node> getNodeClass() {
-            return Node.class;
-        }
-
-        @Override
-        public String getLastSelectedPathKey() {
-            return "lastSelectedPath";
-        }
-
-        @Override
-        public String getDescription(File file) {
-            return file.getDescription();
-        }
-
-        @Override
-        public Class<? extends File> getUnknownFileClass() {
-            return UnknownFile.class;
-        }
-
-        @Override
-        public Optional<Folder> showCreateFolderDialog(Window window, Folder parent) {
-            return NewFolderPane.showAndWaitDialog(window, parent);
-        }
-    }
-
-    private static class TreeModelProjectImpl implements TreeModel<ProjectNode, ProjectFile, ProjectFolder> {
-
-        private final Project project;
-
-        public TreeModelProjectImpl(Project project) {
-            this.project = Objects.requireNonNull(project);
-        }
-
-        @Override
-        public Collection<ProjectNode> getChildren(ProjectFolder folder) {
-            return folder.getChildren();
-        }
-
-        @Override
-        public boolean isFolder(ProjectNode projectNode) {
-            return projectNode == null || projectNode.isFolder();
-        }
-
-        @Override
-        public boolean isWritable(ProjectFolder projectFolder) {
-            return true;
-        }
-
-        @Override
-        public String getName(ProjectNode projectNode) {
-            return projectNode != null ? projectNode.getName() : RESOURCE_BUNDLE.getString("scanning") + "...";
-        }
-
-        @Override
-        public Collection<ProjectFolder> getRootFolders() {
-            return Collections.singleton(project.getRootFolder());
-        }
-
-        @Override
-        public ProjectFolder getFolder(String path) {
-            return project.getRootFolder().getChild(path)
-                    .filter(ProjectNode::isFolder)
-                    .map(ProjectFolder.class::cast)
-                    .orElse(null);
-        }
-
-        @Override
-        public NodePath getPath(ProjectNode projectNode) {
-            return projectNode.getPath();
-        }
-
-        @Override
-        public Class<ProjectNode> getNodeClass() {
-            return ProjectNode.class;
-        }
-
-        @Override
-        public String getLastSelectedPathKey() {
-            return "projectLastSelectedPath";
-        }
-
-        @Override
-        public String getDescription(ProjectFile projectFile) {
-            return "";
-        }
-
-        @Override
-        public Class<? extends ProjectFile> getUnknownFileClass() {
-            return UnknownProjectFile.class;
-        }
-
-        @Override
-        public Optional<ProjectFolder> showCreateFolderDialog(Window window, ProjectFolder parent) {
-            return NewFolderPane.showAndWaitDialog(window, parent);
-        }
-    }
-
     private final BreadCrumbBar<N> path = new BreadCrumbBar<>();
-
     private final Button createFolderButton;
-
     private final Button deleteFolderButton;
-
     private final TreeItem<N> rootItem = new TreeItem<>();
-
-    private TreeTableView<N> tree = new TreeTableView<>(rootItem);
-
     private final ObjectProperty<T> selectedNode = new SimpleObjectProperty<>();
-
     private final ObjectProperty<D> selectedFolder = new SimpleObjectProperty<>();
-
     private final SimpleBooleanProperty doubleClick = new SimpleBooleanProperty(false);
-
     private final Window window;
-
     private final BiFunction<N, TreeModel<N, F, D>, Boolean> filter;
-
     private final AppData appData;
-
     private final Preferences preferences;
-
     private final TreeModel<N, F, D> treeModel;
-
     private final GseContext context;
+    private MoveContext moveContext;
+    private int counter;
+    private boolean success;
+    private TreeTableView<N> tree = new TreeTableView<>(rootItem);
 
     public NodeChooser(Window window, TreeModel<N, F, D> treeModel, AppData appData, GseContext context,
                        BiFunction<N, TreeModel<N, F, D>, Boolean> filter) {
@@ -443,6 +248,69 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         });
     }
 
+    public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context,
+                                                                 BiFunction<Node, TreeModel<Node, File, Folder>, Boolean> filter) {
+
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, filter);
+    }
+
+    private static <N, T extends N> boolean testNode(N node, Class<T> filter, Class<?>... otherFilters) {
+        if (!filter.isAssignableFrom(node.getClass())) {
+            return false;
+        }
+        for (Class<?> otherFilter : otherFilters) {
+            if (!otherFilter.isAssignableFrom(node.getClass())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Class<T> filter, Class<?>... otherFilters) {
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters));
+    }
+
+    public static <T extends ProjectNode> Optional<T> showAndWaitDialog(Project project, Window window, GseContext context, BiFunction<ProjectNode, TreeModel<ProjectNode, ProjectFile, ProjectFolder>, Boolean> filter) {
+        return showAndWaitDialog(new TreeModelProjectImpl(project), window, project.getFileSystem().getData(), context, filter);
+    }
+
+    public static <T extends ProjectNode> Optional<T> showAndWaitDialog(Project project, Window window, GseContext context, Class<T> filter,
+                                                                        Class<?>... otherFilters) {
+        return showAndWaitDialog(new TreeModelProjectImpl(project), window, project.getFileSystem().getData(), context, (projectNode, treeModel) -> testNode(projectNode, filter, otherFilters));
+    }
+
+    public static <N, F extends N, D extends N, T extends N> Optional<T> showAndWaitDialog(
+            TreeModel<N, F, D> treeModel, Window window, AppData appData, GseContext context,
+            BiFunction<N, TreeModel<N, F, D>, Boolean> filter) {
+        Dialog<T> dialog = new Dialog<>();
+        try {
+            dialog.setTitle(RESOURCE_BUNDLE.getString("OpenFile"));
+            dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+            NodeChooser<N, F, D, T> nodeChooser = new NodeChooser<>(window, treeModel, appData, context, filter);
+            Button button = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+            button.disableProperty().bind(nodeChooser.selectedNodeProperty().isNull());
+            nodeChooser.doubleClick().addListener((observable, oldValue, newValue) -> {
+                if (Boolean.TRUE.equals(newValue)) {
+                    button.fire();
+                }
+            });
+            dialog.setResultConverter(buttonType -> {
+                if (buttonType == ButtonType.OK) {
+                    return nodeChooser.selectedNodeProperty().get();
+                }
+                return null;
+            });
+            dialog.getDialogPane().setContent(nodeChooser);
+            dialog.setResizable(true);
+            dialog.initOwner(window);
+            Optional<T> node = dialog.showAndWait();
+            nodeChooser.savePreferences();
+            return node;
+        } finally {
+            dialog.close();
+        }
+    }
+
     public ReadOnlyObjectProperty<T> selectedNodeProperty() {
         return selectedNode;
     }
@@ -485,7 +353,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     public int getCounter() {
         return counter;
     }
-
 
     private void dragDetectedEvent(N value, TreeItem<N> treeItem, MouseEvent event) {
         moveContext = new MoveContext();
@@ -671,7 +538,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         });
     }
 
-
     private void setOnOkButton(List<? extends TreeItem<N>> selectedTreeItems) {
         List<TreeItem<N>> parentTreeItems = new ArrayList<>();
         for (TreeItem<N> selectedTreeItem : selectedTreeItems) {
@@ -769,67 +635,181 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         }
     }
 
-    public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context,
-                                                                 BiFunction<Node, TreeModel<Node, File, Folder>, Boolean> filter) {
+    public interface TreeModel<N, F, D> {
 
-        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, filter);
+        Collection<N> getChildren(D folder);
+
+        boolean isFolder(N node);
+
+        boolean isWritable(D folder);
+
+        String getName(N node);
+
+        Collection<D> getRootFolders();
+
+        D getFolder(String path);
+
+        NodePath getPath(N node);
+
+        Class<N> getNodeClass();
+
+        String getLastSelectedPathKey();
+
+        String getDescription(F file);
+
+        Class<? extends F> getUnknownFileClass();
+
+        Optional<D> showCreateFolderDialog(Window window, D parent);
     }
 
-    private static <N, T extends N> boolean testNode(N node, Class<T> filter, Class<?>... otherFilters) {
-        if (!filter.isAssignableFrom(node.getClass())) {
-            return false;
+    private static class TreeModelImpl implements TreeModel<Node, File, Folder> {
+
+        private final AppData appData;
+
+        public TreeModelImpl(AppData appData) {
+            this.appData = Objects.requireNonNull(appData);
         }
-        for (Class<?> otherFilter : otherFilters) {
-            if (!otherFilter.isAssignableFrom(node.getClass())) {
-                return false;
-            }
+
+        @Override
+        public Collection<Node> getChildren(Folder folder) {
+            return folder.getChildren();
         }
-        return true;
-    }
 
-    public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Class<T> filter, Class<?>... otherFilters) {
-        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters));
-    }
-
-    public static <T extends ProjectNode> Optional<T> showAndWaitDialog(Project project, Window window, GseContext context, BiFunction<ProjectNode, TreeModel<ProjectNode, ProjectFile, ProjectFolder>, Boolean> filter) {
-        return showAndWaitDialog(new TreeModelProjectImpl(project), window, project.getFileSystem().getData(), context, filter);
-    }
-
-    public static <T extends ProjectNode> Optional<T> showAndWaitDialog(Project project, Window window, GseContext context, Class<T> filter,
-                                                                        Class<?>... otherFilters) {
-        return showAndWaitDialog(new TreeModelProjectImpl(project), window, project.getFileSystem().getData(), context, (projectNode, treeModel) -> testNode(projectNode, filter, otherFilters));
-    }
-
-    public static <N, F extends N, D extends N, T extends N> Optional<T> showAndWaitDialog(
-            TreeModel<N, F, D> treeModel, Window window, AppData appData, GseContext context,
-            BiFunction<N, TreeModel<N, F, D>, Boolean> filter) {
-        Dialog<T> dialog = new Dialog<>();
-        try {
-            dialog.setTitle(RESOURCE_BUNDLE.getString("OpenFile"));
-            dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-            NodeChooser<N, F, D, T> nodeChooser = new NodeChooser<>(window, treeModel, appData, context, filter);
-            Button button = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
-            button.disableProperty().bind(nodeChooser.selectedNodeProperty().isNull());
-            nodeChooser.doubleClick().addListener((observable, oldValue, newValue) -> {
-                if (Boolean.TRUE.equals(newValue)) {
-                    button.fire();
-                }
-            });
-            dialog.setResultConverter(buttonType -> {
-                if (buttonType == ButtonType.OK) {
-                    return nodeChooser.selectedNodeProperty().get();
-                }
-                return null;
-            });
-            dialog.getDialogPane().setContent(nodeChooser);
-            dialog.setResizable(true);
-            dialog.initOwner(window);
-            Optional<T> node = dialog.showAndWait();
-            nodeChooser.savePreferences();
-            return node;
-        } finally {
-            dialog.close();
+        @Override
+        public boolean isFolder(Node node) {
+            return node != null ? node.isFolder() : true;
         }
+
+        @Override
+        public boolean isWritable(Folder folder) {
+            return folder.isWritable();
+        }
+
+        @Override
+        public String getName(Node node) {
+            return node != null ? node.getName() : RESOURCE_BUNDLE.getString("scanning") + "...";
+        }
+
+        @Override
+        public Collection<Folder> getRootFolders() {
+            return appData.getFileSystems().stream().map(AppFileSystem::getRootFolder).collect(Collectors.toList());
+        }
+
+        @Override
+        public Folder getFolder(String path) {
+            return appData.getNode(path)
+                    .filter(Node::isFolder)
+                    .map(Folder.class::cast)
+                    .orElse(null);
+        }
+
+        @Override
+        public NodePath getPath(Node node) {
+            return node.getPath();
+        }
+
+        @Override
+        public Class<Node> getNodeClass() {
+            return Node.class;
+        }
+
+        @Override
+        public String getLastSelectedPathKey() {
+            return "lastSelectedPath";
+        }
+
+        @Override
+        public String getDescription(File file) {
+            return file.getDescription();
+        }
+
+        @Override
+        public Class<? extends File> getUnknownFileClass() {
+            return UnknownFile.class;
+        }
+
+        @Override
+        public Optional<Folder> showCreateFolderDialog(Window window, Folder parent) {
+            return NewFolderPane.showAndWaitDialog(window, parent);
+        }
+    }
+
+    private static class TreeModelProjectImpl implements TreeModel<ProjectNode, ProjectFile, ProjectFolder> {
+
+        private final Project project;
+
+        public TreeModelProjectImpl(Project project) {
+            this.project = Objects.requireNonNull(project);
+        }
+
+        @Override
+        public Collection<ProjectNode> getChildren(ProjectFolder folder) {
+            return folder.getChildren();
+        }
+
+        @Override
+        public boolean isFolder(ProjectNode projectNode) {
+            return projectNode == null || projectNode.isFolder();
+        }
+
+        @Override
+        public boolean isWritable(ProjectFolder projectFolder) {
+            return true;
+        }
+
+        @Override
+        public String getName(ProjectNode projectNode) {
+            return projectNode != null ? projectNode.getName() : RESOURCE_BUNDLE.getString("scanning") + "...";
+        }
+
+        @Override
+        public Collection<ProjectFolder> getRootFolders() {
+            return Collections.singleton(project.getRootFolder());
+        }
+
+        @Override
+        public ProjectFolder getFolder(String path) {
+            return project.getRootFolder().getChild(path)
+                    .filter(ProjectNode::isFolder)
+                    .map(ProjectFolder.class::cast)
+                    .orElse(null);
+        }
+
+        @Override
+        public NodePath getPath(ProjectNode projectNode) {
+            return projectNode.getPath();
+        }
+
+        @Override
+        public Class<ProjectNode> getNodeClass() {
+            return ProjectNode.class;
+        }
+
+        @Override
+        public String getLastSelectedPathKey() {
+            return "projectLastSelectedPath";
+        }
+
+        @Override
+        public String getDescription(ProjectFile projectFile) {
+            return "";
+        }
+
+        @Override
+        public Class<? extends ProjectFile> getUnknownFileClass() {
+            return UnknownProjectFile.class;
+        }
+
+        @Override
+        public Optional<ProjectFolder> showCreateFolderDialog(Window window, ProjectFolder parent) {
+            return NewFolderPane.showAndWaitDialog(window, parent);
+        }
+    }
+
+    private class MoveContext {
+        private Object source;
+        private TreeItem sourceTreeItem;
+        private TreeItem sourceparentTreeItem;
     }
 
 }
