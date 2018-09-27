@@ -301,6 +301,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                         } else {
                             if (item == null) {
                                 GseUtil.setWaitingText(this);
+                                setGraphic(null);
                             } else if (item instanceof Node) {
                                 Node node = (Node) item;
                                 setText(treeModel.getName(item));
@@ -310,6 +311,12 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                                 setOnDragOver(this::dragOverEvent);
                                 setOnDragDropped(event -> dragDroppedEvent(getItem(), getTreeTableRow().getTreeItem(), event, node));
                                 setOnDragExited(event -> setTextFill(Color.BLACK));
+                            }
+                            else{
+                                setText(treeModel.getName(item));
+                                setTextFill(Color.BLACK);
+                                setOpacity(item.getClass() == treeModel.getUnknownFileClass() ? 0.5 : 1);
+                                setGraphic(NodeGraphics.getGraphic(item));
                             }
                         }
                     }
