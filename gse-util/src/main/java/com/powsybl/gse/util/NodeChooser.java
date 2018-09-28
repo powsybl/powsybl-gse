@@ -252,47 +252,10 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             @Override
             public TreeTableCell<N, N> call(TreeTableColumn<N, N> param) {
                 return new TreeTableCell<N, N>() {
-                    private void textFillColor() {
-                        if (getCounter() < 1) {
-                            setTextFill(Color.CHOCOLATE);
-                        }
-                    }
-
-                    private void dragOverEvent(DragEvent event) {
-                        if (getItem() instanceof Folder && getItem() != moveContext.source) {
-                            int count = 0;
-                            treeItemChildrenSize(getTreeTableRow().getTreeItem(), count);
-                            textFillColor();
-                            event.acceptTransferModes(TransferMode.ANY);
-                            event.consume();
-                        }
-                    }
-
                     @Override
                     protected void updateItem(N item, boolean empty) {
                         super.updateItem(item, empty);
-                        if (empty) {
-                            setText(null);
-                            setGraphic(null);
-                        } else {
-                            if (item == null) {
-                                GseUtil.setWaitingText(this);
-                            } else if (item instanceof Node) {
-                                Node node = (Node) item;
-                                setText(treeModel.getName(item));
-                                setTextFill(Color.BLACK);
-                                setOpacity(item.getClass() == treeModel.getUnknownFileClass() ? 0.5 : 1);
-                                setOnDragDetected(event -> dragDetectedEvent(getItem(), getTreeTableRow().getTreeItem(), event));
-                                setOnDragOver(this::dragOverEvent);
-                                setOnDragDropped(event -> dragDroppedEvent(getItem(), getTreeTableRow().getTreeItem(), event, node));
-                                setOnDragExited(event -> setTextFill(Color.BLACK));
-                            } else {
-                                setText(treeModel.getName(item));
-                                setTextFill(Color.BLACK);
-                                setOpacity(item.getClass() == treeModel.getUnknownFileClass() ? 0.5 : 1);
-                                setGraphic(NodeGraphics.getGraphic(item));
-                            }
-                        }
+                        updateTreeTableCellFileItem(item, empty, getTreeTableRow(), this);
                     }
                 };
             }
@@ -313,12 +276,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                     @Override
                     protected void updateItem(N item, boolean empty) {
                         super.updateItem(item, empty);
-                        if (empty || item == null) {
-                            setText(null);
-                        } else {
-                            setText(treeModel.getDescription((F) item));
-                            setOpacity(item.getClass() == treeModel.getUnknownFileClass() ? 0.5 : 1);
-                        }
+                        updateTreeTableCellDescriptionItem(item, empty, this);
                     }
                 };
             }
@@ -326,13 +284,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         tree.getColumns().setAll(fileColumn, descriptionColumn);
         tree.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         tree.getSelectionModel().getSelectedItems().addListener(this::treeViewChangeListener);
-        tree.setOnMouseClicked(event -> {
-            TreeItem<N> item = tree.getSelectionModel().getSelectedItem();
-            N node = item != null ? item.getValue() : null;
-            selectedNode.setValue(node != null && filter.apply(node, treeModel) ? (T) node : null);
-            selectedFolder.setValue(node != null && treeModel.isFolder(node) && treeModel.isWritable((D) node) ? (D) node : null);
-            doubleClick.setValue(event.getClickCount() == 2);
-        });
+        tree.setOnMouseClicked(this::onMouseClickedEvent);
         ScrollPane scrollPane = new ScrollPane(tree);
         scrollPane.setFitToWidth(true);
         scrollPane.setFitToHeight(true);
@@ -448,6 +400,68 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         return alert;
     }
 
+    private void onMouseClickedEvent(MouseEvent event) {
+        TreeItem<N> item = tree.getSelectionModel().getSelectedItem();
+        N node = item != null ? item.getValue() : null;
+        selectedNode.setValue(node != null && filter.apply(node, treeModel) ? (T) node : null);
+        selectedFolder.setValue(node != null && treeModel.isFolder(node) && treeModel.isWritable((D) node) ? (D) node : null);
+        doubleClick.setValue(event.getClickCount() == 2);
+    }
+
+    private void updateTreeTableCellFileItem(N item, boolean empty, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treeTableCell) {
+        if (empty) {
+            treeTableCell.setText(null);
+            treeTableCell.setGraphic(null);
+        } else {
+            updateNonNullItemm(item, treeTableRow, treeTableCell);
+        }
+    }
+
+    private void updateTreeTableCellDescriptionItem(N item, boolean empty, TreeTableCell<N, N> treeTableCell) {
+        if (empty || item == null) {
+            treeTableCell.setText(null);
+        } else {
+            treeTableCell.setText(treeModel.getDescription((F) item));
+            treeTableCell.setOpacity(item.getClass() == treeModel.getUnknownFileClass() ? 0.5 : 1);
+        }
+    }
+
+    private void updateNonNullItemm(N item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treeTableCell) {
+        if (item == null) {
+            GseUtil.setWaitingText(treeTableCell);
+        } else if (item instanceof Node) {
+            Node node = (Node) item;
+            treeTableCell.setText(treeModel.getName(item));
+            treeTableCell.setTextFill(Color.BLACK);
+            treeTableCell.setOpacity(item.getClass() == treeModel.getUnknownFileClass() ? 0.5 : 1);
+            treeTableCell.setOnDragDetected(event -> dragDetectedEvent(item, treeTableRow.getTreeItem(), event));
+            treeTableCell.setOnDragOver(event -> dragOverEvent(event, item, treeTableRow, treeTableCell));
+            treeTableCell.setOnDragDropped(event -> dragDroppedEvent(item, treeTableRow.getTreeItem(), event, node));
+            treeTableCell.setOnDragExited(event -> treeTableCell.setTextFill(Color.BLACK));
+        } else {
+            treeTableCell.setText(treeModel.getName(item));
+            treeTableCell.setTextFill(Color.BLACK);
+            treeTableCell.setOpacity(item.getClass() == treeModel.getUnknownFileClass() ? 0.5 : 1);
+            treeTableCell.setGraphic(NodeGraphics.getGraphic(item));
+        }
+    }
+
+    private void textFillColor(TreeTableCell<N, N> treetableCell) {
+        if (getCounter() < 1) {
+            treetableCell.setTextFill(Color.CHOCOLATE);
+        }
+    }
+
+    private void dragOverEvent(DragEvent event, Object item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treetableCell) {
+        if (item instanceof Folder && item != moveContext.source) {
+            int count = 0;
+            treeItemChildrenSize(treeTableRow.getTreeItem(), count);
+            textFillColor(treetableCell);
+            event.acceptTransferModes(TransferMode.ANY);
+            event.consume();
+        }
+    }
+
     public int getCounter() {
         return counter;
     }
@@ -474,8 +488,8 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             treeItemChildrenSize(treeItem, count);
             accepTransferDrag(folder, success);
             event.setDropCompleted(success);
-            refresh(moveContext.sourceparentTreeItem);
-            refresh(treeItem);
+            refreshTreeItem(moveContext.sourceparentTreeItem);
+            refreshTreeItem(treeItem);
             event.consume();
         }
     }
@@ -489,12 +503,15 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private void treeItemChildrenSize(TreeItem<N> treeItem, int compte) {
         counter = compte;
-        if (!treeItem.getChildren().isEmpty()) {
-            for (TreeItem objectTreeItem : treeItem.getChildren()) {
-                if (objectTreeItem.getValue() == null) {
-                    break;
-                } else if (objectTreeItem.getValue().toString().equals(moveContext.source.toString())) {
-                    counter++;
+        if (!treeItem.isLeaf()) {
+            Folder folder = (Folder) treeItem.getValue();
+            if (!folder.getChildren().isEmpty()) {
+                for (Node node : folder.getChildren()) {
+                    if (node == null) {
+                        break;
+                    } else if (node.getName().equals(moveContext.source.toString())) {
+                        counter++;
+                    }
                 }
             }
         }
@@ -522,7 +539,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             } else if (value instanceof Folder) {
                 tree.setContextMenu(createFolderContextMenu(selectedTreeItem));
             } else {
-                // TODO show contextual menu to reach advanced task status ?
                 tree.setContextMenu(null);
             }
         } else {
@@ -564,7 +580,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         menuItem.setOnAction(event ->
                 treeModel.showCreateFolderDialog(window, selectedFolder.get()).ifPresent(newFolder -> {
                     TreeItem<N> selectedItem = tree.getSelectionModel().getSelectedItem();
-                    refresh(selectedItem);
+                    refreshTreeItem(selectedItem);
                 })
         );
         return menuItem;
@@ -583,7 +599,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 if (selectedTreeItem.getValue() instanceof Node) {
                     Node localSelectednode = (Node) selectedTreeItem.getValue();
                     localSelectednode.rename(newname);
-                    refresh(selectedTreeItem.getParent());
+                    refreshTreeItem(selectedTreeItem.getParent());
                     tree.getSelectionModel().clearSelection();
                     tree.getSelectionModel().select(selectedTreeItem.getParent());
                 }
@@ -647,7 +663,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             parentTreeItems.add(selectedTreeItem.getParent());
         }
         for (TreeItem<N> parentTreeItem : parentTreeItems) {
-            refresh(parentTreeItem);
+            refreshTreeItem(parentTreeItem);
             tree.getSelectionModel().clearSelection();
             tree.getSelectionModel().select(parentTreeItem);
             selectedNode.setValue((T) parentTreeItem.getValue());

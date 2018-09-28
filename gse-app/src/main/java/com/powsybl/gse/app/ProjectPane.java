@@ -185,41 +185,36 @@ public class ProjectPane extends Tab {
     }
 
     private TreeCell<Object> treeViewCellFactory(TreeView<Object> item) {
+
         return new TreeCell<Object>() {
-            private void fillCellInfosForObject(Object value) {
+
+            private void setForItemObject(Object value) {
+                if (value instanceof String) {
+                    setText((String) value);
+                    setGraphic(getTreeItem().getGraphic());
+                    setTextFill(Color.BLACK);
+                    setOpacity(1);
+                } else if (value instanceof ProjectNode) {
+                    ProjectNode node = (ProjectNode) value;
+                    setText(node.getName());
+                    setGraphic(getTreeItem().getGraphic());
+                    setTextFill(Color.BLACK);
+                    setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
+                    setOnDragDetected(event -> dragDetectedEvent(getItem(), getTreeItem(), event));
+                    setOnDragOver(event -> dragOverEvent(event, getItem(), getTreeItem(), this));
+                    setOnDragDropped(event -> dragDroppedEvent(getItem(), getTreeItem(), event, node));
+                    setOnDragExited(event -> setTextFill(Color.BLACK));
+                } else {
+                    throw new AssertionError();
+                }
+            }
+
+            private void updateNonEmptyItem(Object value) {
+                fillCellInfosForObject(value, this, getTreeItem());
                 if (value == null) {
                     GseUtil.setWaitingText(this);
                 } else {
-                    if (value instanceof String) {
-                        setText((String) value);
-                        setGraphic(getTreeItem().getGraphic());
-                        setTextFill(Color.BLACK);
-                        setOpacity(1);
-                    } else if (value instanceof ProjectNode) {
-                        ProjectNode node = (ProjectNode) value;
-                        setText(node.getName());
-                        setGraphic(getTreeItem().getGraphic());
-                        setTextFill(Color.BLACK);
-                        setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
-                    } else {
-                        throw new AssertionError("Unexpected type for value: " + value.getClass().getName());
-                    }
-                }
-            }
-
-            private void textFillColor() {
-                if (getCounter() < 1) {
-                    setTextFill(Color.CHOCOLATE);
-                }
-            }
-
-            private void dragOverEvent(DragEvent event) {
-                if (getItem() instanceof ProjectFolder && getItem() != moveContext.source) {
-                    int count = 0;
-                    treeItemChildrenSize(getTreeItem(), count);
-                    textFillColor();
-                    event.acceptTransferModes(TransferMode.ANY);
-                    event.consume();
+                    setForItemObject(value);
                 }
             }
 
@@ -230,29 +225,7 @@ public class ProjectPane extends Tab {
                     setText(null);
                     setGraphic(null);
                 } else {
-                    fillCellInfosForObject(value);
-                    if (value == null) {
-                        GseUtil.setWaitingText(this);
-                    } else {
-                        if (value instanceof String) {
-                            setText((String) value);
-                            setGraphic(getTreeItem().getGraphic());
-                            setTextFill(Color.BLACK);
-                            setOpacity(1);
-                        } else if (value instanceof ProjectNode) {
-                            ProjectNode node = (ProjectNode) value;
-                            setText(node.getName());
-                            setGraphic(getTreeItem().getGraphic());
-                            setTextFill(Color.BLACK);
-                            setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
-                            setOnDragDetected(event -> dragDetectedEvent(getItem(), getTreeItem(), event));
-                            setOnDragOver(this::dragOverEvent);
-                            setOnDragDropped(event -> dragDroppedEvent(getItem(), getTreeItem(), event, node));
-                            setOnDragExited(event -> setTextFill(Color.BLACK));
-                        } else {
-                            throw new AssertionError();
-                        }
-                    }
+                    updateNonEmptyItem(value);
                 }
             }
         };
@@ -285,6 +258,47 @@ public class ProjectPane extends Tab {
             if (selectedTreeItem != null) {
                 runDefaultActionAfterDoubleClick(selectedTreeItem);
             }
+        }
+    }
+
+    private void textFillColor(TreeCell<Object> treeCell) {
+        if (getCounter() < 1) {
+            treeCell.setTextFill(Color.CHOCOLATE);
+        }
+    }
+
+    private void fillCellInfosForObject(Object value, TreeCell<Object> treecell, TreeItem<Object> treeItem) {
+        if (value == null) {
+            GseUtil.setWaitingText(treecell);
+        } else {
+            setsForObjects(value, treecell, treeItem);
+        }
+    }
+
+    private void setsForObjects(Object value, TreeCell<Object> treeCell, TreeItem<Object> treeItem) {
+        if (value instanceof String) {
+            treeCell.setText((String) value);
+            treeCell.setGraphic(treeItem.getGraphic());
+            treeCell.setTextFill(Color.BLACK);
+            treeCell.setOpacity(1);
+        } else if (value instanceof ProjectNode) {
+            ProjectNode node = (ProjectNode) value;
+            treeCell.setText(node.getName());
+            treeCell.setGraphic(treeItem.getGraphic());
+            treeCell.setTextFill(Color.BLACK);
+            treeCell.setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
+        } else {
+            throw new AssertionError("Unexpected type for value: " + value.getClass().getName());
+        }
+    }
+
+    private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
+        if (item instanceof ProjectFolder && item != moveContext.source) {
+            int count = 0;
+            treeItemChildrenSize(treeItem, count);
+            textFillColor(treeCell);
+            event.acceptTransferModes(TransferMode.ANY);
+            event.consume();
         }
     }
 
@@ -331,12 +345,15 @@ public class ProjectPane extends Tab {
 
     private void treeItemChildrenSize(TreeItem<Object> treeItem, int compte) {
         counter = compte;
-        if (!treeItem.getChildren().isEmpty()) {
-            for (TreeItem objectTreeItem : treeItem.getChildren()) {
-                if (objectTreeItem.getValue() == null) {
-                    break;
-                } else if (objectTreeItem.getValue().toString().equals(moveContext.source.toString())) {
-                    counter++;
+        if (!treeItem.isLeaf()) {
+            ProjectFolder treeItemFolder = (ProjectFolder) treeItem.getValue();
+            if (!treeItemFolder.getChildren().isEmpty()) {
+                for (ProjectNode node : treeItemFolder.getChildren()) {
+                    if (node == null) {
+                        break;
+                    } else if (node.getName().equals(moveContext.source.toString())) {
+                        counter++;
+                    }
                 }
             }
         }
