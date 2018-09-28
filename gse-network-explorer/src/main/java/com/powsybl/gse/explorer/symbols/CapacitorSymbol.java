@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.gse.explorer.icons;
+package com.powsybl.gse.explorer.symbols;
 
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -13,14 +13,14 @@ import javafx.scene.shape.Line;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class CapacitorIcon extends Pane {
+public class CapacitorSymbol extends Pane {
 
     private final Line l1;
     private final Line l2;
     private final Line l3;
     private final Line l4;
 
-    public CapacitorIcon(Color stroke, double strokeWidth, double size) {
+    public CapacitorSymbol(Color stroke, double strokeWidth, double size) {
         setPrefSize(size, size);
 
         l1 = new Line();

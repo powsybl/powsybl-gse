@@ -13,7 +13,7 @@ import com.powsybl.afs.ext.base.ProjectCase;
 import com.powsybl.afs.ext.base.ProjectCaseListener;
 import com.powsybl.afs.ext.base.ScriptType;
 import com.powsybl.commons.json.JsonUtil;
-import com.powsybl.gse.explorer.icons.*;
+import com.powsybl.gse.explorer.symbols.*;
 import com.powsybl.gse.explorer.query.LineQueryResult;
 import com.powsybl.gse.explorer.query.VoltageLevelQueryResult;
 import com.powsybl.gse.spi.GseContext;
@@ -213,41 +213,41 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         refreshSubstationsView();
     }
 
-    private Node getIcon(String type) {
-        Node icon = null;
+    private Node getSymbol(String type) {
+        Node symbol = null;
         switch (type) {
             case GENERATOR:
-                icon = new GeneratorIcon(ICON_COLOR, ICON_THICKNESS, rem);
+                symbol = new GeneratorSymbol(ICON_COLOR, ICON_THICKNESS, rem);
                 break;
 
             case LOAD:
-                icon = new LoadIcon(ICON_COLOR, ICON_THICKNESS, rem);
+                symbol = new LoadSymbol(ICON_COLOR, ICON_THICKNESS, rem);
                 break;
 
             case TWO_WINDINGS_TRANSFORMER:
-                icon = new TransformerIcon(ICON_COLOR, ICON_THICKNESS, rem);
+                symbol = new TransformerSymbol(ICON_COLOR, ICON_THICKNESS, rem);
                 break;
 
             case CAPACITOR:
-                icon = new CapacitorIcon(ICON_COLOR, ICON_THICKNESS, rem);
+                symbol = new CapacitorSymbol(ICON_COLOR, ICON_THICKNESS, rem);
                 break;
 
             case INDUCTOR:
-                icon = new InductorIcon(ICON_COLOR, ICON_THICKNESS, rem);
+                symbol = new InductorSymbol(ICON_COLOR, ICON_THICKNESS, rem);
                 break;
 
             case LINE:
-                icon = new LineIcon(ICON_COLOR, ICON_THICKNESS, rem);
+                symbol = new LineSymbol(ICON_COLOR, ICON_THICKNESS, rem);
                 break;
 
             case SWITCH:
-                icon = new SwitchIcon(ICON_COLOR, ICON_THICKNESS, rem);
+                symbol = new SwitchSymbol(ICON_COLOR, ICON_THICKNESS, rem);
                 break;
 
             default:
                 break;
         }
-        return icon;
+        return symbol;
     }
 
     private Comparator<IdAndName> getIdAndNameComparator() {
@@ -293,7 +293,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
                 TreeItem<EquipmentInfo> voltageLevelItem = new TreeItem<>(new EquipmentInfo(voltageLevelQueryResult.getIdAndName(), "VOLTAGE_LEVEL"));
                 substationItem.getChildren().add(voltageLevelItem);
                 for (EquipmentInfo equipment : voltageLevelQueryResult.getEquipments()) {
-                    Node icon = getIcon(equipment.getType());
+                    Node icon = getSymbol(equipment.getType());
                     TreeItem<EquipmentInfo> equipmentItem = new TreeItem<>(equipment, icon);
                     voltageLevelItem.getChildren().add(equipmentItem);
                 }

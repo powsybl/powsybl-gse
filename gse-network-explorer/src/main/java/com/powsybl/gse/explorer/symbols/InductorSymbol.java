@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.gse.explorer.icons;
+package com.powsybl.gse.explorer.symbols;
 
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -16,7 +16,7 @@ import java.util.Arrays;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class InductorIcon extends Pane {
+public class InductorSymbol extends Pane {
 
     private final int spirals;
 
@@ -24,11 +24,11 @@ public class InductorIcon extends Pane {
     private final Arc[] a;
     private final Line l2;
 
-    public InductorIcon(Color stroke, double strokeWidth, double size) {
+    public InductorSymbol(Color stroke, double strokeWidth, double size) {
         this(stroke, strokeWidth, size, 3);
     }
 
-    public InductorIcon(Color stroke, double strokeWidth, double size, int spirals) {
+    public InductorSymbol(Color stroke, double strokeWidth, double size, int spirals) {
         this.spirals = spirals;
 
         setPrefSize(size, size);
