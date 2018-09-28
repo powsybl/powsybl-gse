@@ -11,45 +11,50 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.Line;
 
+import java.util.Arrays;
+
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
 public class InductorIcon extends Pane {
 
+    private final int spirals;
+
     private final Line l1;
-    private final Arc a1;
-    private final Arc a2;
-    private final Arc a3;
+    private final Arc[] a;
     private final Line l2;
 
     public InductorIcon(Color stroke, double strokeWidth, double size) {
+        this(stroke, strokeWidth, size, 3);
+    }
+
+    public InductorIcon(Color stroke, double strokeWidth, double size, int spirals) {
+        this.spirals = spirals;
+
         setPrefSize(size, size);
 
         l1 = new Line();
         l1.setStroke(stroke);
         l1.setStrokeWidth(strokeWidth);
-        a1 = new Arc();
-        a1.setStartAngle(90);
-        a1.setLength(-180);
-        a1.setFill(Color.TRANSPARENT);
-        a1.setStroke(stroke);
-        a1.setStrokeWidth(strokeWidth);
-        a2 = new Arc();
-        a2.setStartAngle(90);
-        a2.setLength(-180);
-        a2.setFill(Color.TRANSPARENT);
-        a2.setStroke(stroke);
-        a2.setStrokeWidth(strokeWidth);
-        a3 = new Arc();
-        a3.setStartAngle(90);
-        a3.setLength(-180);
-        a3.setFill(Color.TRANSPARENT);
-        a3.setStroke(stroke);
-        a3.setStrokeWidth(strokeWidth);
+        a = new Arc[spirals];
+        for (int i = 0; i < spirals; i++) {
+            a[i] = createArc(stroke, strokeWidth);
+        }
         l2 = new Line();
         l2.setStroke(stroke);
         l2.setStrokeWidth(strokeWidth);
-        getChildren().addAll(l1, a1, a2, a3, l2);
+        getChildren().addAll(l1, l2);
+        getChildren().addAll(Arrays.asList(a));
+    }
+
+    private static Arc createArc(Color stroke, double strokeWidth) {
+        Arc a = new Arc();
+        a.setStartAngle(135);
+        a.setLength(-270);
+        a.setFill(Color.TRANSPARENT);
+        a.setStroke(stroke);
+        a.setStrokeWidth(strokeWidth);
+        return a;
     }
 
     @Override
@@ -62,22 +67,14 @@ public class InductorIcon extends Pane {
         l1.setEndX(size / 2);
         l1.setEndY(marginY);
 
-        double r = (size - (2 * marginY)) / (2 * 3);
+        double r = (size - (2 * marginY)) / (2 + 2 * (spirals - 1) * Math.cos(Math.PI / 4));
 
-        a1.setCenterX(size / 2);
-        a1.setCenterY(marginY + r);
-        a1.setRadiusX(r);
-        a1.setRadiusY(r);
-
-        a2.setCenterX(size / 2);
-        a2.setCenterY(marginY + 3 * r);
-        a2.setRadiusX(r);
-        a2.setRadiusY(r);
-
-        a3.setCenterX(size / 2);
-        a3.setCenterY(marginY + 5 * r);
-        a3.setRadiusX(r);
-        a3.setRadiusY(r);
+        for (int i = 0; i < spirals; i++) {
+            a[i].setCenterX(size / 2);
+            a[i].setCenterY(marginY + r + 2 * i * r * Math.cos(Math.PI / 4));
+            a[i].setRadiusX(r);
+            a[i].setRadiusY(r);
+        }
 
         l2.setStartX(size / 2);
         l2.setStartY(size - marginY);
