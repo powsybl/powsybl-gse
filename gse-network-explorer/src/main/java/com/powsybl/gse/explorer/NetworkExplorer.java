@@ -13,9 +13,10 @@ import com.powsybl.afs.ext.base.ProjectCase;
 import com.powsybl.afs.ext.base.ProjectCaseListener;
 import com.powsybl.afs.ext.base.ScriptType;
 import com.powsybl.commons.json.JsonUtil;
-import com.powsybl.gse.explorer.symbols.*;
+import com.powsybl.gse.explorer.diagrams.LinePiModelDiagram;
 import com.powsybl.gse.explorer.query.LineQueryResult;
 import com.powsybl.gse.explorer.query.VoltageLevelQueryResult;
+import com.powsybl.gse.explorer.symbols.*;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.GseException;
 import com.powsybl.gse.spi.ProjectFileViewer;
@@ -31,7 +32,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
-import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.ClipboardContent;
@@ -39,6 +39,7 @@ import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import org.controlsfx.control.textfield.CustomTextField;
@@ -108,6 +109,8 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         substationExecutor = new LastTaskOnlyExecutor(context.getExecutor());
         substationDetailsExecutor = new LastTaskOnlyExecutor(context.getExecutor());
         equipmentExecutor = new LastTaskOnlyExecutor(context.getExecutor());
+
+        equipmentView.setStyle("-fx-background-color:  white;");
 
         splitPane = new SplitPane(substationsView, substationDetailedView, equipmentView);
         splitPane.setDividerPositions(0.2, 0.6);
@@ -318,29 +321,34 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     }
 
     private void refreshLineView(EquipmentInfo equipment) {
+        LinePiModelDiagram diagram = new LinePiModelDiagram(Color.BLACK, 2);
+        Text title = new Text("Line \u03C0 model");
+        title.setStyle("-fx-font-size: 30;");
+        VBox box = new VBox(title, diagram);
+        equipmentView.getChildren().setAll(box);
+
         String query = processTemplate(lineTemplate, ImmutableMap.of("lineId", equipment.getIdAndName().getId()));
         queryNetwork(query, lineType, (LineQueryResult result) -> {
-            System.out.println(result.getR());
-            System.out.println(result.getX());
-            System.out.println(result.getG1());
-            System.out.println(result.getG2());
-            System.out.println(result.getB1());
-            System.out.println(result.getB2());
-            System.out.println(result.getVoltageLevel1());
-            System.out.println(result.getVoltageLevel2());
-            Group group = new Group();
-
-            equipmentView.getChildren().add(group);
+            diagram.rProperty().set(result.getR());
+            diagram.xProperty().set(result.getX());
+            diagram.g1Property().set(result.getG1());
+            diagram.g2Property().set(result.getG2());
+            diagram.b1Property().set(result.getB1());
+            diagram.b2Property().set(result.getB2());
+            diagram.voltageLevel1Property().set(result.getVoltageLevel1());
+            diagram.voltageLevel2Property().set(result.getVoltageLevel2());
         }, equipmentExecutor);
     }
 
     private void refreshEquipmentView(TreeItem<EquipmentInfo> item) {
-        equipmentView.getChildren().clear();
         if (item != null) {
             EquipmentInfo equipment = item.getValue();
             switch (equipment.getType()) {
                 case LINE:
                     refreshLineView(equipment);
+                    break;
+                default:
+                    equipmentView.getChildren().clear();
                     break;
             }
         }
