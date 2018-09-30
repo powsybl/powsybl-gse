@@ -35,7 +35,7 @@ public class LoadSymbol extends Pane {
     protected void layoutChildren() {
         double size = Math.min(getWidth(), getHeight());
 
-        l.getPoints().setAll(new Double[] {
+        l.getPoints().setAll(
             size / 2,
             size * MARGIN,
             size / 2,
@@ -48,6 +48,6 @@ public class LoadSymbol extends Pane {
             size * ARROW_START,
             size / 2,
             size * ARROW_START
-        });
+        );
     }
 }
