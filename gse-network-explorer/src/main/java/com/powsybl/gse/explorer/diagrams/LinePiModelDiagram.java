@@ -44,6 +44,8 @@ public class LinePiModelDiagram extends Pane {
     private final StringProperty voltageLevel2 = new SimpleStringProperty();
 
     public LinePiModelDiagram(Color stroke, double strokeWidth) {
+        setMinSize(400, 300);
+
         // create symbols
         ResistanceSymbol rSymbol = new ResistanceSymbol(stroke, strokeWidth, 50);
         rSymbol.setTranslateX(130);

@@ -13,7 +13,9 @@ import com.powsybl.afs.ext.base.ProjectCase;
 import com.powsybl.afs.ext.base.ProjectCaseListener;
 import com.powsybl.afs.ext.base.ScriptType;
 import com.powsybl.commons.json.JsonUtil;
+import com.powsybl.gse.explorer.diagrams.CurrentLimitsDiagram;
 import com.powsybl.gse.explorer.diagrams.LinePiModelDiagram;
+import com.powsybl.gse.explorer.query.CurrentLimitsQueryResult;
 import com.powsybl.gse.explorer.query.LineQueryResult;
 import com.powsybl.gse.explorer.query.VoltageLevelQueryResult;
 import com.powsybl.gse.explorer.symbols.*;
@@ -39,7 +41,6 @@ import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import org.controlsfx.control.textfield.CustomTextField;
@@ -84,7 +85,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private final ListView<IdAndName> substationsView = new ListView<>(filteredSubstationIds);
     private final TextField substationFilterInput = TextFields.createClearableTextField();
     private final TreeView<EquipmentInfo> substationDetailedView = new TreeView<>();
-    private final FlowPane equipmentView = new FlowPane();
+    private final TabPane equipmentView = new TabPane();
     private final SplitPane splitPane;
     private final CheckBox showName = new CheckBox(RESOURCE_BUNDLE.getString("ShowNames"));
 
@@ -93,6 +94,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private final JavaType voltageLevelQueryResultListType;
     private final JavaType idAndNameListType;
     private final JavaType lineType;
+    private final JavaType currentLimitsType;
 
     private final double rem;
 
@@ -100,6 +102,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private final Template substationTemplate;
     private final Template voltageLevelTemplate;
     private final Template lineTemplate;
+    private final Template currentLimitsTemplate;
 
     private ProjectCase projectCase;
 
@@ -172,6 +175,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         voltageLevelQueryResultListType = mapper.getTypeFactory().constructCollectionType(List.class, VoltageLevelQueryResult.class);
         idAndNameListType = mapper.getTypeFactory().constructCollectionType(List.class, IdAndName.class);
         lineType = mapper.getTypeFactory().constructType(LineQueryResult.class);
+        currentLimitsType = mapper.getTypeFactory().constructCollectionType(List.class, CurrentLimitsQueryResult.class);
 
         rem = Math.rint(new Text("").getLayoutBounds().getHeight());
 
@@ -182,6 +186,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
             substationTemplate = cfg.getTemplate("substationQuery.ftl");
             voltageLevelTemplate = cfg.getTemplate("voltageLevelQuery.ftl");
             lineTemplate = cfg.getTemplate("lineQuery.ftl");
+            currentLimitsTemplate = cfg.getTemplate("currentLimitsQuery.ftl");
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -199,6 +204,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
             try {
                 String json = projectCase.queryNetwork(ScriptType.GROOVY, groovyScript);
                 if (json != null) {
+                    System.out.println(json);
                     T obj = mapper.readValue(json, valueType);
                     Platform.runLater(() -> updater.accept(obj));
                 }
@@ -321,22 +327,26 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     }
 
     private void refreshLineView(EquipmentInfo equipment) {
-        LinePiModelDiagram diagram = new LinePiModelDiagram(Color.BLACK, 2);
-        Text title = new Text("Line \u03C0 model");
-        title.setStyle("-fx-font-size: 30;");
-        VBox box = new VBox(title, diagram);
-        equipmentView.getChildren().setAll(box);
+        LinePiModelDiagram piModelDiagram = new LinePiModelDiagram(Color.BLACK, 2);
+        CurrentLimitsDiagram limitsDiagram = new CurrentLimitsDiagram();
+        equipmentView.getTabs().setAll(new Tab("Line \u03C0 model", piModelDiagram),
+                                       new Tab("Currents limits", limitsDiagram));
 
-        String query = processTemplate(lineTemplate, ImmutableMap.of("lineId", equipment.getIdAndName().getId()));
-        queryNetwork(query, lineType, (LineQueryResult result) -> {
-            diagram.rProperty().set(result.getR());
-            diagram.xProperty().set(result.getX());
-            diagram.g1Property().set(result.getG1());
-            diagram.g2Property().set(result.getG2());
-            diagram.b1Property().set(result.getB1());
-            diagram.b2Property().set(result.getB2());
-            diagram.voltageLevel1Property().set(result.getVoltageLevel1());
-            diagram.voltageLevel2Property().set(result.getVoltageLevel2());
+        String lineQuery = processTemplate(lineTemplate, ImmutableMap.of("lineId", equipment.getIdAndName().getId()));
+        queryNetwork(lineQuery, lineType, (LineQueryResult result) -> {
+            piModelDiagram.rProperty().set(result.getR());
+            piModelDiagram.xProperty().set(result.getX());
+            piModelDiagram.g1Property().set(result.getG1());
+            piModelDiagram.g2Property().set(result.getG2());
+            piModelDiagram.b1Property().set(result.getB1());
+            piModelDiagram.b2Property().set(result.getB2());
+            piModelDiagram.voltageLevel1Property().set(result.getVoltageLevel1());
+            piModelDiagram.voltageLevel2Property().set(result.getVoltageLevel2());
+        }, equipmentExecutor);
+
+        String currentLimitsQuery = processTemplate(currentLimitsTemplate, ImmutableMap.of("lineId", equipment.getIdAndName().getId()));
+        queryNetwork(currentLimitsQuery, currentLimitsType, (List<CurrentLimitsQueryResult> results) -> {
+            limitsDiagram.limitsProperty().set(FXCollections.observableArrayList(results));
         }, equipmentExecutor);
     }
 
@@ -348,7 +358,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
                     refreshLineView(equipment);
                     break;
                 default:
-                    equipmentView.getChildren().clear();
+                    equipmentView.getTabs().clear();
                     break;
             }
         }
