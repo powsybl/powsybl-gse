@@ -37,7 +37,6 @@ import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import org.controlsfx.control.textfield.CustomTextField;
@@ -82,7 +81,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private final ListView<IdAndName> substationsView = new ListView<>(filteredSubstationIds);
     private final TextField substationFilterInput = TextFields.createClearableTextField();
     private final TreeView<EquipmentInfo> substationDetailedView = new TreeView<>();
-    private final FlowPane equipmentView = new FlowPane();
+    private final TabPane equipmentTabs = new TabPane();
     private final SplitPane splitPane;
     private final CheckBox showName = new CheckBox(RESOURCE_BUNDLE.getString("ShowNames"));
 
@@ -99,6 +98,10 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private final Template voltageLevelTemplate;
     private final Template lineTemplate;
 
+    private final LinePiModelDiagram linePiModelDiagram;
+
+    private final Tab linePiModelTab;
+
     private ProjectCase projectCase;
 
     NetworkExplorer(ProjectCase projectCase, GseContext context) {
@@ -108,9 +111,11 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         substationDetailsExecutor = new LastTaskOnlyExecutor(context.getExecutor());
         equipmentExecutor = new LastTaskOnlyExecutor(context.getExecutor());
 
-        equipmentView.setStyle("-fx-background-color: white;");
+        equipmentTabs.setStyle("-fx-background-color: white;");
+        linePiModelDiagram = new LinePiModelDiagram(Color.BLACK, 2);
+        linePiModelTab = new Tab(RESOURCE_BUNDLE.getString("LinePiModel"), linePiModelDiagram);
 
-        splitPane = new SplitPane(substationsView, substationDetailedView, equipmentView);
+        splitPane = new SplitPane(substationsView, substationDetailedView, equipmentTabs);
         splitPane.setDividerPositions(0.2, 0.6);
 
         FlowPane toolBar = new FlowPane(5, 0, substationFilterInput, showName);
@@ -314,22 +319,18 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     }
 
     private void refreshLineView(EquipmentInfo equipment) {
-        LinePiModelDiagram diagram = new LinePiModelDiagram(Color.BLACK, 2);
-        Text title = new Text("Line \u03C0 model");
-        title.setStyle("-fx-font-size: 30;");
-        VBox box = new VBox(title, diagram);
-        equipmentView.getChildren().setAll(box);
+        equipmentTabs.getTabs().setAll(linePiModelTab);
 
-        String query = processTemplate(lineTemplate, ImmutableMap.of("lineId", equipment.getIdAndName().getId()));
-        queryNetwork(query, lineType, (LineQueryResult result) -> {
-            diagram.rProperty().set(result.getR());
-            diagram.xProperty().set(result.getX());
-            diagram.g1Property().set(result.getG1());
-            diagram.g2Property().set(result.getG2());
-            diagram.b1Property().set(result.getB1());
-            diagram.b2Property().set(result.getB2());
-            diagram.voltageLevel1Property().set(result.getVoltageLevel1());
-            diagram.voltageLevel2Property().set(result.getVoltageLevel2());
+        String lineQuery = processTemplate(lineTemplate, ImmutableMap.of("lineId", equipment.getIdAndName().getId()));
+        queryNetwork(lineQuery, lineType, (LineQueryResult result) -> {
+            linePiModelDiagram.rProperty().set(result.getR());
+            linePiModelDiagram.xProperty().set(result.getX());
+            linePiModelDiagram.g1Property().set(result.getG1());
+            linePiModelDiagram.g2Property().set(result.getG2());
+            linePiModelDiagram.b1Property().set(result.getB1());
+            linePiModelDiagram.b2Property().set(result.getB2());
+            linePiModelDiagram.voltageLevel1Property().set(result.getVoltageLevel1());
+            linePiModelDiagram.voltageLevel2Property().set(result.getVoltageLevel2());
         }, equipmentExecutor);
     }
 
@@ -341,7 +342,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
                     refreshLineView(equipment);
                     break;
                 default:
-                    equipmentView.getChildren().clear();
+                    equipmentTabs.getTabs().clear();
                     break;
             }
         }
