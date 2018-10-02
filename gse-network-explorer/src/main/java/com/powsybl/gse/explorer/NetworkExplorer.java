@@ -26,8 +26,6 @@ import freemarker.template.Template;
 import freemarker.template.TemplateException;
 import freemarker.template.Version;
 import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -110,7 +108,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         substationDetailsExecutor = new LastTaskOnlyExecutor(context.getExecutor());
         equipmentExecutor = new LastTaskOnlyExecutor(context.getExecutor());
 
-        equipmentView.setStyle("-fx-background-color:  white;");
+        equipmentView.setStyle("-fx-background-color: white;");
 
         splitPane = new SplitPane(substationsView, substationDetailedView, equipmentView);
         splitPane.setDividerPositions(0.2, 0.6);
@@ -151,12 +149,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
 
         substationsView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> refreshSubstationDetailView(newValue));
 
-        substationDetailedView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<TreeItem<EquipmentInfo>>() {
-            @Override
-            public void changed(ObservableValue<? extends TreeItem<EquipmentInfo>> observable, TreeItem<EquipmentInfo> oldValue, TreeItem<EquipmentInfo> newValue) {
-                refreshEquipmentView(newValue);
-            }
-        });
+        substationDetailedView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> refreshEquipmentView(newValue));
         substationDetailedView.setOnDragDetected(event -> {
             EquipmentInfo selectedEquipmentInfo = substationDetailedView.getSelectionModel().getSelectedItem().getValue();
 
@@ -268,7 +261,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         try (StringWriter out = new StringWriter()) {
             template.process(templateData, out);
             out.flush();
-            return out.getBuffer().toString();
+            return out.toString();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         } catch (TemplateException e) {
