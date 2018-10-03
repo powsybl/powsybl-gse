@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.gse.explorer.icons;
+package com.powsybl.gse.explorer.symbols;
 
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -14,13 +14,13 @@ import javafx.scene.shape.Circle;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class GeneratorIcon extends Pane {
+public class GeneratorSymbol extends Pane {
 
     private final Circle c;
     private final Arc a1;
     private final Arc a2;
 
-    public GeneratorIcon(Color stroke, double strokeWidth, double size) {
+    public GeneratorSymbol(Color stroke, double strokeWidth, double size) {
         setPrefSize(size, size);
 
         c = new Circle();
