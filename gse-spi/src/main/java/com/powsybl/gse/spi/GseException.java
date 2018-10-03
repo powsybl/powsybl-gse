@@ -16,4 +16,8 @@ public class GseException extends PowsyblException {
     public GseException(String msg) {
         super(msg);
     }
+
+    public GseException(Throwable throwable) {
+        super(throwable);
+    }
 }
