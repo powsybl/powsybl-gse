@@ -36,7 +36,11 @@ import java.util.stream.Collectors;
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
 public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridPane {
-    private class MoveContext {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(NodeChooser.class);
+    private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.NodeChooser");
+
+    private static class MoveContext {
         private Object source;
         private TreeItem sourceTreeItem;
         private TreeItem sourceparentTreeItem;
@@ -45,8 +49,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private MoveContext moveContext;
     private int counter;
     private boolean success;
-    private static final Logger LOGGER = LoggerFactory.getLogger(NodeChooser.class);
-    private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.NodeChooser");
 
     public interface TreeModel<N, F, D> {
         Collection<N> getChildren(D folder);
@@ -146,6 +148,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private static class TreeModelProjectImpl implements TreeModel<ProjectNode, ProjectFile, ProjectFolder> {
+
         private final Project project;
 
         public TreeModelProjectImpl(Project project) {
@@ -380,7 +383,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                     } else {
                         F file = (F) child;
                         if (filter.apply(file, treeModel)) {
-                            childItems.add(new TreeItem<>(child, NodeGraphics.getGraphic(file)));
+                            childItems.add(new TreeItem<>(child));
                         }
                     }
                 }
@@ -434,6 +437,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             treeTableCell.setText(treeModel.getName(item));
             treeTableCell.setTextFill(Color.BLACK);
             treeTableCell.setOpacity(item.getClass() == treeModel.getUnknownFileClass() ? 0.5 : 1);
+            treeTableCell.setGraphic(NodeGraphics.getGraphic(item));
             treeTableCell.setOnDragDetected(event -> dragDetectedEvent(item, treeTableRow.getTreeItem(), event));
             treeTableCell.setOnDragOver(event -> dragOverEvent(event, item, treeTableRow, treeTableCell));
             treeTableCell.setOnDragDropped(event -> dragDroppedEvent(item, treeTableRow.getTreeItem(), event, node));
@@ -671,7 +675,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private TreeItem<N> createCollapsedFolderItem(D folder) {
-        TreeItem<N> item = new TreeItem<>(folder, NodeGraphics.getGraphic(folder));
+        TreeItem<N> item = new TreeItem<>(folder);
         item.getChildren().setAll(new TreeItem<>()); // dummy leaf
         item.setExpanded(false);
         item.expandedProperty().addListener((observable, oldValue, newValue) -> {

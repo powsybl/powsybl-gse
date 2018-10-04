@@ -44,18 +44,6 @@ import java.util.stream.Collectors;
  */
 public class ProjectPane extends Tab {
 
-    private class MoveContext {
-        private Object source;
-        private TreeItem sourceTreeItem;
-        private TreeItem sourceparentTreeItem;
-    }
-
-    private int counter;
-
-    private boolean success;
-
-    private MoveContext moveContext;
-
     private static final Logger LOGGER = LoggerFactory.getLogger(ProjectPane.class);
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ProjectPane");
@@ -111,6 +99,18 @@ public class ProjectPane extends Tab {
             return ((TabPaneSkin) getTabPane().getSkin()).getBehavior();
         }
     }
+
+    private static class MoveContext {
+        private Object source;
+        private TreeItem sourceTreeItem;
+        private TreeItem sourceparentTreeItem;
+    }
+
+    private int counter;
+
+    private boolean success;
+
+    private MoveContext moveContext;
 
     private final Project project;
 
