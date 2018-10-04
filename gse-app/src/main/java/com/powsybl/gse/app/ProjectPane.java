@@ -600,7 +600,7 @@ public class ProjectPane extends Tab {
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"));
         menuItem.setOnAction(event -> {
-            TextInputDialog dialog = new TextInputDialog(RESOURCE_BUNDLE.getString("NewName"));
+            TextInputDialog dialog = new TextInputDialog(selectedTreeItem.getValue().toString());
             dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
             dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
             dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
@@ -756,6 +756,7 @@ public class ProjectPane extends Tab {
         ContextMenu contextMenu = new ContextMenu();
         contextMenu.getItems().add(menu);
         contextMenu.getItems().add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+        contextMenu.getItems().add(createRenameProjectNodeItem(selectedTreeItem));
         return contextMenu;
     }
 
