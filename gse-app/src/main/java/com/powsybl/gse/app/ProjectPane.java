@@ -26,7 +26,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
+import javafx.scene.input.*;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -99,6 +99,18 @@ public class ProjectPane extends Tab {
             return ((TabPaneSkin) getTabPane().getSkin()).getBehavior();
         }
     }
+
+    private static class MoveContext {
+        private Object source;
+        private TreeItem sourceTreeItem;
+        private TreeItem sourceparentTreeItem;
+    }
+
+    private int counter;
+
+    private boolean success;
+
+    private MoveContext moveContext;
 
     private final Project project;
 
@@ -173,25 +185,36 @@ public class ProjectPane extends Tab {
     }
 
     private TreeCell<Object> treeViewCellFactory(TreeView<Object> item) {
+
         return new TreeCell<Object>() {
-            private void fillCellInfosForObject(Object value) {
+
+            private void setForItemObject(Object value) {
+                if (value instanceof String) {
+                    setText((String) value);
+                    setGraphic(getTreeItem().getGraphic());
+                    setTextFill(Color.BLACK);
+                    setOpacity(1);
+                } else if (value instanceof ProjectNode) {
+                    ProjectNode node = (ProjectNode) value;
+                    setText(node.getName());
+                    setGraphic(getTreeItem().getGraphic());
+                    setTextFill(Color.BLACK);
+                    setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
+                    setOnDragDetected(event -> dragDetectedEvent(getItem(), getTreeItem(), event));
+                    setOnDragOver(event -> dragOverEvent(event, getItem(), getTreeItem(), this));
+                    setOnDragDropped(event -> dragDroppedEvent(getItem(), getTreeItem(), event, node));
+                    setOnDragExited(event -> setTextFill(Color.BLACK));
+                } else {
+                    throw new AssertionError();
+                }
+            }
+
+            private void updateNonEmptyItem(Object value) {
+                fillCellInfosForObject(value, this, getTreeItem());
                 if (value == null) {
                     GseUtil.setWaitingText(this);
                 } else {
-                    if (value instanceof String) {
-                        setText((String) value);
-                        setGraphic(getTreeItem().getGraphic());
-                        setTextFill(Color.BLACK);
-                        setOpacity(1);
-                    } else if (value instanceof ProjectNode) {
-                        ProjectNode node = (ProjectNode) value;
-                        setText(node.getName());
-                        setGraphic(getTreeItem().getGraphic());
-                        setTextFill(Color.BLACK);
-                        setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
-                    } else {
-                        throw new AssertionError("Unexpected type for value: " + value.getClass().getName());
-                    }
+                    setForItemObject(value);
                 }
             }
 
@@ -202,7 +225,7 @@ public class ProjectPane extends Tab {
                     setText(null);
                     setGraphic(null);
                 } else {
-                    fillCellInfosForObject(value);
+                    updateNonEmptyItem(value);
                 }
             }
         };
@@ -238,6 +261,114 @@ public class ProjectPane extends Tab {
         }
     }
 
+    private void textFillColor(TreeCell<Object> treeCell) {
+        if (getCounter() < 1) {
+            treeCell.setTextFill(Color.CHOCOLATE);
+        }
+    }
+
+    private void fillCellInfosForObject(Object value, TreeCell<Object> treecell, TreeItem<Object> treeItem) {
+        if (value == null) {
+            GseUtil.setWaitingText(treecell);
+        } else {
+            setsForObjects(value, treecell, treeItem);
+        }
+    }
+
+    private void setsForObjects(Object value, TreeCell<Object> treeCell, TreeItem<Object> treeItem) {
+        if (value instanceof String) {
+            treeCell.setText((String) value);
+            treeCell.setGraphic(treeItem.getGraphic());
+            treeCell.setTextFill(Color.BLACK);
+            treeCell.setOpacity(1);
+        } else if (value instanceof ProjectNode) {
+            ProjectNode node = (ProjectNode) value;
+            treeCell.setText(node.getName());
+            treeCell.setGraphic(treeItem.getGraphic());
+            treeCell.setTextFill(Color.BLACK);
+            treeCell.setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
+        } else {
+            throw new AssertionError("Unexpected type for value: " + value.getClass().getName());
+        }
+    }
+
+    private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
+        if (item instanceof ProjectFolder && item != moveContext.source) {
+            int count = 0;
+            treeItemChildrenSize(treeItem, count);
+            textFillColor(treeCell);
+            event.acceptTransferModes(TransferMode.ANY);
+            event.consume();
+        }
+    }
+
+    private Alert nameAlreadyExistsAlert() {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
+        alert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
+        alert.setContentText(RESOURCE_BUNDLE.getString("DragFileExists"));
+        alert.showAndWait();
+        return alert;
+    }
+
+    private int getCounter() {
+        return counter;
+    }
+
+    private void dragDetectedEvent(Object value, TreeItem<Object> treeItem, MouseEvent event) {
+        moveContext = new MoveContext();
+        moveContext.source = value;
+        moveContext.sourceTreeItem = treeItem;
+        moveContext.sourceparentTreeItem = moveContext.sourceTreeItem.getParent();
+        if (value instanceof ProjectNode && treeItem != treeView.getRoot()) {
+            Dragboard db = treeView.startDragAndDrop(TransferMode.ANY);
+            ClipboardContent cb = new ClipboardContent();
+            cb.putString(((ProjectNode) value).getName());
+            db.setContent(cb);
+            event.consume();
+        }
+    }
+
+    private void dragDroppedEvent(Object value, TreeItem<Object> treeItem, DragEvent event, ProjectNode projectNode) {
+        if (value instanceof ProjectFolder && value != moveContext.source) {
+            ProjectFolder projectFolder = (ProjectFolder) projectNode;
+            int count = 0;
+            success = false;
+            treeItemChildrenSize(treeItem, count);
+            accepTransferDrag(projectFolder, success);
+            event.setDropCompleted(success);
+            refresh(moveContext.sourceparentTreeItem);
+            refresh(treeItem);
+            event.consume();
+        }
+    }
+
+    private void treeItemChildrenSize(TreeItem<Object> treeItem, int compte) {
+        counter = compte;
+        if (!treeItem.isLeaf()) {
+            ProjectFolder treeItemFolder = (ProjectFolder) treeItem.getValue();
+            if (!treeItemFolder.getChildren().isEmpty()) {
+                for (ProjectNode node : treeItemFolder.getChildren()) {
+                    if (node == null) {
+                        break;
+                    } else if (node.getName().equals(moveContext.source.toString())) {
+                        counter++;
+                    }
+                }
+            }
+        }
+    }
+
+    private void accepTransferDrag(ProjectFolder projectFolder, boolean s) {
+        success = s;
+        if (getCounter() >= 1) {
+            nameAlreadyExistsAlert();
+        } else if (getCounter() < 1) {
+            ProjectNode monfichier = (ProjectNode) moveContext.source;
+            monfichier.moveTo(projectFolder);
+            success = true;
+        }
+    }
 
     private final CreationTaskList tasks = new CreationTaskList();
 
@@ -397,7 +528,7 @@ public class ProjectPane extends Tab {
 
     // extension search
 
-    private static List<ProjectFileCreatorExtension> findCreatorExtension(Class<? extends  ProjectFile> type) {
+    private static List<ProjectFileCreatorExtension> findCreatorExtension(Class<? extends ProjectFile> type) {
         return CREATOR_EXTENSION_LOADER.getServices().stream()
                 .filter(extension -> extension.getProjectFileType().isAssignableFrom(type))
                 .collect(Collectors.toList());
@@ -462,6 +593,28 @@ public class ProjectPane extends Tab {
                     refresh(parentTreeItem);
                 }
             }
+        });
+        return menuItem;
+    }
+
+    private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
+        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"));
+        menuItem.setOnAction(event -> {
+            TextInputDialog dialog = new TextInputDialog(selectedTreeItem.getValue().toString());
+            dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
+            dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
+            dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
+            Optional<String> result = dialog.showAndWait();
+            result.ifPresent(newname -> {
+                if (selectedTreeItem.getValue() instanceof ProjectNode) {
+                    ProjectNode selectedTreeNode = (ProjectNode) selectedTreeItem.getValue();
+                    selectedTreeNode.rename(newname);
+                    refresh(selectedTreeItem.getParent());
+                    treeView.getSelectionModel().clearSelection();
+                    treeView.getSelectionModel().select(selectedTreeItem);
+                }
+            });
+
         });
         return menuItem;
     }
@@ -603,17 +756,18 @@ public class ProjectPane extends Tab {
         ContextMenu contextMenu = new ContextMenu();
         contextMenu.getItems().add(menu);
         contextMenu.getItems().add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+        contextMenu.getItems().add(createRenameProjectNodeItem(selectedTreeItem));
         return contextMenu;
     }
 
     private MenuItem createCreateFolderItem(TreeItem<Object> selectedTreeItem, ProjectFolder folder) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("CreateFolder") + "...");
-        menuItem.setOnAction((ActionEvent event) -> {
-            NewFolderPane.showAndWaitDialog(getContent().getScene().getWindow(), folder).ifPresent(newFolder -> {
-                refresh(selectedTreeItem);
-                selectedTreeItem.setExpanded(true);
-            });
-        });
+        menuItem.setOnAction((ActionEvent event) ->
+                NewFolderPane.showAndWaitDialog(getContent().getScene().getWindow(), folder).ifPresent(newFolder -> {
+                    refresh(selectedTreeItem);
+                    selectedTreeItem.setExpanded(true);
+                })
+        );
         return menuItem;
     }
 
@@ -695,6 +849,7 @@ public class ProjectPane extends Tab {
         }
         if (selectedTreeItem != treeView.getRoot()) {
             items.add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+            items.add(createRenameProjectNodeItem(selectedTreeItem));
         }
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
