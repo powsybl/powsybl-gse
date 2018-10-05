@@ -38,6 +38,11 @@
     <dependencies>
         <!-- Compilation dependencies -->
         <dependency>
+            <groupId>com.github.afester.javafx</groupId>
+            <artifactId>FranzXaver</artifactId>
+            <version>${franzxaver.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-afs-core</artifactId>
         </dependency>
