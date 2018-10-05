@@ -14,14 +14,14 @@ import java.util.Collection;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class PowsyblLogo extends AbstractSvgImage {
+public class LfeLogo extends AbstractSvgImage {
 
-    public PowsyblLogo() {
-        super(PowsyblLogo.class.getResourceAsStream("/images/logo_lfe_powsybl.svg"), 0, 0, 114, 114);
+    public LfeLogo() {
+        super(LfeLogo.class.getResourceAsStream("/images/logo_lfe_powsybl.svg"), 130, 0, 232, 29);
     }
 
     @Override
     protected Collection<Node> extractNodes(Group svg) {
-        return ((Group) svg.getChildren().get(0)).getChildren();
+        return ((Group) svg.getChildren().get(4)).getChildren();
     }
 }

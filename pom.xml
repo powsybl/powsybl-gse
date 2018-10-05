@@ -87,6 +87,7 @@
         <commonscompress.version>1.17</commonscompress.version>
         <commonslogging.version>1.2</commonslogging.version>
         <controlfx.version>8.40.14</controlfx.version>
+        <franzxaver.version>0.1</franzxaver.version>
         <freemarker.version>2.3.28</freemarker.version>
         <groovy.version>2.4.12</groovy.version>
         <guava.version>20.0</guava.version>
