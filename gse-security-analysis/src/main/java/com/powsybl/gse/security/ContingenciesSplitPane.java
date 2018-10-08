@@ -9,6 +9,7 @@ package com.powsybl.gse.security;
 import com.powsybl.security.LimitViolationsResult;
 import com.powsybl.security.PostContingencyResult;
 import com.powsybl.security.SecurityAnalysisResult;
+import javafx.collections.FXCollections;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SplitPane;
 
@@ -24,7 +25,7 @@ public class ContingenciesSplitPane extends SplitPane {
 
     private final ListView<String> contingencyListView = new ListView<>();
 
-    private final LimitViolationsTableView limitViolationsTableView = new LimitViolationsTableView();
+    private final LimitViolationsTableView limitViolationsTableView = new LimitViolationsTableView(FXCollections.observableArrayList());
 
     ContingenciesSplitPane() {
         setDividerPositions(0.2);

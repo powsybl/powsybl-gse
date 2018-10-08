@@ -8,6 +8,7 @@ package com.powsybl.gse.security;
 
 import com.powsybl.security.LimitViolation;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.ObservableList;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -20,7 +21,8 @@ import java.util.ResourceBundle;
 public class LimitViolationsTableView extends TableView<LimitViolation> {
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.SecurityAnalysis");
 
-    LimitViolationsTableView() {
+    LimitViolationsTableView(ObservableList<LimitViolation> violations) {
+        super(violations);
         TableColumn<LimitViolation, String> equipmentColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Equipment"));
         equipmentColumn.setPrefWidth(200);
         equipmentColumn.setCellValueFactory(new PropertyValueFactory<>("subjectId"));
