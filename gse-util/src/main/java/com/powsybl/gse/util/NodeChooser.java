@@ -415,7 +415,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             treeTableCell.setText(null);
             treeTableCell.setGraphic(null);
         } else {
-            updateNonNullItemm(item, treeTableRow, treeTableCell);
+            updateNonNullItem(item, treeTableRow, treeTableCell);
         }
     }
 
@@ -428,7 +428,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         }
     }
 
-    private void updateNonNullItemm(N item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treeTableCell) {
+    private void updateNonNullItem(N item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treeTableCell) {
         if (item == null) {
             GseUtil.setWaitingText(treeTableCell);
         } else if (item instanceof Node) {

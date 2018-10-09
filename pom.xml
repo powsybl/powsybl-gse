@@ -70,6 +70,7 @@
         <maven.compiler.version>3.8.0</maven.compiler.version>
         <maven.deploy.version>2.8.2</maven.deploy.version>
         <maven.enforcer.version>3.0.0-M2</maven.enforcer.version>
+        <maven.javafx.version>8.8.3</maven.javafx.version>
         <maven.gpg.version>1.6</maven.gpg.version>
         <maven.install.version>2.5.2</maven.install.version>
         <maven.jar.version>3.1.0</maven.jar.version>
@@ -86,6 +87,8 @@
         <commonscompress.version>1.17</commonscompress.version>
         <commonslogging.version>1.2</commonslogging.version>
         <controlfx.version>8.40.14</controlfx.version>
+        <franzxaver.version>0.1</franzxaver.version>
+        <freemarker.version>2.3.28</freemarker.version>
         <groovy.version>2.4.12</groovy.version>
         <guava.version>20.0</guava.version>
         <jackson.version>2.8.7</jackson.version>
@@ -401,6 +404,11 @@
                 <groupId>org.controlsfx</groupId>
                 <artifactId>controlsfx</artifactId>
                 <version>${controlfx.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.freemarker</groupId>
+                <artifactId>freemarker</artifactId>
+                <version>${freemarker.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.fxmisc.richtext</groupId>
