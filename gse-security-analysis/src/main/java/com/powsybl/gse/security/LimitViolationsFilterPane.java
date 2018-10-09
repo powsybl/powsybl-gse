@@ -12,7 +12,6 @@ import com.powsybl.security.LimitViolation;
 import com.powsybl.security.LimitViolationType;
 import com.powsybl.security.afs.SubjectInfoExtension;
 import javafx.beans.binding.Bindings;
-import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
@@ -175,9 +174,5 @@ class LimitViolationsFilterPane extends GridPane {
             }
             return true;
         });
-    }
-
-    ReadOnlyObjectProperty<Integer> precision() {
-        return precision.valueProperty();
     }
 }

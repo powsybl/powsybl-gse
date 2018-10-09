@@ -62,16 +62,16 @@ public class SecurityAnalysisResultViewer extends BorderPane implements ProjectF
         this.scene = Objects.requireNonNull(scene);
         this.context = Objects.requireNonNull(context);
 
-        LimitViolationsFilterPane filtersPane = new LimitViolationsFilterPane(preContTable);
-        HiddenSidesPane preContTableAndFiltersPane = new HiddenSidesPane();
-        preContTableAndFiltersPane.setContent(preContTable);
-        preContTableAndFiltersPane.setLeft(filtersPane);
+        LimitViolationsFilterPane filterPane = new LimitViolationsFilterPane(preContTable);
+        HiddenSidesPane preContTableAndFilterPane = new HiddenSidesPane();
+        preContTableAndFilterPane.setContent(preContTable);
+        preContTableAndFilterPane.setLeft(filterPane);
         // to prevent filter pane from disappear when clicking on inside controls
-        filtersPane.setOnMouseEntered(e -> preContTableAndFiltersPane.setPinnedSide(Side.LEFT));
-        filtersPane.setOnMouseExited(e -> preContTableAndFiltersPane.setPinnedSide(null));
+        filterPane.setOnMouseEntered(e -> preContTableAndFilterPane.setPinnedSide(Side.LEFT));
+        filterPane.setOnMouseExited(e -> preContTableAndFilterPane.setPinnedSide(null));
 
         preContPane = new BorderPane();
-        preContPane.setCenter(preContTableAndFiltersPane);
+        preContPane.setCenter(preContTableAndFilterPane);
         preContTab = new Tab(RESOURCE_BUNDLE.getString("PreContingency"), preContPane);
         preContTab.setClosable(false);
 
