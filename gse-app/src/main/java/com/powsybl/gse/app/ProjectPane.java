@@ -112,18 +112,6 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private static class MoveContext {
-        private Object source;
-        private TreeItem sourceTreeItem;
-        private TreeItem sourceparentTreeItem;
-    }
-
-    private int counter;
-
-    private boolean success;
-
-    private MoveContext moveContext;
-
     private final Project project;
 
     private final GseContext context;
