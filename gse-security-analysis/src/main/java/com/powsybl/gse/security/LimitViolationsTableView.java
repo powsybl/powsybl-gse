@@ -8,21 +8,35 @@ package com.powsybl.gse.security;
 
 import com.powsybl.security.LimitViolation;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 
 import java.util.ResourceBundle;
+import java.util.function.Predicate;
 
 /**
+ *
  * @author Sebastien Murgey <sebastien.murgey at rte-france.com>
  */
-public class LimitViolationsTableView extends TableView<LimitViolation> {
+class LimitViolationsTableView extends TableView<LimitViolation> {
+
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.SecurityAnalysis");
 
-    LimitViolationsTableView(ObservableList<LimitViolation> violations) {
-        super(violations);
+    private final ObservableList<LimitViolation> violations = FXCollections.observableArrayList();
+
+    private final FilteredList<LimitViolation> filteredViolations = new FilteredList<>(violations);
+
+    private final SortedList<LimitViolation> sortedViolations = new SortedList<>(filteredViolations);
+
+    LimitViolationsTableView() {
+        sortedViolations.comparatorProperty().bind(comparatorProperty());
+        setItems(sortedViolations);
+
         TableColumn<LimitViolation, String> equipmentColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Equipment"));
         equipmentColumn.setPrefWidth(200);
         equipmentColumn.setCellValueFactory(new PropertyValueFactory<>("subjectId"));
@@ -32,22 +46,30 @@ public class LimitViolationsTableView extends TableView<LimitViolation> {
         TableColumn<LimitViolation, String> violationNameColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("ViolationName"));
         violationNameColumn.setPrefWidth(150);
         violationNameColumn.setCellValueFactory(new PropertyValueFactory<>("limitName"));
-        TableColumn<LimitViolation, Float> limitColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Limit"));
+        TableColumn<LimitViolation, Double> limitColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Limit"));
         limitColumn.setCellValueFactory(new PropertyValueFactory<>("limit"));
-        TableColumn<LimitViolation, Float> valueColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Value"));
+        TableColumn<LimitViolation, Double> valueColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Value"));
         valueColumn.setCellValueFactory(new PropertyValueFactory<>("value"));
-        TableColumn<LimitViolation, Float> loadColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Load"));
+        TableColumn<LimitViolation, Double> loadColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Load"));
         loadColumn.setPrefWidth(150);
         loadColumn.setCellValueFactory(features -> {
             LimitViolation violation = features.getValue();
-            float load = (float) (violation.getValue() / (violation.getLimit() * violation.getLimitReduction()) * 100);
+            double load = violation.getValue() / (violation.getLimit() * violation.getLimitReduction()) * 100;
             return new SimpleObjectProperty<>(load);
         });
-        this.getColumns().setAll(equipmentColumn,
-                violationTypeColumn,
-                violationNameColumn,
-                limitColumn,
-                valueColumn,
-                loadColumn);
+        getColumns().setAll(equipmentColumn,
+                            violationTypeColumn,
+                            violationNameColumn,
+                            limitColumn,
+                            valueColumn,
+                            loadColumn);
+    }
+
+    public ObservableList<LimitViolation> getViolations() {
+        return violations;
+    }
+
+    public void setPredicate(Predicate<LimitViolation> predicate) {
+        filteredViolations.setPredicate(predicate);
     }
 }
