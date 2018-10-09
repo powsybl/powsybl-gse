@@ -20,6 +20,7 @@ import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.RowConstraints;
+import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Window;
 import javafx.util.Callback;
@@ -329,11 +330,12 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         getColumnConstraints().addAll(column0);
         RowConstraints row0 = new RowConstraints();
         RowConstraints row1 = new RowConstraints();
+        HBox hbox = new HBox();
+        hbox.getChildren().addAll(createFolderButton, deleteFolderButton);
         row1.setVgrow(Priority.ALWAYS);
         getRowConstraints().addAll(row0, row1);
         add(new ScrollPane(path), 0, 0);
-        add(deleteFolderButton, 2, 0);
-        add(createFolderButton, 1, 0);
+        add(hbox, 1, 0);
         add(scrollPane, 0, 1, 2, 1);
         context.getExecutor().submit(() -> {
             try {
