@@ -14,7 +14,6 @@ import com.powsybl.security.SecurityAnalysisResult;
 import com.powsybl.security.afs.SecurityAnalysisRunner;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
-import javafx.geometry.Side;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -23,7 +22,6 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
-import org.controlsfx.control.HiddenSidesPane;
 
 import java.util.Objects;
 import java.util.ResourceBundle;
@@ -45,15 +43,13 @@ public class SecurityAnalysisResultViewer extends BorderPane implements ProjectF
 
     private final Tab preContTab;
 
-    private final BorderPane preContPane;
-
-    private final ProgressIndicator preContProgressIndic = new ProgressIndicator();
+    private final PreContingencyResultPane preContResultPane;
 
     private final Tab postContTab;
 
-    private final LimitViolationsTableView preContTable = new LimitViolationsTableView();
-
     private final ContingenciesSplitPane postContSplitPane = new ContingenciesSplitPane();
+
+    private final ProgressIndicator progressIndic = new ProgressIndicator();
 
     private final Service<SecurityAnalysisResult> resultLoadingService;
 
@@ -62,23 +58,14 @@ public class SecurityAnalysisResultViewer extends BorderPane implements ProjectF
         this.scene = Objects.requireNonNull(scene);
         this.context = Objects.requireNonNull(context);
 
-        LimitViolationsFilterPane filterPane = new LimitViolationsFilterPane(preContTable);
-        HiddenSidesPane preContTableAndFilterPane = new HiddenSidesPane();
-        preContTableAndFilterPane.setContent(preContTable);
-        preContTableAndFilterPane.setLeft(filterPane);
-        // to prevent filter pane from disappear when clicking on inside controls
-        filterPane.setOnMouseEntered(e -> preContTableAndFilterPane.setPinnedSide(Side.LEFT));
-        filterPane.setOnMouseExited(e -> preContTableAndFilterPane.setPinnedSide(null));
-
-        preContPane = new BorderPane();
-        preContPane.setCenter(preContTableAndFilterPane);
-        preContTab = new Tab(RESOURCE_BUNDLE.getString("PreContingency"), preContPane);
+        preContResultPane = new PreContingencyResultPane();
+        preContTab = new Tab(RESOURCE_BUNDLE.getString("PreContingency"), preContResultPane);
         preContTab.setClosable(false);
 
         postContTab = new Tab(RESOURCE_BUNDLE.getString("PostContingency"), postContSplitPane);
         postContTab.setClosable(false);
         tabPane = new TabPane(preContTab, postContTab);
-        StackPane mainPane = new StackPane(tabPane, new Group(preContProgressIndic));
+        StackPane mainPane = new StackPane(tabPane, new Group(progressIndic));
         setCenter(mainPane);
 
         resultLoadingService = GseUtil.createService(new Task<SecurityAnalysisResult>() {
@@ -96,13 +83,13 @@ public class SecurityAnalysisResultViewer extends BorderPane implements ProjectF
 
     @Override
     public void view() {
-        preContProgressIndic.visibleProperty().bind(resultLoadingService.runningProperty());
+        progressIndic.visibleProperty().bind(resultLoadingService.runningProperty());
         tabPane.disableProperty().bind(resultLoadingService.runningProperty());
         resultLoadingService.setOnSucceeded(event -> {
             SecurityAnalysisResult result = (SecurityAnalysisResult) event.getSource().getValue();
             if (result != null) {
                 LimitViolationsResult preContingencyResult = result.getPreContingencyResult();
-                preContTable.getViolations().setAll(preContingencyResult.getLimitViolations());
+                preContResultPane.getViolations().setAll(preContingencyResult.getLimitViolations());
                 postContSplitPane.resetWithSecurityAnalysisResults(result);
             } else {
                 // TODO
