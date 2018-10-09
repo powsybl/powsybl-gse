@@ -69,15 +69,16 @@ class LimitViolationsFilterPane extends GridPane {
             }
         });
 
+        tableView.setPrecision(precision.getValue());
+        precision.valueProperty().addListener((observable, oldValue, newValue) -> tableView.setPrecision(newValue));
+
         tableView.getViolations().addListener((ListChangeListener<LimitViolation>) c -> {
             getChildren().clear();
 
             setPadding(new Insets(10, 10, 10, 10));
             setStyle("-fx-background-color: white");
 
-            add(new Label(RESOURCE_BUNDLE.getString("Columns") + ":"), 0, 0);
-            add(columnsListView, 0, 1);
-            GridPane.setMargin(columnsListView, new Insets(0, 0, 10, 0));
+            addControl(RESOURCE_BUNDLE.getString("Columns"), columnsListView, 0, true);
 
             Set<Country> countries = new TreeSet<>();
             Set<Double> nominalVoltages = new TreeSet<>();
@@ -89,13 +90,29 @@ class LimitViolationsFilterPane extends GridPane {
                 }
             }
 
-            violationTypeListView = createListView(Sets.newLinkedHashSet(Arrays.asList(LimitViolationType.values())), "ViolationType", 2, 180);
-            countryListView = createListView(countries, "Countries", 4, 100);
-            nominalVoltagesListView = createListView(nominalVoltages, "NominalVoltages", 6, 100);
+            violationTypeListView = createListView(Sets.newLinkedHashSet(Arrays.asList(LimitViolationType.values())), "ViolationType", 3, 180);
+            countryListView = createListView(countries, "Countries", 6, 100);
+            nominalVoltagesListView = createListView(nominalVoltages, "NominalVoltages", 9, 100);
 
-            add(new Label(RESOURCE_BUNDLE.getString("Precision") + ":"), 0, 8);
-            add(precision, 0, 9);
+            addControl(RESOURCE_BUNDLE.getString("Precision"), precision, 12, false);
         });
+    }
+
+    private static Label createTitle(String text) {
+        Label label = new Label(text + ":");
+        label.setStyle("-fx-font-weight: bold");
+        return label;
+    }
+
+    private void addControl(String title, Control control, int rowIndex, boolean addSeparator) {
+        add(createTitle(title), 0, rowIndex);
+        add(control, 0, rowIndex + 1);
+        GridPane.setMargin(control, new Insets(5, 0, 10, 0));
+        if (addSeparator) {
+            Separator separator = new Separator();
+            add(separator, 0, rowIndex + 2);
+            GridPane.setMargin(separator, new Insets(0, 0, 5, 0));
+        }
     }
 
     private static <T> void addContextMenu(CheckListView<T> listView) {
@@ -112,7 +129,7 @@ class LimitViolationsFilterPane extends GridPane {
         });
     }
 
-    private <T> CheckListView<T> createListView(Set<T> values, String label, int rowIndex, double prefHeight) {
+    private <T> CheckListView<T> createListView(Set<T> values, String text, int rowIndex, double prefHeight) {
         if (values.isEmpty()) {
             return null;
         } else {
@@ -122,9 +139,7 @@ class LimitViolationsFilterPane extends GridPane {
             listView.getItems().addAll(values);
             listView.getCheckModel().checkAll();
             listView.getCheckModel().getCheckedIndices().addListener((ListChangeListener<Integer>) l -> updateFilter());
-            add(new Label(RESOURCE_BUNDLE.getString(label) + ":"), 0, rowIndex);
-            add(listView, 0, rowIndex + 1);
-            GridPane.setMargin(listView, new Insets(0, 0, 10, 0));
+            addControl(RESOURCE_BUNDLE.getString(text), listView, rowIndex, true);
             return listView;
         }
     }

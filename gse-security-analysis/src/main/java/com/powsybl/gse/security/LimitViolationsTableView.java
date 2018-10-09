@@ -12,9 +12,11 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.util.Callback;
 
 import java.util.ResourceBundle;
 import java.util.function.Predicate;
@@ -27,11 +29,34 @@ class LimitViolationsTableView extends TableView<LimitViolation> {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.SecurityAnalysis");
 
+    public class DecimalColumnFactory<T extends Number> implements Callback<TableColumn<LimitViolation, T>, TableCell<LimitViolation, T>> {
+
+        @Override
+        public TableCell<LimitViolation, T> call(TableColumn<LimitViolation, T> param) {
+            return new TableCell<LimitViolation, T>() {
+
+                @Override
+                protected void updateItem(T item, boolean empty) {
+                    if (!empty && item != null) {
+                        String format = "%." + precision + "f";
+                        setText(String.format(format, item.doubleValue()));
+                    } else {
+                        setText("");
+                    }
+                }
+            };
+        }
+    }
+
     private final ObservableList<LimitViolation> violations = FXCollections.observableArrayList();
 
     private final FilteredList<LimitViolation> filteredViolations = new FilteredList<>(violations);
 
     private final SortedList<LimitViolation> sortedViolations = new SortedList<>(filteredViolations);
+
+    private int precision = 0;
+
+    private final DecimalColumnFactory<Double> columnFactory = new DecimalColumnFactory<>();
 
     LimitViolationsTableView() {
         sortedViolations.comparatorProperty().bind(comparatorProperty());
@@ -47,11 +72,14 @@ class LimitViolationsTableView extends TableView<LimitViolation> {
         violationNameColumn.setPrefWidth(150);
         violationNameColumn.setCellValueFactory(new PropertyValueFactory<>("limitName"));
         TableColumn<LimitViolation, Double> limitColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Limit"));
+        limitColumn.setCellFactory(columnFactory);
         limitColumn.setCellValueFactory(new PropertyValueFactory<>("limit"));
         TableColumn<LimitViolation, Double> valueColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Value"));
+        valueColumn.setCellFactory(columnFactory);
         valueColumn.setCellValueFactory(new PropertyValueFactory<>("value"));
         TableColumn<LimitViolation, Double> loadColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Load"));
         loadColumn.setPrefWidth(150);
+        loadColumn.setCellFactory(columnFactory);
         loadColumn.setCellValueFactory(features -> {
             LimitViolation violation = features.getValue();
             double load = violation.getValue() / (violation.getLimit() * violation.getLimitReduction()) * 100;
@@ -63,6 +91,14 @@ class LimitViolationsTableView extends TableView<LimitViolation> {
                             limitColumn,
                             valueColumn,
                             loadColumn);
+    }
+
+    public void setPrecision(int precision) {
+        if (precision < 0) {
+            throw new IllegalArgumentException("Bad precision: " + precision);
+        }
+        this.precision = precision;
+        refresh();
     }
 
     public ObservableList<LimitViolation> getViolations() {
