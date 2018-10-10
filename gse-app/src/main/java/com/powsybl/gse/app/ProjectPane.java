@@ -203,7 +203,7 @@ public class ProjectPane extends Tab {
                     setOnDragDetected(event -> dragDetectedEvent(getItem(), getTreeItem(), event));
                     setOnDragOver(event -> dragOverEvent(event, getItem(), getTreeItem(), this));
                     setOnDragDropped(event -> dragDroppedEvent(getItem(), getTreeItem(), event, node));
-                    setOnDragExited(event -> setTextFill(Color.BLACK));
+                    setOnDragExited(event -> setStyle(""));
                 } else {
                     throw new AssertionError();
                 }
@@ -263,7 +263,7 @@ public class ProjectPane extends Tab {
 
     private void textFillColor(TreeCell<Object> treeCell) {
         if (getCounter() < 1) {
-            treeCell.setTextFill(Color.CHOCOLATE);
+            treeCell.setStyle("-fx-background-color: #87ceeb;");
         }
     }
 
