@@ -330,12 +330,10 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         getColumnConstraints().addAll(column0);
         RowConstraints row0 = new RowConstraints();
         RowConstraints row1 = new RowConstraints();
-        HBox hbox = new HBox();
-        hbox.getChildren().addAll(createFolderButton, deleteFolderButton);
         row1.setVgrow(Priority.ALWAYS);
         getRowConstraints().addAll(row0, row1);
         add(new ScrollPane(path), 0, 0);
-        add(hbox, 1, 0);
+        add(new HBox(5, createFolderButton, deleteFolderButton), 1, 0);
         add(scrollPane, 0, 1, 2, 1);
         context.getExecutor().submit(() -> {
             try {
