@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.gse.explorer.icons;
+package com.powsybl.gse.explorer.symbols;
 
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -13,14 +13,14 @@ import javafx.scene.shape.Polyline;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class LoadIcon extends Pane {
+public class LoadSymbol extends Pane {
 
     private static final double ARROW_START = 0.7;
     private static final double MARGIN = 0.1;
 
     private final Polyline l;
 
-    public LoadIcon(Color stroke, double strokeWidth, double size) {
+    public LoadSymbol(Color stroke, double strokeWidth, double size) {
         setPrefSize(size, size);
 
         l = new Polyline();
@@ -35,7 +35,7 @@ public class LoadIcon extends Pane {
     protected void layoutChildren() {
         double size = Math.min(getWidth(), getHeight());
 
-        l.getPoints().setAll(new Double[] {
+        l.getPoints().setAll(
             size / 2,
             size * MARGIN,
             size / 2,
@@ -48,6 +48,6 @@ public class LoadIcon extends Pane {
             size * ARROW_START,
             size / 2,
             size * ARROW_START
-        });
+        );
     }
 }

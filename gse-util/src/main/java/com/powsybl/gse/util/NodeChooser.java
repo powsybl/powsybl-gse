@@ -15,10 +15,12 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
+import javafx.scene.input.*;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.RowConstraints;
+import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Window;
 import javafx.util.Callback;
@@ -32,17 +34,24 @@ import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
 
 /**
- *
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
 public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridPane {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NodeChooser.class);
-
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.NodeChooser");
 
-    public interface TreeModel<N, F, D> {
+    private static class MoveContext {
+        private Object source;
+        private TreeItem sourceTreeItem;
+        private TreeItem sourceparentTreeItem;
+    }
 
+    private MoveContext moveContext;
+    private int counter;
+    private boolean success;
+
+    public interface TreeModel<N, F, D> {
         Collection<N> getChildren(D folder);
 
         boolean isFolder(N node);
@@ -69,7 +78,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private static class TreeModelImpl implements TreeModel<Node, File, Folder> {
-
         private final AppData appData;
 
         public TreeModelImpl(AppData appData) {
@@ -213,29 +221,18 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private final BreadCrumbBar<N> path = new BreadCrumbBar<>();
-
     private final Button createFolderButton;
-
+    private final Button deleteFolderButton;
     private final TreeItem<N> rootItem = new TreeItem<>();
-
     private TreeTableView<N> tree = new TreeTableView<>(rootItem);
-
     private final ObjectProperty<T> selectedNode = new SimpleObjectProperty<>();
-
     private final ObjectProperty<D> selectedFolder = new SimpleObjectProperty<>();
-
     private final SimpleBooleanProperty doubleClick = new SimpleBooleanProperty(false);
-
     private final Window window;
-
     private final BiFunction<N, TreeModel<N, F, D>, Boolean> filter;
-
     private final AppData appData;
-
     private final Preferences preferences;
-
     private final TreeModel<N, F, D> treeModel;
-
     private final GseContext context;
 
     public NodeChooser(Window window, TreeModel<N, F, D> treeModel, AppData appData, GseContext context,
@@ -246,11 +243,9 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         this.context = Objects.requireNonNull(context);
         this.filter = Objects.requireNonNull(filter);
         preferences = Preferences.userNodeForPackage(getClass());
-
         tree.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         tree.setShowRoot(false);
         rootItem.getChildren().add(new TreeItem<>());
-
         TreeTableColumn<N, N> fileColumn = new TreeTableColumn<>(RESOURCE_BUNDLE.getString("File"));
         fileColumn.setPrefWidth(415);
         fileColumn.setCellValueFactory((TreeTableColumn.CellDataFeatures<N, N> callback) -> {
@@ -264,23 +259,11 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                     @Override
                     protected void updateItem(N item, boolean empty) {
                         super.updateItem(item, empty);
-                        if (empty) {
-                            setText(null);
-                            setGraphic(null);
-                        } else {
-                            if (item == null) {
-                                GseUtil.setWaitingText(this);
-                            } else {
-                                setText(treeModel.getName(item));
-                                setTextFill(Color.BLACK);
-                                setOpacity(item.getClass() == treeModel.getUnknownFileClass() ? 0.5 : 1);
-                            }
-                        }
+                        updateTreeTableCellFileItem(item, empty, getTreeTableRow(), this);
                     }
                 };
             }
         });
-
         TreeTableColumn<N, N> descriptionColumn = new TreeTableColumn<>(RESOURCE_BUNDLE.getString("Description"));
         descriptionColumn.setPrefWidth(182);
         descriptionColumn.setCellValueFactory((TreeTableColumn.CellDataFeatures<N, N> p) -> {
@@ -297,28 +280,18 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                     @Override
                     protected void updateItem(N item, boolean empty) {
                         super.updateItem(item, empty);
-                        if (empty || item == null) {
-                            setText(null);
-                        } else {
-                            setText(treeModel.getDescription((F) item));
-                            setOpacity(item.getClass() == treeModel.getUnknownFileClass() ? 0.5 : 1);
-                        }
+                        updateTreeTableCellDescriptionItem(item, empty, this);
                     }
                 };
             }
         });
         tree.getColumns().setAll(fileColumn, descriptionColumn);
-        tree.setOnMouseClicked(event -> {
-            TreeItem<N> item = tree.getSelectionModel().getSelectedItem();
-            N node = item != null ? item.getValue() : null;
-            selectedNode.setValue(node != null && filter.apply(node, treeModel) ? (T) node : null);
-            selectedFolder.setValue(node != null && treeModel.isFolder(node) && treeModel.isWritable((D) node) ? (D) node : null);
-            doubleClick.setValue(event.getClickCount() == 2);
-        });
+        tree.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        tree.getSelectionModel().getSelectedItems().addListener(this::treeViewChangeListener);
+        tree.setOnMouseClicked(this::onMouseClickedEvent);
         ScrollPane scrollPane = new ScrollPane(tree);
         scrollPane.setFitToWidth(true);
         scrollPane.setFitToHeight(true);
-
         path.setCrumbFactory(item -> {
             if (item.getValue() != null) {
                 return new BreadCrumbBarSkin.BreadCrumbButton(item.getValue().toString(), NodeGraphics.getGraphic(item.getValue()));
@@ -333,19 +306,23 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             tree.scrollTo(index);
             tree.layout();
         });
-
         javafx.scene.Node createFolderGlyph = Glyph.createAwesomeFont('\uf07b').size("1.3em").color("#FFDB69")
                 .stack(Glyph.createAwesomeFont('\uf055').color("limegreen").size("0.8em"));
         createFolderButton = new Button("", createFolderGlyph);
         createFolderButton.setPadding(new Insets(3, 5, 3, 5));
         createFolderButton.disableProperty().bind(selectedFolder.isNull());
-        createFolderButton.setOnAction(event -> {
-            treeModel.showCreateFolderDialog(window, selectedFolder.get()).ifPresent(newFolder -> {
-                TreeItem<N> selectedItem = tree.getSelectionModel().getSelectedItem();
-                refresh(selectedItem);
-            });
-        });
-
+        createFolderButton.setOnAction(event ->
+                treeModel.showCreateFolderDialog(window, selectedFolder.get()).ifPresent(newFolder -> {
+                    TreeItem<N> selectedItem = tree.getSelectionModel().getSelectedItem();
+                    refresh(selectedItem);
+                })
+        );
+        javafx.scene.Node deleteFolderGlyph = Glyph.createAwesomeFont('\uf1f8').size("1.1em");
+        deleteFolderButton = new Button("", deleteFolderGlyph);
+        deleteFolderButton.setPadding(new Insets(3, 5, 3, 5));
+        deleteFolderButton.disableProperty().bind(selectedNode.isNull());
+        ObservableList<TreeItem<N>> selectedItems = tree.getSelectionModel().getSelectedItems();
+        deleteFolderButton.setOnAction(event -> createDeleteAlert(selectedItems));
         setHgap(5);
         setVgap(5);
         ColumnConstraints column0 = new ColumnConstraints();
@@ -356,9 +333,8 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         row1.setVgrow(Priority.ALWAYS);
         getRowConstraints().addAll(row0, row1);
         add(new ScrollPane(path), 0, 0);
-        add(createFolderButton, 1, 0);
+        add(new HBox(5, createFolderButton, deleteFolderButton), 1, 0);
         add(scrollPane, 0, 1, 2, 1);
-
         context.getExecutor().submit(() -> {
             try {
                 List<TreeItem<N>> nodes = new ArrayList<>();
@@ -369,12 +345,10 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 }
                 Platform.runLater(() -> {
                     rootItem.getChildren().setAll(nodes);
-
                     // select first root
                     if (!nodes.isEmpty()) {
                         tree.getSelectionModel().select(nodes.get(0));
                     }
-
                     // select saved path
 //                    String lastSelectedPath = preferences.get(treeModel.getLastSelectedPathKey(), null);
 //                    if (lastSelectedPath != null) {
@@ -409,7 +383,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                     } else {
                         F file = (F) child;
                         if (filter.apply(file, treeModel)) {
-                            childItems.add(new TreeItem<>(child, NodeGraphics.getGraphic(file)));
+                            childItems.add(new TreeItem<>(child));
                         }
                     }
                 }
@@ -420,8 +394,288 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         }
     }
 
+    private Alert nameAlreadyExistsAlert() {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
+        alert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
+        alert.setContentText(RESOURCE_BUNDLE.getString("DragFileExists"));
+        alert.showAndWait();
+        return alert;
+    }
+
+    private void onMouseClickedEvent(MouseEvent event) {
+        TreeItem<N> item = tree.getSelectionModel().getSelectedItem();
+        N node = item != null ? item.getValue() : null;
+        selectedNode.setValue(node != null && filter.apply(node, treeModel) ? (T) node : null);
+        selectedFolder.setValue(node != null && treeModel.isFolder(node) && treeModel.isWritable((D) node) ? (D) node : null);
+        doubleClick.setValue(event.getClickCount() == 2);
+    }
+
+    private void updateTreeTableCellFileItem(N item, boolean empty, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treeTableCell) {
+        if (empty) {
+            treeTableCell.setText(null);
+            treeTableCell.setGraphic(null);
+        } else {
+            updateNonNullItemm(item, treeTableRow, treeTableCell);
+        }
+    }
+
+    private void updateTreeTableCellDescriptionItem(N item, boolean empty, TreeTableCell<N, N> treeTableCell) {
+        if (empty || item == null) {
+            treeTableCell.setText(null);
+        } else {
+            treeTableCell.setText(treeModel.getDescription((F) item));
+            treeTableCell.setOpacity(item.getClass() == treeModel.getUnknownFileClass() ? 0.5 : 1);
+        }
+    }
+
+    private void updateNonNullItemm(N item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treeTableCell) {
+        if (item == null) {
+            GseUtil.setWaitingText(treeTableCell);
+        } else if (item instanceof Node) {
+            Node node = (Node) item;
+            treeTableCell.setText(treeModel.getName(item));
+            treeTableCell.setTextFill(Color.BLACK);
+            treeTableCell.setOpacity(item.getClass() == treeModel.getUnknownFileClass() ? 0.5 : 1);
+            treeTableCell.setGraphic(NodeGraphics.getGraphic(item));
+            treeTableCell.setOnDragDetected(event -> dragDetectedEvent(item, treeTableRow.getTreeItem(), event));
+            treeTableCell.setOnDragOver(event -> dragOverEvent(event, item, treeTableRow, treeTableCell));
+            treeTableCell.setOnDragDropped(event -> dragDroppedEvent(item, treeTableRow.getTreeItem(), event, node));
+            treeTableCell.setOnDragExited(event -> treeTableCell.setTextFill(Color.BLACK));
+        } else {
+            treeTableCell.setText(treeModel.getName(item));
+            treeTableCell.setTextFill(Color.BLACK);
+            treeTableCell.setOpacity(item.getClass() == treeModel.getUnknownFileClass() ? 0.5 : 1);
+            treeTableCell.setGraphic(NodeGraphics.getGraphic(item));
+        }
+    }
+
+    private void textFillColor(TreeTableCell<N, N> treetableCell) {
+        if (getCounter() < 1) {
+            treetableCell.setTextFill(Color.CHOCOLATE);
+        }
+    }
+
+    private void dragOverEvent(DragEvent event, Object item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treetableCell) {
+        if (item instanceof Folder && item != moveContext.source) {
+            int count = 0;
+            treeItemChildrenSize(treeTableRow.getTreeItem(), count);
+            textFillColor(treetableCell);
+            event.acceptTransferModes(TransferMode.ANY);
+            event.consume();
+        }
+    }
+
+    public int getCounter() {
+        return counter;
+    }
+
+    private void dragDetectedEvent(N value, TreeItem<N> treeItem, MouseEvent event) {
+        moveContext = new MoveContext();
+        moveContext.source = value;
+        moveContext.sourceTreeItem = treeItem;
+        moveContext.sourceparentTreeItem = moveContext.sourceTreeItem.getParent();
+        if (value instanceof Project && treeItem != tree.getRoot()) {
+            Dragboard db = tree.startDragAndDrop(TransferMode.ANY);
+            ClipboardContent cb = new ClipboardContent();
+            cb.putString(((Project) value).getName());
+            db.setContent(cb);
+            event.consume();
+        }
+    }
+
+    private void dragDroppedEvent(Object value, TreeItem<N> treeItem, DragEvent event, Node node) {
+        if (value instanceof Folder && value != moveContext.source) {
+            Folder folder = (Folder) node;
+            int count = 0;
+            success = false;
+            treeItemChildrenSize(treeItem, count);
+            accepTransferDrag(folder, success);
+            event.setDropCompleted(success);
+            refreshTreeItem(moveContext.sourceparentTreeItem);
+            refreshTreeItem(treeItem);
+            event.consume();
+        }
+    }
+
+    private void refreshTreeItem(TreeItem<N> item) {
+        if (item.getValue() instanceof Folder) {
+            item.setExpanded(false);
+            item.setExpanded(true);
+        }
+    }
+
+    private void treeItemChildrenSize(TreeItem<N> treeItem, int compte) {
+        counter = compte;
+        if (!treeItem.isLeaf()) {
+            Folder folder = (Folder) treeItem.getValue();
+            if (!folder.getChildren().isEmpty()) {
+                for (Node node : folder.getChildren()) {
+                    if (node == null) {
+                        break;
+                    } else if (node.getName().equals(moveContext.source.toString())) {
+                        counter++;
+                    }
+                }
+            }
+        }
+    }
+
+    private void accepTransferDrag(Folder folder, boolean s) {
+        success = s;
+        if (getCounter() >= 1) {
+            nameAlreadyExistsAlert();
+        } else if (getCounter() < 1) {
+            Project monfichier = (Project) moveContext.source;
+            monfichier.moveTo(folder);
+            success = true;
+        }
+    }
+
+    private void treeViewChangeListener(ListChangeListener.Change<? extends TreeItem<N>> c) {
+        if (c.getList().isEmpty()) {
+            tree.setContextMenu(null);
+        } else if (c.getList().size() == 1) {
+            TreeItem<N> selectedTreeItem = c.getList().get(0);
+            N value = selectedTreeItem.getValue();
+            if (value instanceof Project) {
+                tree.setContextMenu(createProjectContextMenu(selectedTreeItem));
+            } else if (value instanceof Folder) {
+                tree.setContextMenu(createFolderContextMenu(selectedTreeItem));
+            } else {
+                tree.setContextMenu(null);
+            }
+        } else {
+            tree.setContextMenu(createMultipleContextMenu(c.getList()));
+        }
+    }
+
+    private ContextMenu createMultipleContextMenu(List<? extends TreeItem<N>> selectedTreeItems) {
+        ContextMenu contextMenu = new ContextMenu();
+        contextMenu.getItems().add(createDeleteNodeMenuItem(selectedTreeItems));
+        return contextMenu;
+    }
+
+    private ContextMenu createFolderContextMenu(TreeItem<N> selectedTreeItem) {
+        ContextMenu contextMenu = new ContextMenu();
+        List<MenuItem> items = new ArrayList<>();
+        items.add(createRenameProjectMenuItem());
+        items.add(createCreateFolderMenuItem());
+        items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
+        contextMenu.getItems().addAll(items.stream()
+                .sorted(Comparator.comparing(MenuItem::getText))
+                .collect(Collectors.toList()));
+        return contextMenu;
+    }
+
+    private ContextMenu createProjectContextMenu(TreeItem<N> selectedTreeItem) {
+        ContextMenu contextMenu = new ContextMenu();
+        List<MenuItem> items = new ArrayList<>();
+        items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
+        items.add(createRenameProjectMenuItem());
+        contextMenu.getItems().addAll(items.stream()
+                .sorted(Comparator.comparing(MenuItem::getText))
+                .collect(Collectors.toList()));
+        return contextMenu;
+    }
+
+    private MenuItem createCreateFolderMenuItem() {
+        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("CreateFolder") + "...");
+        menuItem.setOnAction(event ->
+                treeModel.showCreateFolderDialog(window, selectedFolder.get()).ifPresent(newFolder -> {
+                    TreeItem<N> selectedItem = tree.getSelectionModel().getSelectedItem();
+                    refreshTreeItem(selectedItem);
+                })
+        );
+        return menuItem;
+    }
+
+    private MenuItem createRenameProjectMenuItem() {
+        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"));
+        menuItem.setOnAction(event -> {
+            TextInputDialog dialog = new TextInputDialog(tree.getSelectionModel().getSelectedItem().getValue().toString());
+            dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
+            dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
+            dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
+            Optional<String> result = dialog.showAndWait();
+            result.ifPresent(newname -> {
+                TreeItem<N> selectedTreeItem = tree.getSelectionModel().getSelectedItem();
+                if (selectedTreeItem.getValue() instanceof Node) {
+                    Node localSelectednode = (Node) selectedTreeItem.getValue();
+                    localSelectednode.rename(newname);
+                    refreshTreeItem(selectedTreeItem.getParent());
+                    tree.getSelectionModel().clearSelection();
+                    tree.getSelectionModel().select(selectedTreeItem.getParent());
+                }
+            });
+        });
+        return menuItem;
+    }
+
+    private MenuItem createDeleteNodeMenuItem(List<? extends TreeItem<N>> selectedTreeItems) {
+        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.3em"));
+        menuItem.setOnAction(event -> createDeleteAlert(selectedTreeItems));
+        return menuItem;
+    }
+
+    private void deleleFolder(Folder folder) {
+        if (folder.getChildren().isEmpty()) {
+            folder.delete();
+        } else if (!folder.getChildren().isEmpty()) {
+            Alert deleteAlert = new Alert(Alert.AlertType.ERROR);
+            deleteAlert.setTitle(RESOURCE_BUNDLE.getString("DeleteError"));
+            deleteAlert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
+            deleteAlert.setContentText(String.format(RESOURCE_BUNDLE.getString("DeletedFolderContainsProjects"), folder.toString()));
+            deleteAlert.showAndWait();
+        }
+    }
+
+    public void createDeleteAlert(List<? extends TreeItem<N>> selectedTreeItems) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle(RESOURCE_BUNDLE.getString("ConfirmationDialog"));
+        String headerText;
+        if (selectedTreeItems.size() == 1) {
+            Node node = (Node) selectedTreeItems.get(0).getValue();
+            headerText = String.format(RESOURCE_BUNDLE.getString("FileWillBeDeleted"), node.getName());
+        } else if (selectedTreeItems.size() > 1) {
+            String names = selectedTreeItems.stream()
+                    .map(selectedItem -> selectedItem.getValue().toString())
+                    .collect(Collectors.joining(", "));
+            headerText = String.format(RESOURCE_BUNDLE.getString("FilesWillBeDeleted"), names);
+        } else {
+            throw new AssertionError();
+        }
+        alert.setHeaderText(headerText);
+        alert.setContentText(RESOURCE_BUNDLE.getString("DoYouConfirm"));
+        alert.showAndWait().ifPresent(result -> {
+            if (result == ButtonType.OK) {
+                setOnOkButton(selectedTreeItems);
+            }
+        });
+    }
+
+    private void setOnOkButton(List<? extends TreeItem<N>> selectedTreeItems) {
+        List<TreeItem<N>> parentTreeItems = new ArrayList<>();
+        for (TreeItem<N> selectedTreeItem : selectedTreeItems) {
+            if (selectedTreeItem.getValue() instanceof Project) {
+                Project selectedProject = (Project) selectedTreeItem.getValue();
+                selectedProject.delete();
+            } else if (selectedTreeItem.getValue() instanceof Folder) {
+                Folder folderSelected = (Folder) selectedTreeItem.getValue();
+                deleleFolder(folderSelected);
+            }
+            parentTreeItems.add(selectedTreeItem.getParent());
+        }
+        for (TreeItem<N> parentTreeItem : parentTreeItems) {
+            refreshTreeItem(parentTreeItem);
+            tree.getSelectionModel().clearSelection();
+            tree.getSelectionModel().select(parentTreeItem);
+            selectedNode.setValue((T) parentTreeItem.getValue());
+        }
+    }
+
     private TreeItem<N> createCollapsedFolderItem(D folder) {
-        TreeItem<N> item = new TreeItem<>(folder, NodeGraphics.getGraphic(folder));
+        TreeItem<N> item = new TreeItem<>(folder);
         item.getChildren().setAll(new TreeItem<>()); // dummy leaf
         item.setExpanded(false);
         item.expandedProperty().addListener((observable, oldValue, newValue) -> {
@@ -499,7 +753,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context,
                                                                  BiFunction<Node, TreeModel<Node, File, Folder>, Boolean> filter) {
-
         return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, filter);
     }
 
@@ -516,8 +769,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Class<T> filter, Class<?>... otherFilters) {
-        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context,
-            (node, treeModel) -> testNode(node, filter, otherFilters));
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters));
     }
 
     public static <T extends ProjectNode> Optional<T> showAndWaitDialog(Project project, Window window, GseContext context, BiFunction<ProjectNode, TreeModel<ProjectNode, ProjectFile, ProjectFolder>, Boolean> filter) {
@@ -526,8 +778,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     public static <T extends ProjectNode> Optional<T> showAndWaitDialog(Project project, Window window, GseContext context, Class<T> filter,
                                                                         Class<?>... otherFilters) {
-        return showAndWaitDialog(new TreeModelProjectImpl(project), window, project.getFileSystem().getData(), context,
-            (projectNode, treeModel) -> testNode(projectNode, filter, otherFilters));
+        return showAndWaitDialog(new TreeModelProjectImpl(project), window, project.getFileSystem().getData(), context, (projectNode, treeModel) -> testNode(projectNode, filter, otherFilters));
     }
 
     public static <N, F extends N, D extends N, T extends N> Optional<T> showAndWaitDialog(
@@ -561,5 +812,4 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             dialog.close();
         }
     }
-
 }
