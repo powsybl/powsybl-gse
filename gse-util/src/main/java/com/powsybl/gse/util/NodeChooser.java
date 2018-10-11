@@ -457,7 +457,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treetableCell) {
-        if (item instanceof Folder && item != moveContext.source) {
+        if (item instanceof Folder && item != moveContext.source && treeTableRow.getTreeItem() != moveContext.sourceparentTreeItem) {
             int count = 0;
             treeItemChildrenSize(treeTableRow.getTreeItem(), count);
             textFillColor(treetableCell);

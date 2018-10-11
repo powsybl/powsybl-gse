@@ -293,7 +293,7 @@ public class ProjectPane extends Tab {
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
-        if (item instanceof ProjectFolder && item != moveContext.source) {
+        if (item instanceof ProjectFolder && item != moveContext.source && treeItem != moveContext.sourceparentTreeItem && treeItem.getParent() != moveContext.sourceTreeItem) {
             int count = 0;
             treeItemChildrenSize(treeItem, count);
             textFillColor(treeCell);
