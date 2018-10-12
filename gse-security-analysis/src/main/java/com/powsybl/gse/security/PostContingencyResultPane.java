@@ -85,6 +85,8 @@ class PostContingencyResultPane extends BorderPane implements LimitViolationsRes
 
     private final ObservableList<LimitViolation> violations = FXCollections.observableArrayList();
 
+    private final ObservableList<LimitViolation> filteredViolations = FXCollections.observableArrayList();
+
     PostContingencyResultPane() {
         sortedRows.comparatorProperty().bind(tableView.comparatorProperty());
 
@@ -160,12 +162,33 @@ class PostContingencyResultPane extends BorderPane implements LimitViolationsRes
     }
 
     @Override
+    public ObservableList<LimitViolation> getFilteredViolations() {
+        return filteredViolations;
+    }
+
+    @Override
     public void setPrecision(int precision) {
         if (precision < 0) {
             throw new IllegalArgumentException("Bad precision: " + precision);
         }
         columnFactory.setPrecision(precision);
         tableView.refresh();
+    }
+
+    private void updateViolations() {
+        violations.setAll(rows.stream().flatMap(row -> {
+            if (row instanceof ContingencyRow) {
+                return ((ContingencyRow) row).getViolations().stream();
+            }
+            return Stream.empty();
+        }).collect(Collectors.toCollection(FXCollections::observableArrayList)));
+    }
+
+    private void updateFilteredViolations() {
+        filteredViolations.setAll(filteredRows.stream()
+                .filter(row -> row instanceof LimitViolationRow)
+                .map(row -> ((LimitViolationRow) row).getViolation())
+                .collect(Collectors.toCollection(FXCollections::observableArrayList)));
     }
 
     @Override
@@ -184,6 +207,7 @@ class PostContingencyResultPane extends BorderPane implements LimitViolationsRes
                 return predicate.test(((LimitViolationRow) row).getViolation());
             }
         });
+        updateFilteredViolations();
     }
 
     public void setResults(List<PostContingencyResult> results) {
@@ -200,12 +224,8 @@ class PostContingencyResultPane extends BorderPane implements LimitViolationsRes
                 }
             }
             rows.setAll(newRows);
-            violations.setAll(newRows.stream().flatMap(row -> {
-                if (row instanceof ContingencyRow) {
-                    return ((ContingencyRow) row).getViolations().stream();
-                }
-                return Stream.empty();
-            }).collect(Collectors.toCollection(FXCollections::observableArrayList)));
         }
+        updateViolations();
+        updateFilteredViolations();
     }
 }

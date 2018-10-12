@@ -96,6 +96,11 @@ class PreContingencyResultPane extends BorderPane implements LimitViolationsResu
     }
 
     @Override
+    public ObservableList<LimitViolation> getFilteredViolations() {
+        return filteredViolations;
+    }
+
+    @Override
     public void setPrecision(int precision) {
         if (precision < 0) {
             throw new IllegalArgumentException("Bad precision: " + precision);

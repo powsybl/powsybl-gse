@@ -21,6 +21,8 @@ public interface LimitViolationsResultPane {
 
     ObservableList<LimitViolation> getViolations();
 
+    ObservableList<LimitViolation> getFilteredViolations();
+
     void setPrecision(int precision);
 
     void setFilter(Predicate<LimitViolation> predicate);
