@@ -293,7 +293,7 @@ public class ProjectPane extends Tab {
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
-        if (item instanceof ProjectFolder && item != moveContext.source) {
+        if (item instanceof ProjectNode && item != moveContext.source) {
             int count = 0;
             treeItemChildrenSize(treeItem, count);
             textFillColor(treeCell);
@@ -340,6 +340,17 @@ public class ProjectPane extends Tab {
             refresh(moveContext.sourceparentTreeItem);
             refresh(treeItem);
             event.consume();
+        } else if (value instanceof ProjectFile && value != moveContext.source) {
+            int count = 0;
+            success = false;
+            treeItemChildrenSize(treeItem, count);
+            ((ProjectFile) value).getParent().ifPresent(projectFolder -> {
+                accepTransferDrag(projectFolder, success);
+                event.setDropCompleted(success);
+                refresh(moveContext.sourceparentTreeItem);
+                refresh(treeItem.getParent());
+                event.consume();
+            });
         }
     }
 
