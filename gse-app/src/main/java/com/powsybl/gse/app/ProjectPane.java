@@ -293,13 +293,31 @@ public class ProjectPane extends Tab {
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
-        if (item instanceof ProjectFolder && item != moveContext.source && treeItem != moveContext.sourceparentTreeItem && treeItem.getParent() != moveContext.sourceTreeItem) {
-            int count = 0;
-            treeItemChildrenSize(treeItem, count);
-            textFillColor(treeCell);
-            event.acceptTransferModes(TransferMode.ANY);
-            event.consume();
+        if (item instanceof ProjectFolder && item != moveContext.source && treeItem != moveContext.sourceparentTreeItem) {
+            boolean ancestorDetected = false;
+            for (TreeItem<Object> myTreeItem : findTreeItemAncesters(treeItem)) {
+                if (moveContext.sourceTreeItem == myTreeItem) {
+                    ancestorDetected = true;
+                }
+            }
+            if (!ancestorDetected) {
+                int count = 0;
+                treeItemChildrenSize(treeItem, count);
+                textFillColor(treeCell);
+                event.acceptTransferModes(TransferMode.ANY);
+                event.consume();
+            }
         }
+    }
+
+    private List<TreeItem<Object>> findTreeItemAncesters(TreeItem<Object> treeItem) {
+        List<TreeItem<Object>> ancesterTreeItems = new ArrayList<>();
+        TreeItem<Object> treeItemParent = treeItem.getParent();
+        while (treeItemParent != null) {
+            ancesterTreeItems.add(treeItemParent);
+            treeItemParent = treeItemParent.getParent();
+        }
+        return ancesterTreeItems;
     }
 
     private Alert nameAlreadyExistsAlert() {
