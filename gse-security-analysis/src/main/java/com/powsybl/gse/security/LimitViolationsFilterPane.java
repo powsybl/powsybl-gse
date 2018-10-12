@@ -29,7 +29,7 @@ class LimitViolationsFilterPane extends GridPane {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.SecurityAnalysis");
 
-    private LimitViolationsTableView tableView;
+    private LimitViolationsResultPane resultPane;
 
     private CheckListView<LimitViolationType> violationTypeListView;
 
@@ -39,14 +39,17 @@ class LimitViolationsFilterPane extends GridPane {
 
     private final Spinner<Integer> precision = new Spinner<>(0, 14, 1);
 
-    LimitViolationsFilterPane(LimitViolationsTableView tableView) {
-        this.tableView = Objects.requireNonNull(tableView);
+    LimitViolationsFilterPane(LimitViolationsResultPane resultPane) {
+        this.resultPane = Objects.requireNonNull(resultPane);
 
-        CheckListView<TableColumn<LimitViolation, ?>> columnsListView = new CheckListView<>(tableView.getColumns());
+        setPadding(new Insets(10, 10, 10, 10));
+        setStyle("-fx-background-color: white");
+
+        CheckListView<TableColumn<?, ?>> columnsListView = new CheckListView<>(resultPane.getColumns());
         columnsListView.setPrefHeight(160);
-        columnsListView.setCellFactory(lv -> new CheckBoxListCell<TableColumn<LimitViolation, ?>>(columnsListView::getItemBooleanProperty) {
+        columnsListView.setCellFactory(lv -> new CheckBoxListCell<TableColumn<?, ?>>(columnsListView::getItemBooleanProperty) {
             @Override
-            public void updateItem(TableColumn<LimitViolation, ?> column, boolean empty) {
+            public void updateItem(TableColumn<?, ?> column, boolean empty) {
                 super.updateItem(column, empty);
                 setText(column == null ? "" : column.getText());
             }
@@ -68,14 +71,14 @@ class LimitViolationsFilterPane extends GridPane {
             }
         });
 
-        tableView.setPrecision(precision.getValue());
-        precision.valueProperty().addListener((observable, oldValue, newValue) -> tableView.setPrecision(newValue));
+        resultPane.setPrecision(precision.getValue());
+        precision.valueProperty().addListener((observable, oldValue, newValue) -> resultPane.setPrecision(newValue));
 
-        tableView.getViolations().addListener((ListChangeListener<LimitViolation>) c -> {
+        addControl(RESOURCE_BUNDLE.getString("Columns"), columnsListView, 0, true);
+        addControl(RESOURCE_BUNDLE.getString("Precision"), precision, 12, false);
+
+        resultPane.getViolations().addListener((ListChangeListener<LimitViolation>) c -> {
             getChildren().clear();
-
-            setPadding(new Insets(10, 10, 10, 10));
-            setStyle("-fx-background-color: white");
 
             addControl(RESOURCE_BUNDLE.getString("Columns"), columnsListView, 0, true);
 
@@ -157,11 +160,11 @@ class LimitViolationsFilterPane extends GridPane {
         Set<Country> checkedCountries = getCheckedValues(countryListView);
         Set<Double> checkedNominaVoltages = getCheckedValues(nominalVoltagesListView);
 
-        tableView.setPredicate(limitViolation -> {
-            if (checkedViolationTypes != null && !checkedViolationTypes.contains(limitViolation.getLimitType())) {
+        resultPane.setFilter(violation -> {
+            if (checkedViolationTypes != null && !checkedViolationTypes.contains(violation.getLimitType())) {
                 return false;
             }
-            SubjectInfoExtension extension = limitViolation.getExtension(SubjectInfoExtension.class);
+            SubjectInfoExtension extension = violation.getExtension(SubjectInfoExtension.class);
             // if no extension, we cannot filter
             if (extension == null) {
                 return true;

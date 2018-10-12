@@ -9,7 +9,6 @@ package com.powsybl.gse.security;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.util.GseUtil;
-import com.powsybl.security.LimitViolationsResult;
 import com.powsybl.security.SecurityAnalysisResult;
 import com.powsybl.security.afs.SecurityAnalysisRunner;
 import javafx.concurrent.Service;
@@ -43,11 +42,11 @@ public class SecurityAnalysisResultViewer extends BorderPane implements ProjectF
 
     private final Tab preContTab;
 
-    private final PreContingencyResultPane preContResultPane;
+    private final PreContingencyResultPane preContResultPane = new PreContingencyResultPane();
 
     private final Tab postContTab;
 
-    private final ContingenciesSplitPane postContSplitPane = new ContingenciesSplitPane();
+    private final PostContingencyResultPane postContSplitPane = new PostContingencyResultPane();
 
     private final ProgressIndicator progressIndic = new ProgressIndicator();
 
@@ -58,7 +57,6 @@ public class SecurityAnalysisResultViewer extends BorderPane implements ProjectF
         this.scene = Objects.requireNonNull(scene);
         this.context = Objects.requireNonNull(context);
 
-        preContResultPane = new PreContingencyResultPane();
         preContTab = new Tab(RESOURCE_BUNDLE.getString("PreContingency"), preContResultPane);
         preContTab.setClosable(false);
 
@@ -88,11 +86,11 @@ public class SecurityAnalysisResultViewer extends BorderPane implements ProjectF
         resultLoadingService.setOnSucceeded(event -> {
             SecurityAnalysisResult result = (SecurityAnalysisResult) event.getSource().getValue();
             if (result != null) {
-                LimitViolationsResult preContingencyResult = result.getPreContingencyResult();
-                preContResultPane.getViolations().setAll(preContingencyResult.getLimitViolations());
-                postContSplitPane.resetWithSecurityAnalysisResults(result);
+                preContResultPane.setResult(result.getPreContingencyResult());
+                postContSplitPane.setResults(result.getPostContingencyResults());
             } else {
-                // TODO
+                preContResultPane.setResult(null);
+                postContSplitPane.setResults(null);
             }
         });
         resultLoadingService.start();
