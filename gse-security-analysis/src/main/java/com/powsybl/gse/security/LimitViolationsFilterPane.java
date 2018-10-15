@@ -141,7 +141,6 @@ class LimitViolationsFilterPane extends GridPane {
         this.resultPane = Objects.requireNonNull(resultPane);
 
         setPadding(new Insets(10, 10, 10, 10));
-        setStyle("-fx-background-color: white");
 
         columnsListView = new CheckListView<>(resultPane.getColumns());
         columnsListView.setPrefHeight(160);
