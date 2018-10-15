@@ -49,45 +49,72 @@ class LimitViolationsFilterPane extends GridPane {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
-    LimitViolationsFilterPane(LimitViolationsResultPane resultPane) {
-        this.resultPane = Objects.requireNonNull(resultPane);
-
-        setPadding(new Insets(10, 10, 10, 10));
-        setStyle("-fx-background-color: white");
-
-        columnsListView = new CheckListView<>(resultPane.getColumns());
-        columnsListView.setPrefHeight(160);
-        columnsListView.setCellFactory(lv -> new CheckBoxListCell<TableColumn<?, ?>>(columnsListView::getItemBooleanProperty) {
-            @Override
-            public void updateItem(TableColumn<?, ?> column, boolean empty) {
-                super.updateItem(column, empty);
-                setText(column == null ? "" : column.getText());
-            }
-        });
-        addContextMenu(columnsListView);
-        columnsListView.getCheckModel().checkAll();
-        columnsListView.getCheckModel().getCheckedIndices().addListener((ListChangeListener<Integer>) c1 -> {
-            while (c1.next()) {
-                if (c1.wasAdded()) {
-                    for (int i : c1.getAddedSubList()) {
+    private final ListChangeListener<Integer> columnChangeListener = new ListChangeListener<Integer>() {
+        @Override
+        public void onChanged(Change<? extends Integer> c) {
+            while (c.next()) {
+                if (c.wasAdded()) {
+                    for (int i : c.getAddedSubList()) {
                         columnsListView.getItems().get(i).setVisible(true);
                     }
                 }
-                if (c1.wasRemoved()) {
-                    for (int i : c1.getRemoved()) {
+                if (c.wasRemoved()) {
+                    for (int i : c.getRemoved()) {
                         columnsListView.getItems().get(i).setVisible(false);
                     }
                 }
             }
-        });
+        }
+    };
 
-        resultPane.setPrecision(precision.getValue());
-        precision.valueProperty().addListener((observable, oldValue, newValue) -> resultPane.setPrecision(newValue));
+    private final ListChangeListener<LimitViolation> limitViolationsChangeListener = new ListChangeListener<LimitViolation>() {
 
-        addControl(RESOURCE_BUNDLE.getString("Columns"), columnsListView, 0, true);
-        addControl(RESOURCE_BUNDLE.getString("Precision"), precision, 12, false);
+        private <T> Optional<Set<T>> getCheckedValues(CheckListView<T> listView) {
+            if (listView == null) {
+                return Optional.empty();
+            }
+            return Optional.of(listView.getCheckModel().getCheckedIndices().stream()
+                    .map(i -> listView.getCheckModel().getItem(i))
+                    .collect(Collectors.toSet()));
+        }
 
-        resultPane.getViolations().addListener((ListChangeListener<LimitViolation>) c -> {
+        private void updateFilter() {
+            Optional<Set<LimitViolationType>> checkedViolationTypes = getCheckedValues(violationTypeListView);
+            Optional<Set<Country>> checkedCountries = getCheckedValues(countryListView);
+            Optional<Set<Double>> checkedNominaVoltages = getCheckedValues(nominalVoltagesListView);
+            resultPane.setFilter(violation -> {
+                if (checkedViolationTypes.isPresent() && !checkedViolationTypes.get().contains(violation.getLimitType())) {
+                    return false;
+                }
+                SubjectInfoExtension extension = violation.getExtension(SubjectInfoExtension.class);
+                // if no extension, we cannot filter
+                if (extension == null) {
+                    return true;
+                }
+                if (checkedCountries.isPresent() && checkedCountries.get().stream().noneMatch(extension.getCountries()::contains)) {
+                    return false;
+                }
+                return !checkedNominaVoltages.isPresent() || checkedNominaVoltages.get().stream().anyMatch(extension.getNominalVoltages()::contains);
+            });
+        }
+
+        private <T> CheckListView<T> createListView(Set<T> values, String text, int rowIndex, double prefHeight) {
+            if (values.isEmpty()) {
+                return null;
+            } else {
+                CheckListView<T> listView = new CheckListView<>();
+                addContextMenu(listView);
+                listView.setPrefHeight(prefHeight);
+                listView.getItems().addAll(values);
+                listView.getCheckModel().checkAll();
+                listView.getCheckModel().getCheckedIndices().addListener((ListChangeListener<Integer>) l -> updateFilter());
+                addControl(RESOURCE_BUNDLE.getString(text), listView, rowIndex, true);
+                return listView;
+            }
+        }
+
+        @Override
+        public void onChanged(Change<? extends LimitViolation> c) {
             getChildren().clear();
 
             addControl(RESOURCE_BUNDLE.getString("Columns"), columnsListView, 0, true);
@@ -107,7 +134,35 @@ class LimitViolationsFilterPane extends GridPane {
             nominalVoltagesListView = createListView(nominalVoltages, "NominalVoltages", 9, 100);
 
             addControl(RESOURCE_BUNDLE.getString("Precision"), precision, 12, false);
+        }
+    };
+
+    LimitViolationsFilterPane(LimitViolationsResultPane resultPane) {
+        this.resultPane = Objects.requireNonNull(resultPane);
+
+        setPadding(new Insets(10, 10, 10, 10));
+        setStyle("-fx-background-color: white");
+
+        columnsListView = new CheckListView<>(resultPane.getColumns());
+        columnsListView.setPrefHeight(160);
+        columnsListView.setCellFactory(lv -> new CheckBoxListCell<TableColumn<?, ?>>(columnsListView::getItemBooleanProperty) {
+            @Override
+            public void updateItem(TableColumn<?, ?> column, boolean empty) {
+                super.updateItem(column, empty);
+                setText(column == null ? "" : column.getText());
+            }
         });
+        addContextMenu(columnsListView);
+        columnsListView.getCheckModel().checkAll();
+        columnsListView.getCheckModel().getCheckedIndices().addListener(columnChangeListener);
+
+        resultPane.setPrecision(precision.getValue());
+        precision.valueProperty().addListener((observable, oldValue, newValue) -> resultPane.setPrecision(newValue));
+
+        addControl(RESOURCE_BUNDLE.getString("Columns"), columnsListView, 0, true);
+        addControl(RESOURCE_BUNDLE.getString("Precision"), precision, 12, false);
+
+        resultPane.getViolations().addListener(limitViolationsChangeListener);
     }
 
     private static Label createTitle(String text) {
@@ -138,53 +193,6 @@ class LimitViolationsFilterPane extends GridPane {
             deselectAll.setOnAction(event2 -> listView.getCheckModel().clearChecks());
             contextMenu.getItems().addAll(selectAll, deselectAll);
             contextMenu.show(listView, event.getScreenX(), event.getScreenY());
-        });
-    }
-
-    private <T> CheckListView<T> createListView(Set<T> values, String text, int rowIndex, double prefHeight) {
-        if (values.isEmpty()) {
-            return null;
-        } else {
-            CheckListView<T> listView = new CheckListView<>();
-            addContextMenu(listView);
-            listView.setPrefHeight(prefHeight);
-            listView.getItems().addAll(values);
-            listView.getCheckModel().checkAll();
-            listView.getCheckModel().getCheckedIndices().addListener((ListChangeListener<Integer>) l -> updateFilter());
-            addControl(RESOURCE_BUNDLE.getString(text), listView, rowIndex, true);
-            return listView;
-        }
-    }
-
-    private static <T> Set<T> getCheckedValues(CheckListView<T> listView) {
-        if (listView == null) {
-            return null;
-        }
-        return listView.getCheckModel().getCheckedIndices().stream()
-                .map(i -> listView.getCheckModel().getItem(i))
-                .collect(Collectors.toSet());
-    }
-
-    private void updateFilter() {
-        Set<LimitViolationType> checkedViolationTypes = getCheckedValues(violationTypeListView);
-        Set<Country> checkedCountries = getCheckedValues(countryListView);
-        Set<Double> checkedNominaVoltages = getCheckedValues(nominalVoltagesListView);
-        resultPane.setFilter(violation -> {
-            if (checkedViolationTypes != null && !checkedViolationTypes.contains(violation.getLimitType())) {
-                return false;
-            }
-            SubjectInfoExtension extension = violation.getExtension(SubjectInfoExtension.class);
-            // if no extension, we cannot filter
-            if (extension == null) {
-                return true;
-            }
-            if (checkedCountries != null && checkedCountries.stream().noneMatch(extension.getCountries()::contains)) {
-                return false;
-            }
-            if (checkedNominaVoltages != null && checkedNominaVoltages.stream().noneMatch(extension.getNominalVoltages()::contains)) {
-                return false;
-            }
-            return true;
         });
     }
 
@@ -220,6 +228,72 @@ class LimitViolationsFilterPane extends GridPane {
         }
     }
 
+    private void loadColumnsConfig(JsonNode rootNode) {
+        ArrayNode columnsNode = (ArrayNode) rootNode.get("columns");
+        Set<String> visibleColumns = new HashSet<>();
+        for (int i = 0; i < columnsNode.size(); i++) {
+            visibleColumns.add(columnsNode.get(i).asText());
+        }
+        for (TableColumn<?, ?> column : resultPane.getColumns()) {
+            if (visibleColumns.contains(column.getUserData())) {
+                columnsListView.getCheckModel().check(column);
+            } else {
+                columnsListView.getCheckModel().clearCheck(column);
+            }
+        }
+    }
+
+    private void loadViolationTypesConfig(JsonNode rootNode) {
+        if (violationTypeListView != null) {
+            ArrayNode violationTypesNode = (ArrayNode) rootNode.get("violationTypes");
+            Set<LimitViolationType> visibleViolationTypes = EnumSet.noneOf(LimitViolationType.class);
+            for (int i = 0; i < violationTypesNode.size(); i++) {
+                visibleViolationTypes.add(LimitViolationType.valueOf(violationTypesNode.get(i).asText()));
+            }
+            for (LimitViolationType violationType : violationTypeListView.getItems()) {
+                if (visibleViolationTypes.contains(violationType)) {
+                    violationTypeListView.getCheckModel().check(violationType);
+                } else {
+                    violationTypeListView.getCheckModel().clearCheck(violationType);
+                }
+            }
+        }
+    }
+
+    private void loadCountriesConfig(JsonNode rootNode) {
+        if (countryListView != null) {
+            ArrayNode countriesNode = (ArrayNode) rootNode.get("countries");
+            Set<Country> visibleCountries = EnumSet.noneOf(Country.class);
+            for (int i = 0; i < countriesNode.size(); i++) {
+                visibleCountries.add(Country.valueOf(countriesNode.get(i).asText()));
+            }
+            for (Country country : countryListView.getItems()) {
+                if (visibleCountries.contains(country)) {
+                    countryListView.getCheckModel().check(country);
+                } else {
+                    countryListView.getCheckModel().clearCheck(country);
+                }
+            }
+        }
+    }
+
+    private void loadNominalVoltagesConfig(JsonNode rootNode) {
+        if (nominalVoltagesListView != null) {
+            ArrayNode nominalVoltagesNode = (ArrayNode) rootNode.get("nominalVoltages");
+            Set<Double> visibleNominalVoltages = new HashSet<>();
+            for (int i = 0; i < nominalVoltagesNode.size(); i++) {
+                visibleNominalVoltages.add(nominalVoltagesNode.get(i).asDouble());
+            }
+            for (Double nominalVoltage : nominalVoltagesListView.getItems()) {
+                if (visibleNominalVoltages.contains(nominalVoltage)) {
+                    nominalVoltagesListView.getCheckModel().check(nominalVoltage);
+                } else {
+                    nominalVoltagesListView.getCheckModel().clearCheck(nominalVoltage);
+                }
+            }
+        }
+    }
+
     public void loadJsonConfig(String json) {
         if (json == null || json.isEmpty()) {
             return;
@@ -227,63 +301,10 @@ class LimitViolationsFilterPane extends GridPane {
         try {
             JsonNode rootNode = mapper.readTree(json);
 
-            ArrayNode columnsNode = (ArrayNode) rootNode.get("columns");
-            Set<String> visibleColumns = new HashSet<>();
-            for (int i = 0; i < columnsNode.size(); i++) {
-                visibleColumns.add(columnsNode.get(i).asText());
-            }
-            for (TableColumn<?, ?> column : resultPane.getColumns()) {
-                if (visibleColumns.contains(column.getUserData())) {
-                    columnsListView.getCheckModel().check(column);
-                } else {
-                    columnsListView.getCheckModel().clearCheck(column);
-                }
-            }
-
-            if (violationTypeListView != null) {
-                ArrayNode violationTypesNode = (ArrayNode) rootNode.get("violationTypes");
-                Set<LimitViolationType> visibleViolationTypes = EnumSet.noneOf(LimitViolationType.class);
-                for (int i = 0; i < violationTypesNode.size(); i++) {
-                    visibleViolationTypes.add(LimitViolationType.valueOf(violationTypesNode.get(i).asText()));
-                }
-                for (LimitViolationType violationType : violationTypeListView.getItems()) {
-                    if (visibleViolationTypes.contains(violationType)) {
-                        violationTypeListView.getCheckModel().check(violationType);
-                    } else {
-                        violationTypeListView.getCheckModel().clearCheck(violationType);
-                    }
-                }
-            }
-
-            if (countryListView != null) {
-                ArrayNode countriesNode = (ArrayNode) rootNode.get("countries");
-                Set<Country> visibleCountries = EnumSet.noneOf(Country.class);
-                for (int i = 0; i < countriesNode.size(); i++) {
-                    visibleCountries.add(Country.valueOf(countriesNode.get(i).asText()));
-                }
-                for (Country country : countryListView.getItems()) {
-                    if (visibleCountries.contains(country)) {
-                        countryListView.getCheckModel().check(country);
-                    } else {
-                        countryListView.getCheckModel().clearCheck(country);
-                    }
-                }
-            }
-
-            if (nominalVoltagesListView != null) {
-                ArrayNode nominalVoltagesNode = (ArrayNode) rootNode.get("nominalVoltages");
-                Set<Double> visibleNominalVoltages = new HashSet<>();
-                for (int i = 0; i < nominalVoltagesNode.size(); i++) {
-                    visibleNominalVoltages.add(nominalVoltagesNode.get(i).asDouble());
-                }
-                for (Double nominalVoltage : nominalVoltagesListView.getItems()) {
-                    if (visibleNominalVoltages.contains(nominalVoltage)) {
-                        nominalVoltagesListView.getCheckModel().check(nominalVoltage);
-                    } else {
-                        nominalVoltagesListView.getCheckModel().clearCheck(nominalVoltage);
-                    }
-                }
-            }
+            loadColumnsConfig(rootNode);
+            loadViolationTypesConfig(rootNode);
+            loadCountriesConfig(rootNode);
+            loadNominalVoltagesConfig(rootNode);
 
             precision.getValueFactory().setValue(rootNode.get("precision").asInt());
         } catch (IOException e) {
