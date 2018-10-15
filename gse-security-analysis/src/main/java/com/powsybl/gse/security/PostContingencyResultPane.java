@@ -161,7 +161,7 @@ class PostContingencyResultPane extends BorderPane implements LimitViolationsRes
     }
 
     @Override
-    public ObservableList<TableColumn<?, ?>> getColumns() {
+    public ObservableList<TableColumn> getColumns() {
         return FXCollections.observableArrayList(tableView.getColumns());
     }
 

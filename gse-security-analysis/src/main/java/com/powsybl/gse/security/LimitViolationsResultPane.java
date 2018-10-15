@@ -17,7 +17,7 @@ import java.util.function.Predicate;
  */
 public interface LimitViolationsResultPane {
 
-    ObservableList<TableColumn<?, ?>> getColumns();
+    ObservableList<TableColumn> getColumns();
 
     ObservableList<LimitViolation> getViolations();
 
