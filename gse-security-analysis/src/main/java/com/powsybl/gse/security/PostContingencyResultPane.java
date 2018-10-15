@@ -13,7 +13,6 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
-import javafx.collections.transformation.SortedList;
 import javafx.geometry.Side;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableColumn;
@@ -80,9 +79,7 @@ class PostContingencyResultPane extends BorderPane implements LimitViolationsRes
 
     private final FilteredList<ResultRow> filteredRows = new FilteredList<>(rows);
 
-    private final SortedList<ResultRow> sortedRows = new SortedList<>(filteredRows);
-
-    private final TableView<ResultRow> tableView = new TableView<>(sortedRows);
+    private final TableView<ResultRow> tableView = new TableView<>(filteredRows);
 
     private final DecimalColumnFactory<ResultRow, Double> columnFactory = new DecimalColumnFactory<>(0);
 
@@ -93,8 +90,6 @@ class PostContingencyResultPane extends BorderPane implements LimitViolationsRes
     private final LimitViolationsFilterPane filterPane;
 
     PostContingencyResultPane() {
-        sortedRows.comparatorProperty().bind(tableView.comparatorProperty());
-
         TableColumn<ResultRow, String> contingencyColumn = createColumn("Contingency");
         contingencyColumn.setPrefWidth(200);
         contingencyColumn.setCellValueFactory(callback -> callback.getValue() instanceof ContingencyRow
