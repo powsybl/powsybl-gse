@@ -6,10 +6,7 @@
  */
 package com.powsybl.gse.afs.ext.base;
 
-import com.powsybl.contingency.BranchContingency;
-import com.powsybl.contingency.Contingency;
-import com.powsybl.contingency.ContingencyElement;
-import com.powsybl.contingency.GeneratorContingency;
+import com.powsybl.contingency.*;
 import com.powsybl.contingency.afs.ContingencyStore;
 import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.spi.Savable;
@@ -117,12 +114,18 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
 
     private ContingencyElement createElement(EquipmentInfo equipmentInfo) {
         switch (equipmentInfo.getType()) {
-            case "LINE":
-            case "TWO_WINDINGS_TRANSFORMER":
-                return new BranchContingency(equipmentInfo.getIdAndName().getId());
+            case "BUSBAR_SECTION":
+                return new BusbarSectionContingency(equipmentInfo.getIdAndName().getId());
 
             case "GENERATOR":
                 return new GeneratorContingency(equipmentInfo.getIdAndName().getId());
+
+            case "HVDC_LINE":
+                return new HvdcLineContingency(equipmentInfo.getIdAndName().getId());
+
+            case "LINE":
+            case "TWO_WINDINGS_TRANSFORMER":
+                return new BranchContingency(equipmentInfo.getIdAndName().getId());
 
             default:
                 return null;
