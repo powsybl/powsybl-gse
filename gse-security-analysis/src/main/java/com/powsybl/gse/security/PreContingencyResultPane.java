@@ -22,6 +22,7 @@ import org.controlsfx.control.HiddenSidesPane;
 import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.function.Predicate;
+import java.util.prefs.Preferences;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -40,25 +41,27 @@ class PreContingencyResultPane extends BorderPane implements LimitViolationsResu
 
     private final DecimalColumnFactory<LimitViolation, Double> columnFactory = new DecimalColumnFactory<>(0);
 
+    private final LimitViolationsFilterPane filterPane;
+
     PreContingencyResultPane() {
         sortedViolations.comparatorProperty().bind(tableView.comparatorProperty());
 
-        TableColumn<LimitViolation, String> equipmentColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Equipment"));
+        TableColumn<LimitViolation, String> equipmentColumn = createColumn("Equipment");
         equipmentColumn.setPrefWidth(200);
         equipmentColumn.setCellValueFactory(callback -> new SimpleObjectProperty<>(callback.getValue().getSubjectId()));
-        TableColumn<LimitViolation, String> violationTypeColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("ViolationType"));
+        TableColumn<LimitViolation, String> violationTypeColumn = createColumn("ViolationType");
         violationTypeColumn.setPrefWidth(150);
         violationTypeColumn.setCellValueFactory(callback -> new SimpleObjectProperty<>(callback.getValue().getLimitType().name()));
-        TableColumn<LimitViolation, String> violationNameColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("ViolationName"));
+        TableColumn<LimitViolation, String> violationNameColumn = createColumn("ViolationName");
         violationNameColumn.setPrefWidth(150);
         violationNameColumn.setCellValueFactory(callback -> new SimpleObjectProperty<>(callback.getValue().getLimitName()));
-        TableColumn<LimitViolation, Double> limitColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Limit"));
+        TableColumn<LimitViolation, Double> limitColumn = createColumn("Limit");
         limitColumn.setCellFactory(columnFactory);
         limitColumn.setCellValueFactory(callback -> new SimpleObjectProperty<>(callback.getValue().getLimit()));
-        TableColumn<LimitViolation, Double> valueColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Value"));
+        TableColumn<LimitViolation, Double> valueColumn = createColumn("Value");
         valueColumn.setCellFactory(columnFactory);
         valueColumn.setCellValueFactory(callback -> new SimpleObjectProperty<>(callback.getValue().getValue()));
-        TableColumn<LimitViolation, Double> loadColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Load"));
+        TableColumn<LimitViolation, Double> loadColumn = createColumn("Load");
         loadColumn.setPrefWidth(150);
         loadColumn.setCellFactory(columnFactory);
         loadColumn.setCellValueFactory(callback -> {
@@ -73,7 +76,7 @@ class PreContingencyResultPane extends BorderPane implements LimitViolationsResu
                                       valueColumn,
                                       loadColumn);
 
-        LimitViolationsFilterPane filterPane = new LimitViolationsFilterPane(this);
+        filterPane = new LimitViolationsFilterPane(this);
         HiddenSidesPane hiddenSidesPane = new HiddenSidesPane();
         hiddenSidesPane.setContent(tableView);
         hiddenSidesPane.setLeft(filterPane);
@@ -83,6 +86,12 @@ class PreContingencyResultPane extends BorderPane implements LimitViolationsResu
         filterPane.setOnMouseExited(e -> hiddenSidesPane.setPinnedSide(null));
 
         setCenter(hiddenSidesPane);
+    }
+
+    private static <S, T> TableColumn<S, T> createColumn(String type) {
+        TableColumn<S, T> column = new TableColumn<>(RESOURCE_BUNDLE.getString(type));
+        column.setUserData(type);
+        return column;
     }
 
     @Override
@@ -121,5 +130,15 @@ class PreContingencyResultPane extends BorderPane implements LimitViolationsResu
         } else {
             violations.addAll(result.getLimitViolations());
         }
+    }
+
+    void savePreferences() {
+        Preferences.userNodeForPackage(PreContingencyResultPane.class)
+                .put("preContingencyResultConfig", filterPane.toJsonConfig());
+    }
+
+    void loadPreferences() {
+        filterPane.loadJsonConfig(Preferences.userNodeForPackage(PreContingencyResultPane.class)
+                .get("preContingencyResultConfig", null));
     }
 }

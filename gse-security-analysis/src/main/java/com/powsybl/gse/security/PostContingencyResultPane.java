@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.function.Predicate;
+import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -87,40 +88,42 @@ class PostContingencyResultPane extends BorderPane implements LimitViolationsRes
 
     private final ObservableList<LimitViolation> filteredViolations = FXCollections.observableArrayList();
 
+    private final LimitViolationsFilterPane filterPane;
+
     PostContingencyResultPane() {
         sortedRows.comparatorProperty().bind(tableView.comparatorProperty());
 
-        TableColumn<ResultRow, String> contingencyColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Contingency"));
+        TableColumn<ResultRow, String> contingencyColumn = createColumn("Contingency");
         contingencyColumn.setPrefWidth(200);
         contingencyColumn.setCellValueFactory(callback -> callback.getValue() instanceof ContingencyRow
                                                           ? new SimpleObjectProperty<>(callback.getValue().getContingency().getId())
                                                           : null);
-        TableColumn<ResultRow, String> equipmentColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Equipment"));
+        TableColumn<ResultRow, String> equipmentColumn = createColumn("Equipment");
         equipmentColumn.setPrefWidth(200);
         equipmentColumn.setCellValueFactory(callback -> callback.getValue() instanceof LimitViolationRow
                                                         ? new SimpleObjectProperty<>(((LimitViolationRow) callback.getValue()).getViolation().getSubjectId())
                                                         : null);
-        TableColumn<ResultRow, String> violationTypeColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("ViolationType"));
+        TableColumn<ResultRow, String> violationTypeColumn = createColumn("ViolationType");
         violationTypeColumn.setPrefWidth(150);
         violationTypeColumn.setCellValueFactory(callback -> callback.getValue() instanceof LimitViolationRow
                                                             ? new SimpleObjectProperty<>(((LimitViolationRow) callback.getValue()).getViolation().getLimitType().name())
                                                             : null);
-        TableColumn<ResultRow, String> violationNameColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("ViolationName"));
+        TableColumn<ResultRow, String> violationNameColumn = createColumn("ViolationName");
         violationNameColumn.setPrefWidth(150);
         violationNameColumn.setCellValueFactory(callback -> callback.getValue() instanceof LimitViolationRow
                                                             ? new SimpleObjectProperty<>(((LimitViolationRow) callback.getValue()).getViolation().getLimitName())
                                                             : null);
-        TableColumn<ResultRow, Double> limitColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Limit"));
+        TableColumn<ResultRow, Double> limitColumn = createColumn("Limit");
         limitColumn.setCellFactory(columnFactory);
         limitColumn.setCellValueFactory(callback -> callback.getValue() instanceof LimitViolationRow
                                                     ? new SimpleObjectProperty<>(((LimitViolationRow) callback.getValue()).getViolation().getLimit())
                                                     : null);
-        TableColumn<ResultRow, Double> valueColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Value"));
+        TableColumn<ResultRow, Double> valueColumn = createColumn("Value");
         valueColumn.setCellFactory(columnFactory);
         valueColumn.setCellValueFactory(callback -> callback.getValue() instanceof LimitViolationRow
                                                     ? new SimpleObjectProperty<>(((LimitViolationRow) callback.getValue()).getViolation().getValue())
                                                     : null);
-        TableColumn<ResultRow, Double> loadColumn = new TableColumn<>(RESOURCE_BUNDLE.getString("Load"));
+        TableColumn<ResultRow, Double> loadColumn = createColumn("Load");
         loadColumn.setPrefWidth(150);
         loadColumn.setCellFactory(columnFactory);
         loadColumn.setCellValueFactory(callback -> {
@@ -139,7 +142,7 @@ class PostContingencyResultPane extends BorderPane implements LimitViolationsRes
                                       valueColumn,
                                       loadColumn);
 
-        LimitViolationsFilterPane filterPane = new LimitViolationsFilterPane(this);
+        filterPane = new LimitViolationsFilterPane(this);
         HiddenSidesPane hiddenSidesPane = new HiddenSidesPane();
         hiddenSidesPane.setContent(tableView);
         hiddenSidesPane.setLeft(filterPane);
@@ -149,6 +152,12 @@ class PostContingencyResultPane extends BorderPane implements LimitViolationsRes
         filterPane.setOnMouseExited(e -> hiddenSidesPane.setPinnedSide(null));
 
         setCenter(hiddenSidesPane);
+    }
+
+    private static <S, T> TableColumn<S, T> createColumn(String type) {
+        TableColumn<S, T> column = new TableColumn<>(RESOURCE_BUNDLE.getString(type));
+        column.setUserData(type);
+        return column;
     }
 
     @Override
@@ -227,5 +236,15 @@ class PostContingencyResultPane extends BorderPane implements LimitViolationsRes
         }
         updateViolations();
         updateFilteredViolations();
+    }
+
+    void savePreferences() {
+        Preferences.userNodeForPackage(PostContingencyResultPane.class)
+                .put("postContingencyResultConfig", filterPane.toJsonConfig());
+    }
+
+    void loadPreferences() {
+        filterPane.loadJsonConfig(Preferences.userNodeForPackage(PostContingencyResultPane.class)
+                .get("postContingencyResultConfig", null));
     }
 }

@@ -128,12 +128,15 @@ public class SecurityAnalysisResultViewer extends BorderPane implements ProjectF
                 preContResultPane.setResult(null);
                 postContResultPane.setResults(null);
             }
+            preContResultPane.loadPreferences();
+            postContResultPane.loadPreferences();
         });
         resultLoadingService.start();
     }
 
     @Override
     public void dispose() {
-        // nothing to dispose
+        preContResultPane.savePreferences();
+        postContResultPane.savePreferences();
     }
 }
