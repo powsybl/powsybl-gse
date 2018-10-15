@@ -8,7 +8,7 @@ package com.powsybl.gse.security;
 
 import com.powsybl.security.LimitViolation;
 import javafx.collections.ObservableList;
-import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumnBase;
 
 import java.util.function.Predicate;
 
@@ -17,7 +17,7 @@ import java.util.function.Predicate;
  */
 public interface LimitViolationsResultPane {
 
-    ObservableList<TableColumn> getColumns();
+    ObservableList<TableColumnBase> getColumns();
 
     ObservableList<LimitViolation> getViolations();
 

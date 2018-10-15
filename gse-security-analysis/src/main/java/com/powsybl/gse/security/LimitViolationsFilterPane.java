@@ -37,7 +37,7 @@ class LimitViolationsFilterPane extends GridPane {
 
     private LimitViolationsResultPane resultPane;
 
-    private final CheckListView<TableColumn> columnsListView;
+    private final CheckListView<TableColumnBase> columnsListView;
 
     private CheckListView<LimitViolationType> violationTypeListView;
 
@@ -145,9 +145,9 @@ class LimitViolationsFilterPane extends GridPane {
 
         columnsListView = new CheckListView<>(resultPane.getColumns());
         columnsListView.setPrefHeight(160);
-        columnsListView.setCellFactory(lv -> new CheckBoxListCell<TableColumn>(columnsListView::getItemBooleanProperty) {
+        columnsListView.setCellFactory(lv -> new CheckBoxListCell<TableColumnBase>(columnsListView::getItemBooleanProperty) {
             @Override
-            public void updateItem(TableColumn column, boolean empty) {
+            public void updateItem(TableColumnBase column, boolean empty) {
                 super.updateItem(column, empty);
                 setText(column == null ? "" : column.getText());
             }
@@ -234,7 +234,7 @@ class LimitViolationsFilterPane extends GridPane {
         for (int i = 0; i < columnsNode.size(); i++) {
             visibleColumns.add(columnsNode.get(i).asText());
         }
-        for (TableColumn<?, ?> column : resultPane.getColumns()) {
+        for (TableColumnBase column : resultPane.getColumns()) {
             if (visibleColumns.contains(column.getUserData())) {
                 columnsListView.getCheckModel().check(column);
             } else {

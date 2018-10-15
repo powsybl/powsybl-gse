@@ -14,7 +14,9 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.geometry.Side;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.BorderPane;
 import org.controlsfx.control.HiddenSidesPane;
@@ -79,7 +81,7 @@ class PreContingencyResultPane extends BorderPane implements LimitViolationsResu
         filterPane = new LimitViolationsFilterPane(this);
         HiddenSidesPane hiddenSidesPane = new HiddenSidesPane();
         hiddenSidesPane.setContent(tableView);
-        hiddenSidesPane.setLeft(filterPane);
+        hiddenSidesPane.setRight(new ScrollPane(filterPane));
 
         // to prevent filter pane from disappear when clicking on a control
         filterPane.setOnMouseEntered(e -> hiddenSidesPane.setPinnedSide(Side.LEFT));
@@ -95,7 +97,7 @@ class PreContingencyResultPane extends BorderPane implements LimitViolationsResu
     }
 
     @Override
-    public ObservableList<TableColumn> getColumns() {
+    public ObservableList<TableColumnBase> getColumns() {
         return FXCollections.observableArrayList(tableView.getColumns());
     }
 
