@@ -9,10 +9,11 @@ http://www.powsybl.com
 
 ## Overview
 Powsybl-GSE (Grid Study Environment) is an open-source, [JavaFX](https://www.oracle.com/technetwork/java/javase/overview/javafx-overview-2158620.html) based, UI for [Powsybl](http://www.powsybl.com).  
-GSE enables users to leverage the Powsybl functionalities in order to perform `power grid studies` without using a command line interface.
+GSE enables users to leverage the Powsybl functionalities in order to perform `power grid studies` without using a command line interface.  
+
 Its source code is distributed under the Mozilla Public License 2.0 and it is hosted on GitHub: https://github.com/powsybl .
 
-GSE is designed to be fully extensible, allowing new functionalities to be developed and plugged-in. 
+GSE is designed to be fully extensible, allowing new functionalities to be implemented and plugged-in. 
 
 Currently GSE exposes these features: 
 - [AFS](https://github.com/powsybl/powsybl-core/tree/docs/docs/architecture/afs), to be used as a context container to represent: [cases](), [contingencies](), [simulations-results](), etc.
