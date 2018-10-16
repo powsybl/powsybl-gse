@@ -648,6 +648,14 @@ public class ProjectPane extends Tab {
         }
     }
 
+    private void closeViews() {
+        for (DetachableTabPane tabPane : findDetachableTabPanes()) {
+            for (Tab tab : new ArrayList<>(tabPane.getTabs())) {
+                ((MyTab) tab).requestClose();
+            }
+        }
+    }
+
     private void closeViews(String nodeId) {
         for (DetachableTabPane tabPane : findDetachableTabPanes()) {
             for (Tab tab : new ArrayList<>(tabPane.getTabs())) {
@@ -859,5 +867,6 @@ public class ProjectPane extends Tab {
 
     public void dispose() {
         taskItems.dispose();
+        closeViews();
     }
 }
