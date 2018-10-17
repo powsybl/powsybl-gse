@@ -62,7 +62,7 @@ public class BaseExtNodeGraphicProvider implements NodeGraphicProvider {
                                 .color("limegreen")
                                 .size("0.9em"));
         } else if (file instanceof ModificationScript) {
-            return Glyph.createAwesomeFont('\uf044').size("1.4em");
+            return Glyph.createAwesomeFont('\uf0f6').size("1.2em");
         }
         return null;
     }
