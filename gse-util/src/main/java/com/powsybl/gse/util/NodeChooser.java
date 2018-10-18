@@ -41,6 +41,8 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private static final Logger LOGGER = LoggerFactory.getLogger(NodeChooser.class);
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.NodeChooser");
 
+    private static final String ICON_SIZE = "1.1em";
+
     private static class MoveContext {
         private Object source;
         private TreeItem sourceTreeItem;
@@ -317,7 +319,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                     refresh(selectedItem);
                 })
         );
-        javafx.scene.Node deleteFolderGlyph = Glyph.createAwesomeFont('\uf1f8').size("1.1em");
+        javafx.scene.Node deleteFolderGlyph = Glyph.createAwesomeFont('\uf1f8').size(ICON_SIZE);
         deleteFolderButton = new Button("", deleteFolderGlyph);
         deleteFolderButton.setPadding(new Insets(3, 5, 3, 5));
         deleteFolderButton.disableProperty().bind(selectedNode.isNull());
@@ -580,7 +582,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private MenuItem createCreateFolderMenuItem() {
-        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("CreateFolder") + "...");
+        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("CreateFolder") + "...", Glyph.createAwesomeFont('\uf115').size(ICON_SIZE));
         menuItem.setOnAction(event ->
                 treeModel.showCreateFolderDialog(window, selectedFolder.get()).ifPresent(newFolder -> {
                     TreeItem<N> selectedItem = tree.getSelectionModel().getSelectedItem();
@@ -591,7 +593,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private MenuItem createRenameProjectMenuItem() {
-        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"));
+        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size(ICON_SIZE));
         menuItem.setOnAction(event -> {
             TextInputDialog dialog = new TextInputDialog(tree.getSelectionModel().getSelectedItem().getValue().toString());
             dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
@@ -613,7 +615,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private MenuItem createDeleteNodeMenuItem(List<? extends TreeItem<N>> selectedTreeItems) {
-        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.3em"));
+        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size(ICON_SIZE));
         menuItem.setOnAction(event -> createDeleteAlert(selectedTreeItems));
         return menuItem;
     }
