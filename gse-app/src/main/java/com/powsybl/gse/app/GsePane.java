@@ -185,8 +185,8 @@ public class GsePane extends StackPane {
         return title;
     }
 
-    public Image getIcon() {
-        return brandingConfig.getIcon16x16();
+    public List<Image> getIcons() {
+        return brandingConfig.getIcons();
     }
 
     public void dispose() {

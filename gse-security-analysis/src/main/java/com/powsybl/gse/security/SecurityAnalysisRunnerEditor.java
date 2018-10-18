@@ -6,7 +6,6 @@
  */
 package com.powsybl.gse.security;
 
-import com.powsybl.afs.ProjectFile;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileEditor;
 import com.powsybl.security.afs.SecurityAnalysisRunner;
@@ -25,12 +24,13 @@ public class SecurityAnalysisRunnerEditor extends AbstractSecurityAnalysisRunner
     public void edit() {
         nameTextField.setText(node.getName());
         nameTextField.setDisable(true);
-        node.getCase().ifPresent(aCase -> caseSelectionPane.nodeProperty().setValue((ProjectFile) aCase));
-        node.getContingencyListProvider().ifPresent(contingencyStore -> contingencyStoreSelectionPane.nodeProperty().setValue((ProjectFile) contingencyStore));
+        node.getCase().ifPresent(aCase -> caseSelectionPane.nodeProperty().setValue(aCase));
+        node.getContingencyStore().ifPresent(contingencyStore -> contingencyStoreSelectionPane.nodeProperty().setValue(contingencyStore));
     }
 
     @Override
     public void saveChanges() {
-        throw new AssertionError("TODO");
+        node.setCase(caseSelectionPane.nodeProperty().getValue());
+        node.setContingencyStore(contingencyStoreSelectionPane.nodeProperty().getValue());
     }
 }

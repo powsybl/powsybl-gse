@@ -609,7 +609,7 @@ public class ProjectPane extends Tab {
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
-        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"));
+        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
         menuItem.setOnAction(event -> {
             TextInputDialog dialog = new TextInputDialog(selectedTreeItem.getValue().toString());
             dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
@@ -655,6 +655,14 @@ public class ProjectPane extends Tab {
         } else if (node instanceof Pane) {
             for (Node child : ((Pane) node).getChildren()) {
                 findDetachableTabPanes(child, detachableTabPanes);
+            }
+        }
+    }
+
+    private void closeViews() {
+        for (DetachableTabPane tabPane : findDetachableTabPanes()) {
+            for (Tab tab : new ArrayList<>(tabPane.getTabs())) {
+                ((MyTab) tab).requestClose();
             }
         }
     }
@@ -870,5 +878,6 @@ public class ProjectPane extends Tab {
 
     public void dispose() {
         taskItems.dispose();
+        closeViews();
     }
 }

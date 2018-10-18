@@ -1,5 +1,4 @@
-*.iml
-/.idea
+# Maven projects
 /gse-afs-ext-base/target/
 /gse-app/target/
 /gse-demo/target/
@@ -9,3 +8,19 @@
 /gse-spi/target/
 /gse-util/target/
 /target/
+
+# IntelliJ
+*.iml
+/.idea
+
+# Eclipse projects
+.classpath
+.project
+org.eclipse.core.resources.prefs
+org.eclipse.jdt.core.prefs
+org.eclipse.m2e.core.prefs
+org.eclipse.jdt.groovy.core.prefs
+
+# Log files
+powsybl.log
+
