@@ -441,7 +441,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             treeTableCell.setOnDragDetected(event -> dragDetectedEvent(item, treeTableRow.getTreeItem(), event));
             treeTableCell.setOnDragOver(event -> dragOverEvent(event, item, treeTableRow, treeTableCell));
             treeTableCell.setOnDragDropped(event -> dragDroppedEvent(item, treeTableRow.getTreeItem(), event, node));
-            treeTableCell.setOnDragExited(event -> treeTableCell.setStyle(""));
+            treeTableCell.setOnDragExited(event -> setDragExitedStyle(treeTableCell));
         } else {
             treeTableCell.setText(treeModel.getName(item));
             treeTableCell.setTextFill(Color.BLACK);
@@ -452,8 +452,12 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private void textFillColor(TreeTableCell<N, N> treetableCell) {
         if (getCounter() < 1) {
-            treetableCell.setStyle("-fx-background-color: #87ceeb;");
+            treetableCell.setId("cell_DragOver-id");
         }
+    }
+
+    private void setDragExitedStyle(TreeTableCell<N, N> treetableCell) {
+        treetableCell.setId("cell_DragExited-id");
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treetableCell) {
