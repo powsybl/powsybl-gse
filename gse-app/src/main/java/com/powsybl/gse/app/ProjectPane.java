@@ -261,7 +261,7 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private void textFillColor(TreeCell<Object> treeCell) {
+    private void setDragOverStyle(TreeCell<Object> treeCell) {
         if (getCounter() < 1) {
             treeCell.setStyle("-fx-background-color: #87ceeb;");
         }
@@ -296,7 +296,7 @@ public class ProjectPane extends Tab {
         if (item instanceof ProjectFolder && item != moveContext.source) {
             int count = 0;
             treeItemChildrenSize(treeItem, count);
-            textFillColor(treeCell);
+            setDragOverStyle(treeCell);
             event.acceptTransferModes(TransferMode.ANY);
             event.consume();
         }
