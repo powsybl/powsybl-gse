@@ -598,7 +598,7 @@ public class ProjectPane extends Tab {
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
-        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"));
+        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
         menuItem.setOnAction(event -> {
             TextInputDialog dialog = new TextInputDialog(selectedTreeItem.getValue().toString());
             dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));

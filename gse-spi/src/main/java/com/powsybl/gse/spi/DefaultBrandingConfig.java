@@ -13,8 +13,11 @@ import javafx.scene.image.Image;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
 
 import java.awt.image.BufferedImage;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -33,15 +36,17 @@ public class DefaultBrandingConfig implements BrandingConfig {
         int width = (int) node.getWidth();
         int height = (int) node.getHeight();
         BufferedImage bimg = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        SwingFXUtils.fromFXImage(node.snapshot(new SnapshotParameters(), new WritableImage(width, height)), bimg);
+        SnapshotParameters snapshotParameters = new SnapshotParameters();
+        snapshotParameters.setFill(Color.TRANSPARENT);
+        SwingFXUtils.fromFXImage(node.snapshot(snapshotParameters, new WritableImage(width, height)), bimg);
         return SwingFXUtils.toFXImage(bimg, new WritableImage(width, height));
     }
 
     @Override
-    public Image getIcon16x16() {
+    public List<Image> getIcons() {
         PowsyblLogo logo = new PowsyblLogo();
-        logo.resize(16, 16);
-        return createImage(logo);
+        logo.resize(128, 128);
+        return Arrays.asList(createImage(logo));
     }
 
     @Override
