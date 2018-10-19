@@ -18,6 +18,8 @@ import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.Dragboard;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Text;
@@ -33,6 +35,8 @@ import java.util.stream.Collectors;
 public class ContingencyStoreEditor extends BorderPane implements ProjectFileViewer, Savable {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ContingencyStore");
+
+    private static final String REMOVE = RESOURCE_BUNDLE.getString("Remove");
 
     private final ContingencyStore store;
 
@@ -181,6 +185,8 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
             }
         });
 
+        contingencyTree.addEventHandler(KeyEvent.KEY_PRESSED, this::keyBind);
+
         setTop(toolBar);
         setCenter(contingencyTree);
     }
@@ -201,9 +207,20 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
     private ContextMenu createContingencyMenu() {
         MenuItem renameItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename") + "...");
         renameItem.setOnAction(event -> rename());
-        MenuItem removeItem = new MenuItem(RESOURCE_BUNDLE.getString("Remove"));
+        MenuItem removeItem = new MenuItem(REMOVE);
         removeItem.setOnAction(event -> remove());
         return new ContextMenu(renameItem, removeItem);
+    }
+
+    private void keyBind(KeyEvent e) {
+        if (e.getCode() == KeyCode.DELETE) {
+            alertRemove();
+        } else if (e.getCode() == KeyCode.F2) {
+            TreeItem<Object> item = contingencyTree.getSelectionModel().getSelectedItem();
+            if (item.getValue() instanceof Contingency) {
+                rename();
+            }
+        }
     }
 
     private void rename() {
@@ -215,9 +232,29 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
         Optional<String> result = dialog.showAndWait();
         result.ifPresent(newName -> {
-            if (!newName.isEmpty()) {
+            if (!newName.isEmpty() && !newName.equals(contingency.getId())) {
                 contingency.setId(newName);
                 contingencyTree.refresh();
+                saved.set(false);
+            }
+        });
+    }
+
+    private void alertRemove() {
+        TreeItem<Object> item = contingencyTree.getSelectionModel().getSelectedItem();
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle(REMOVE);
+        if (item.getValue() instanceof Contingency) {
+            alert.setHeaderText(REMOVE + " " + ((Contingency) item.getValue()).getId() + " ?");
+        } else if (item.getValue() instanceof ContingencyElement) {
+            alert.setHeaderText(REMOVE + " " + ((ContingencyElement) item.getValue()).getId() + " ?");
+        }
+        Optional<ButtonType> result = alert.showAndWait();
+        result.ifPresent(type -> {
+            if (type == ButtonType.OK) {
+                remove();
+            } else {
+                alert.close();
             }
         });
     }
@@ -241,7 +278,7 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
     }
 
     private ContextMenu createContingencyElementMenu() {
-        MenuItem removeItem = new MenuItem(RESOURCE_BUNDLE.getString("Remove"));
+        MenuItem removeItem = new MenuItem(REMOVE);
         removeItem.setOnAction(event -> remove());
         return new ContextMenu(removeItem);
     }
