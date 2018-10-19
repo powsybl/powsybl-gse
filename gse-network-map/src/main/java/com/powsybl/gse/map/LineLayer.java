@@ -20,7 +20,6 @@ import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Observable;
-import rx.functions.Action1;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -71,12 +70,19 @@ public class LineLayer extends CanvasBasedLayer {
         for (Map.Entry<Integer, BranchGraphicIndex> e : branchesIndexes.entrySet()) {
             BranchGraphicIndex index = e.getValue();
             Observable<Entry<BranchGraphic, Geometry>> search = index.getTree().search(Geometries.pointGeographic(c.getLon(), c.getLat()));
-            search.toBlocking().forEach(new Action1<Entry<BranchGraphic, Geometry>>() {
-                @Override
-                public void call(Entry<BranchGraphic, Geometry> entry) {
-                    LOGGER.trace(entry.value().getLine().getId());
-                }
-            });
+            search.toBlocking().forEach(entry -> LOGGER.trace(entry.value().getLine().getId()));
+        }
+    }
+
+    private void reinitGraphicsContext(GraphicsContext gc, BranchGraphic branch) {
+        if (Objects.isNull(branch.getLine().getModel())) {
+            gc.setStroke(UNMAPPED_LINE_COLOR);
+            gc.setFill(UNMAPPED_LINE_COLOR);
+            gc.setLineDashes(1., 7., 1., 7.);
+        } else {
+            gc.setStroke(branch.getLine().getColor());
+            gc.setFill(branch.getLine().getColor());
+            gc.setLineDashes(0.);
         }
     }
 
@@ -95,15 +101,7 @@ public class LineLayer extends CanvasBasedLayer {
         segmentIndex.getTree().search(getMapBounds()).toBlocking().forEach(e -> {
             BranchGraphic branch = e.value();
 
-            if (Objects.isNull(branch.getLine().getModel())) {
-                gc.setStroke(UNMAPPED_LINE_COLOR);
-                gc.setFill(UNMAPPED_LINE_COLOR);
-                gc.setLineDashes(1., 7., 1., 7.);
-            } else {
-                gc.setStroke(branch.getLine().getColor());
-                gc.setFill(branch.getLine().getColor());
-                gc.setLineDashes(0.);
-            }
+            reinitGraphicsContext(gc, branch);
 
             Point2D[] points = new Point2D[branch.getPylons().size()];
             int i = 0;
