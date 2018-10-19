@@ -16,11 +16,8 @@
     -fx-font-size: 1.7em;
 }
 
-#cell_DragOver-id{
-     -fx-background-color: #87ceeb;
-}
-
-#cell_DragExited-id{
+.cell_DragOver_class {
+    -fx-background-color: #87ceeb;
 }
 
 .gse-app-bar-icon:hover {
