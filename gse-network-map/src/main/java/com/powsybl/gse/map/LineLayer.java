@@ -14,6 +14,7 @@ import com.goebl.simplify.PointExtractor;
 import com.goebl.simplify.Simplify;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcType;
 import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
@@ -34,6 +35,8 @@ public class LineLayer extends CanvasBasedLayer {
     private static final Logger LOGGER = LoggerFactory.getLogger(LineLayer.class);
 
     private static final int PYLON_SHOW_ZOOM_THRESHOLD = 10;
+
+    private static final Color UNMAPPED_LINE_COLOR = Color.GRAY;
 
     private static final PointExtractor<Point2D> POINT_EXTRACTOR = new PointExtractor<Point2D>() {
         @Override
@@ -92,8 +95,15 @@ public class LineLayer extends CanvasBasedLayer {
         segmentIndex.getTree().search(getMapBounds()).toBlocking().forEach(e -> {
             BranchGraphic branch = e.value();
 
-            gc.setStroke(branch.getLine().getColor());
-            gc.setFill(branch.getLine().getColor());
+            if (Objects.isNull(branch.getLine().getModel())) {
+                gc.setStroke(UNMAPPED_LINE_COLOR);
+                gc.setFill(UNMAPPED_LINE_COLOR);
+                gc.setLineDashes(1., 7., 1., 7.);
+            } else {
+                gc.setStroke(branch.getLine().getColor());
+                gc.setFill(branch.getLine().getColor());
+                gc.setLineDashes(0.);
+            }
 
             Point2D[] points = new Point2D[branch.getPylons().size()];
             int i = 0;
