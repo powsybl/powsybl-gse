@@ -15,6 +15,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Side;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableView;
@@ -138,6 +139,13 @@ class PostContingencyResultPane extends BorderPane implements LimitViolationsRes
                                       limitColumn,
                                       valueColumn,
                                       loadColumn);
+
+        // enable multi-selection
+        tableView.getSelectionModel().setCellSelectionEnabled(true);
+        tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        // enable copy/paste
+        TableUtils.installCopyPasteHandler(tableView, true);
 
         filterPane = new LimitViolationsFilterPane(this);
         HiddenSidesPane hiddenSidesPane = new HiddenSidesPane();
