@@ -339,6 +339,7 @@ public class ProjectPane extends Tab {
             event.setDropCompleted(success);
             refresh(moveContext.sourceparentTreeItem);
             refresh(treeItem);
+            treeView.getSelectionModel().clearSelection();
             event.consume();
         }
     }

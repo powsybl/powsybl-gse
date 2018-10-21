@@ -494,6 +494,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             event.setDropCompleted(success);
             refreshTreeItem(moveContext.sourceparentTreeItem);
             refreshTreeItem(treeItem);
+            tree.getSelectionModel().clearSelection();
             event.consume();
         }
     }
