@@ -36,6 +36,8 @@ public class LineLayer extends CanvasBasedLayer {
 
     private static final int PYLON_SHOW_ZOOM_THRESHOLD = 10;
 
+    private static final Color UNMAPPED_LINE_COLOR = Color.GRAY;
+
     private static final PointExtractor<Point2D> POINT_EXTRACTOR = new PointExtractor<Point2D>() {
         @Override
         public double getX(Point2D point2D) {
@@ -178,6 +180,7 @@ public class LineLayer extends CanvasBasedLayer {
         }
 
         Line l = branch.getLine().getModel();
+        Color lineColor = l != null ? branch.getLine().getColor() : UNMAPPED_LINE_COLOR;
         boolean reverse = l != null && l.getTerminal1().getP() >= 0;
 
         stats.segmentCount += points.length - 1;
@@ -185,12 +188,12 @@ public class LineLayer extends CanvasBasedLayer {
 
         ArrowConfig arrowConfig = null;
         if (zoom >= 9) {
-            arrowConfig = new ArrowConfig(50, 5, 10, branch.getLine().getColor(), reverse);
+            arrowConfig = new ArrowConfig(50, 5, 10, lineColor, reverse);
         } else if (zoom >= 8) {
-            arrowConfig = new ArrowConfig(50, 3, 6, branch.getLine().getColor(), reverse);
+            arrowConfig = new ArrowConfig(50, 3, 6, lineColor, reverse);
         }
 
-        return new PointsToDraw(pointsToDraw, branch.getLine().getColor(), arrowConfig);
+        return new PointsToDraw(pointsToDraw, lineColor, arrowConfig);
     }
 
     private void drawArrows(Canvas canvas, List<PointsToDraw> pointsList, double progress) {
@@ -294,6 +297,11 @@ public class LineLayer extends CanvasBasedLayer {
 
             gc.setStroke(points.lineColor);
             gc.setFill(points.lineColor);
+            if (Objects.isNull(branch.getLine().getModel())) {
+                gc.setLineDashes(1., 7., 1., 7.);
+            } else {
+                gc.setLineDashes(0.);
+            }
 
             Point2D prev = null;
             for (Point2D point : points.array) {

@@ -41,7 +41,7 @@ public final class NewScriptButton {
     private ObjectProperty<ModificationScript> scriptProperty;
 
     private NewScriptButton(ProjectFolder folder, Project project, ObjectProperty<ModificationScript> nodeProperty, GseContext context) {
-        Node newGlyph = Glyph.createAwesomeFont('\uf044').size("1.3em")
+        Node newGlyph = Glyph.createAwesomeFont('\uf0f6').size("1.3em")
                 .stack(Glyph.createAwesomeFont('\uf055').color("limegreen").size("0.8em"));
         scriptProperty = nodeProperty;
         button = new Button(null, newGlyph);

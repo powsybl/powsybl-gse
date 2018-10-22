@@ -38,7 +38,7 @@ public class ModificationScriptEditorExtension implements ProjectFileViewerExten
 
     @Override
     public Node getMenuGraphic(ProjectFile file) {
-        return Glyph.createAwesomeFont('\uf040');
+        return Glyph.createAwesomeFont('\uf044').size("1.1em");
     }
 
     @Override

@@ -8,18 +8,23 @@ package com.powsybl.gse.security;
 
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileViewer;
+import com.powsybl.gse.util.BadgeCount;
 import com.powsybl.gse.util.GseUtil;
 import com.powsybl.security.LimitViolation;
-import com.powsybl.security.LimitViolationsResult;
 import com.powsybl.security.SecurityAnalysisResult;
 import com.powsybl.security.afs.SecurityAnalysisRunner;
+import javafx.collections.ListChangeListener;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.Label;
+import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.StackPane;
 
 import java.util.Objects;
@@ -42,13 +47,17 @@ public class SecurityAnalysisResultViewer extends BorderPane implements ProjectF
 
     private final Tab preContTab;
 
-    private final ProgressIndicator preContProgressIndic = new ProgressIndicator();
+    private final BadgeCount preContBadge = new BadgeCount(0);
+
+    private final PreContingencyResultPane preContResultPane = new PreContingencyResultPane();
 
     private final Tab postContTab;
 
-    private final TableView<LimitViolation> preContTable = new LimitViolationsTableView();
+    private final BadgeCount postContBadge = new BadgeCount(0);
 
-    private final ContingenciesSplitPane postContSplitPane = new ContingenciesSplitPane();
+    private final PostContingencyResultPane postContResultPane = new PostContingencyResultPane();
+
+    private final ProgressIndicator progressIndic = new ProgressIndicator();
 
     private final Service<SecurityAnalysisResult> resultLoadingService;
 
@@ -56,13 +65,42 @@ public class SecurityAnalysisResultViewer extends BorderPane implements ProjectF
         this.runner = Objects.requireNonNull(runner);
         this.scene = Objects.requireNonNull(scene);
         this.context = Objects.requireNonNull(context);
-        preContTab = new Tab(RESOURCE_BUNDLE.getString("PreContingency"), preContTable);
+
+        preContBadge.setVisible(false);
+        FlowPane preContGraphic = new FlowPane(3, 3, new Label(RESOURCE_BUNDLE.getString("PreContingency")), preContBadge);
+        preContGraphic.setPrefWrapLength(150);
+        preContTab = new Tab("", preContResultPane);
+        preContTab.setGraphic(preContGraphic);
         preContTab.setClosable(false);
-        postContTab = new Tab(RESOURCE_BUNDLE.getString("PostContingency"), postContSplitPane);
+
+        postContBadge.setVisible(false);
+        FlowPane postContGraphic = new FlowPane(3, 3, new Label(RESOURCE_BUNDLE.getString("PostContingency")), postContBadge);
+        postContGraphic.setPrefWrapLength(150);
+        postContTab = new Tab("", postContResultPane);
+        postContTab.setGraphic(postContGraphic);
         postContTab.setClosable(false);
+
         tabPane = new TabPane(preContTab, postContTab);
-        StackPane mainPane = new StackPane(tabPane, new Group(preContProgressIndic));
+
+        StackPane mainPane = new StackPane(tabPane, new Group(progressIndic));
         setCenter(mainPane);
+
+        preContResultPane.getFilteredViolations().addListener((ListChangeListener<LimitViolation>) c -> {
+            if (c.getList().size() > 0) {
+                preContBadge.setCount(c.getList().size());
+                preContBadge.setVisible(true);
+            } else {
+                preContBadge.setVisible(false);
+            }
+        });
+        postContResultPane.getFilteredViolations().addListener((ListChangeListener<LimitViolation>) c -> {
+            if (c.getList().size() > 0) {
+                postContBadge.setCount(c.getList().size());
+                postContBadge.setVisible(true);
+            } else {
+                postContBadge.setVisible(false);
+            }
+        });
 
         resultLoadingService = GseUtil.createService(new Task<SecurityAnalysisResult>() {
             @Override
@@ -79,23 +117,26 @@ public class SecurityAnalysisResultViewer extends BorderPane implements ProjectF
 
     @Override
     public void view() {
-        preContProgressIndic.visibleProperty().bind(resultLoadingService.runningProperty());
+        progressIndic.visibleProperty().bind(resultLoadingService.runningProperty());
         tabPane.disableProperty().bind(resultLoadingService.runningProperty());
         resultLoadingService.setOnSucceeded(event -> {
             SecurityAnalysisResult result = (SecurityAnalysisResult) event.getSource().getValue();
             if (result != null) {
-                LimitViolationsResult preContingencyResult = result.getPreContingencyResult();
-                preContTable.getItems().setAll(preContingencyResult.getLimitViolations());
-                postContSplitPane.resetWithSecurityAnalysisResults(result);
+                preContResultPane.setResult(result.getPreContingencyResult());
+                postContResultPane.setResults(result.getPostContingencyResults());
             } else {
-                // TODO
+                preContResultPane.setResult(null);
+                postContResultPane.setResults(null);
             }
+            preContResultPane.loadPreferences();
+            postContResultPane.loadPreferences();
         });
         resultLoadingService.start();
     }
 
     @Override
     public void dispose() {
-        // nothing to dispose
+        preContResultPane.savePreferences();
+        postContResultPane.savePreferences();
     }
 }

@@ -30,6 +30,7 @@ public class SecurityAnalysisRunnerEditor extends AbstractSecurityAnalysisRunner
 
     @Override
     public void saveChanges() {
-        throw new AssertionError("TODO");
+        node.setCase(caseSelectionPane.nodeProperty().getValue());
+        node.setContingencyStore(contingencyStoreSelectionPane.nodeProperty().getValue());
     }
 }
