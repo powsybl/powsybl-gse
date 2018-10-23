@@ -615,15 +615,16 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private MenuItem createDeleteNodeMenuItem(List<? extends TreeItem<N>> selectedTreeItems) {
-        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size(ICON_SIZE)); if (selectedTreeItems.size() == 1) {
-        TreeItem<N> selectedTreeItem = selectedTreeItems.get(0);
-        if (selectedTreeItem.getValue() instanceof Folder) {
-            Folder folder = (Folder) selectedTreeItem.getValue();
-            if (!folder.getChildren().isEmpty()) {
-                menuItem.setDisable(true);
+        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size(ICON_SIZE));
+        if (selectedTreeItems.size() == 1) {
+            TreeItem<N> selectedTreeItem = selectedTreeItems.get(0);
+            if (selectedTreeItem.getValue() instanceof Folder) {
+                Folder folder = (Folder) selectedTreeItem.getValue();
+                if (!folder.getChildren().isEmpty()) {
+                    menuItem.setDisable(true);
+                }
             }
         }
-    }
         menuItem.setOnAction(event -> createDeleteAlert(selectedTreeItems));
         return menuItem;
     }
