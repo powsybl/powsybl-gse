@@ -9,6 +9,7 @@ package com.powsybl.gse.map;
 import com.gluonhq.maps.MapView;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcType;
 import javafx.scene.text.Font;
 import org.apache.commons.lang3.time.StopWatch;
@@ -23,6 +24,8 @@ import java.util.Objects;
 public class SubstationLayer extends CanvasBasedLayer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SubstationLayer.class);
+
+    private static final Color UNMAPPED_SUBSTATION_COLOR = Color.GRAY;
 
     private final SubstationGraphicIndex substationIndex;
 
@@ -53,7 +56,11 @@ public class SubstationLayer extends CanvasBasedLayer {
                     SubstationGraphic substation = e.value();
                     Point2D p = baseMap.getMapPoint(substation.getPosition().getLat(),
                                                     substation.getPosition().getLon());
-                    gc.setFill(substation.getColor());
+                    if (Objects.isNull(substation.getModel())) {
+                        gc.setFill(UNMAPPED_SUBSTATION_COLOR);
+                    } else {
+                        gc.setFill(substation.getColor());
+                    }
                     gc.fillArc(p.getX() - size / 2, p.getY() - size / 2, size, size, 0, 360, ArcType.ROUND);
                     if (zoom > 9) {
                         gc.fillText(substation.getId(), p.getX() + 10, p.getY() + 10);
