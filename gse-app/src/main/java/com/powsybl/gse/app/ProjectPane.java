@@ -302,15 +302,6 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private Alert nameAlreadyExistsAlert() {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
-        alert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
-        alert.setContentText(RESOURCE_BUNDLE.getString("DragFileExists"));
-        alert.showAndWait();
-        return alert;
-    }
-
     private int getCounter() {
         return counter;
     }
@@ -362,7 +353,7 @@ public class ProjectPane extends Tab {
     private void accepTransferDrag(ProjectFolder projectFolder, boolean s) {
         success = s;
         if (getCounter() >= 1) {
-            nameAlreadyExistsAlert();
+            GseAlerts.draggingError();
         } else if (getCounter() < 1) {
             ProjectNode monfichier = (ProjectNode) moveContext.source;
             monfichier.moveTo(projectFolder);
@@ -560,22 +551,7 @@ public class ProjectPane extends Tab {
     private MenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.1em"));
         menuItem.setOnAction(event -> {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle(RESOURCE_BUNDLE.getString("ConfirmationDialog"));
-            String headerText;
-            if (selectedTreeItems.size() == 1) {
-                ProjectNode node = (ProjectNode) selectedTreeItems.get(0).getValue();
-                headerText = String.format(RESOURCE_BUNDLE.getString("FileWillBeDeleted"), node.getName());
-            } else if (selectedTreeItems.size() > 1) {
-                String names = selectedTreeItems.stream()
-                        .map(selectedTreeItem -> selectedTreeItem.getValue().toString())
-                        .collect(Collectors.joining(", "));
-                headerText = String.format(RESOURCE_BUNDLE.getString("FilesWillBeDeleted"), names);
-            } else {
-                throw new AssertionError();
-            }
-            alert.setHeaderText(headerText);
-            alert.setContentText(RESOURCE_BUNDLE.getString("DoYouConfirm"));
+            Alert alert = GseAlerts.deleteNodesAlert(selectedTreeItems);
             Optional<ButtonType> result = alert.showAndWait();
             if (result.get() == ButtonType.OK) {
                 List<TreeItem<Object>> parentTreeItems = new ArrayList<>();
