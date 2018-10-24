@@ -5,6 +5,7 @@ import com.powsybl.afs.ProjectNode;
 import com.powsybl.afs.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.TreeItem;
+
 import java.util.List;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
@@ -13,9 +14,10 @@ public final class GseAlerts {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.GseAlerts");
 
-    private GseAlerts() { }
+    private GseAlerts() {
+    }
 
-    public static void draggingError() {
+    public static void showDraggingError() {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
         alert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
@@ -38,12 +40,11 @@ public final class GseAlerts {
         final String fileWillBeDeleted = RESOURCE_BUNDLE.getString("FileWillBeDeleted");
         AbstractNodeBase node;
         if (selectedTreeItems.size() == 1) {
-            if(selectedTreeItems.get(0).getValue() instanceof ProjectNode) {
-                 node = (ProjectNode) selectedTreeItems.get(0).getValue();
+            if (selectedTreeItems.get(0).getValue() instanceof ProjectNode) {
+                node = (ProjectNode) selectedTreeItems.get(0).getValue();
                 headerText = String.format(fileWillBeDeleted, node.getName());
-            }
-            else if (selectedTreeItems.get(0).getValue() instanceof Node){
-                 node = (Node) selectedTreeItems.get(0).getValue();
+            } else if (selectedTreeItems.get(0).getValue() instanceof Node) {
+                node = (Node) selectedTreeItems.get(0).getValue();
                 headerText = String.format(fileWillBeDeleted, node.getName());
             } else {
                 headerText = String.format(fileWillBeDeleted, "the selected file");

@@ -353,7 +353,7 @@ public class ProjectPane extends Tab {
     private void accepTransferDrag(ProjectFolder projectFolder, boolean s) {
         success = s;
         if (getCounter() >= 1) {
-            GseAlerts.draggingError();
+            GseAlerts.showDraggingError();
         } else if (getCounter() < 1) {
             ProjectNode monfichier = (ProjectNode) moveContext.source;
             monfichier.moveTo(projectFolder);

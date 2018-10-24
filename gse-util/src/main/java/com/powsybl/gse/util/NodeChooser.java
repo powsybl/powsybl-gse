@@ -519,7 +519,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private void accepTransferDrag(Folder folder, boolean s) {
         success = s;
         if (getCounter() >= 1) {
-            GseAlerts.draggingError();
+            GseAlerts.showDraggingError();
         } else if (getCounter() < 1) {
             Project monfichier = (Project) moveContext.source;
             monfichier.moveTo(folder);
