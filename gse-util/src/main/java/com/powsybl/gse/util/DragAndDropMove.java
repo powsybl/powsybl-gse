@@ -6,9 +6,6 @@ public class DragAndDropMove {
     private Object source;
     private TreeItem sourceTreeItem;
 
-    public DragAndDropMove() {
-
-    }
 
     public Object getSource() {
         return source;
