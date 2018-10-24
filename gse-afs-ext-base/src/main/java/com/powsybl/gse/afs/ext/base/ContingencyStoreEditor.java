@@ -12,15 +12,13 @@ import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.spi.Savable;
 import com.powsybl.gse.util.EquipmentInfo;
 import com.powsybl.gse.util.Glyph;
+import com.powsybl.gse.util.IdAndName;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.input.Dragboard;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.TransferMode;
+import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Text;
 
@@ -50,6 +48,9 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
 
         private ContingencyTreeCell() {
             setOnDragDropped(event -> {
+                if (event.getGestureSource() == contingencyTree) {
+                    remove();
+                }
                 Dragboard db = event.getDragboard();
                 boolean success = false;
                 if (db.hasContent(EquipmentInfo.DATA_FORMAT)) {
@@ -129,10 +130,26 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
 
             case "LINE":
             case "TWO_WINDINGS_TRANSFORMER":
+            case "BRANCH":
                 return new BranchContingency(equipmentInfo.getIdAndName().getId());
 
             default:
                 return null;
+        }
+    }
+
+    private EquipmentInfo createEquipmentInfo(ContingencyElement contingencyElement) {
+        ContingencyElementType type = contingencyElement.getType();
+        if (type.equals(ContingencyElementType.BUSBAR_SECTION)) {
+            return new EquipmentInfo(new IdAndName(contingencyElement.getId(), contingencyElement.getId()), "BUSBAR_SECTION");
+        } else if (type.equals(ContingencyElementType.GENERATOR)) {
+            return new EquipmentInfo(new IdAndName(contingencyElement.getId(), contingencyElement.getId()), "GENERATOR");
+        } else if (type.equals(ContingencyElementType.HVDC_LINE)) {
+            return new EquipmentInfo(new IdAndName(contingencyElement.getId(), contingencyElement.getId()), "HVDC_LINE");
+        } else if (type.equals(ContingencyElementType.BRANCH)) {
+            return new EquipmentInfo(new IdAndName(contingencyElement.getId(), contingencyElement.getId()), "BRANCH");
+        } else {
+            return null;
         }
     }
 
@@ -155,8 +172,7 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         contingencyTree.setShowRoot(false);
         contingencyTree.setOnDragOver(event -> {
             Dragboard db = event.getDragboard();
-            if (event.getGestureSource() != contingencyTree &&
-                    db.hasContent(EquipmentInfo.DATA_FORMAT)) {
+            if (db.hasContent(EquipmentInfo.DATA_FORMAT)) {
                 EquipmentInfo equipmentInfo = (EquipmentInfo) db.getContent(EquipmentInfo.DATA_FORMAT);
                 ContingencyElement element = createElement(equipmentInfo);
                 if (element != null) {
@@ -164,6 +180,17 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
                 }
             }
             event.consume();
+        });
+
+        contingencyTree.setOnDragDetected(event -> {
+            TreeItem<Object> item = contingencyTree.getSelectionModel().getSelectedItem();
+            if (item.getValue() instanceof ContingencyElement) {
+                Dragboard db = contingencyTree.startDragAndDrop(TransferMode.ANY);
+                ClipboardContent content = new ClipboardContent();
+                content.put(EquipmentInfo.DATA_FORMAT, createEquipmentInfo((ContingencyElement) item.getValue()));
+                db.setContent(content);
+                event.consume();
+            }
         });
 
         ContextMenu contingencyMenu = createContingencyMenu();
