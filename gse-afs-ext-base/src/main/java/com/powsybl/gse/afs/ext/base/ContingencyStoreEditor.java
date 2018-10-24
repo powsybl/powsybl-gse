@@ -283,6 +283,29 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         return new ContextMenu(removeItem);
     }
 
+    private boolean alertSave() {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setHeaderText("'" + this.store.getName() + "' " + RESOURCE_BUNDLE.getString("UnsavedQuitConfirmation"));
+        ButtonType saveAndContinue = new ButtonType(RESOURCE_BUNDLE.getString("SaveAndContinue"));
+        ButtonType dontSaveAndContinue = new ButtonType(RESOURCE_BUNDLE.getString("DontSaveAndContinue"));
+        ButtonType cancel = new ButtonType(RESOURCE_BUNDLE.getString("Cancel"));
+
+        alert.getButtonTypes().setAll(saveAndContinue, dontSaveAndContinue, cancel);
+
+        Optional<ButtonType> result = alert.showAndWait();
+        return result.map(type -> {
+            if (type == saveAndContinue) {
+                save();
+                return true;
+            } else if (type == dontSaveAndContinue) {
+                saved.set(true);
+                return true;
+            } else {
+                return false;
+            }
+        }).orElse(false);
+    }
+
     @Override
     public void save() {
         if (!saved.get()) {
@@ -303,6 +326,14 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
 
     @Override
     public void dispose() {
-        // nothing to dispose
+        //noting to dispose
+    }
+
+    @Override
+    public boolean canBeClosed() {
+        if (!saved.getValue()) {
+            return alertSave();
+        }
+        return true;
     }
 }

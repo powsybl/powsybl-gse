@@ -56,6 +56,13 @@ public class GseApp extends Application {
         }
 
         stage.show();
+
+        stage.setOnCloseRequest(event -> {
+            gsePane.dispose();
+            if (!gsePane.canBeClosed()) {
+                event.consume();
+            }
+        });
     }
 
     @Override
@@ -76,7 +83,6 @@ public class GseApp extends Application {
     @Override
     public void stop() throws Exception {
         super.stop();
-        gsePane.dispose();
         appData.close();
         computationManager.close();
         executor.shutdownNow();

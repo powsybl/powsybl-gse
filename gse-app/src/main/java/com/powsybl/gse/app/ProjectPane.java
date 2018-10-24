@@ -56,6 +56,8 @@ public class ProjectPane extends Tab {
 
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
 
+    private int tabsOpen = 0;
+
     private static class TabKey {
 
         private final String nodeId;
@@ -682,7 +684,15 @@ public class ProjectPane extends Tab {
         Node graphic = viewerExtension.getMenuGraphic(file);
         ProjectFileViewer viewer = viewerExtension.newViewer(file, getContent().getScene(), context);
         Tab tab = new MyTab(tabName, viewer.getContent());
-        tab.setOnClosed(event -> viewer.dispose());
+        tabsOpen++;
+        tab.setOnCloseRequest(event -> {
+            if (!viewer.canBeClosed()) {
+                event.consume();
+            } else {
+                viewer.dispose();
+            }
+        });
+        tab.setOnClosed(event -> tabsOpen--);
         tab.setGraphic(graphic);
         tab.setTooltip(new Tooltip(tabName));
         tab.setUserData(tabKey);
@@ -868,5 +878,9 @@ public class ProjectPane extends Tab {
     public void dispose() {
         taskItems.dispose();
         closeViews();
+    }
+
+    public boolean canBeClosed() {
+        return tabsOpen == 0;
     }
 }

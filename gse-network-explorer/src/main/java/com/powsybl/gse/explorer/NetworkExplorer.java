@@ -360,4 +360,9 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         projectCase.removeListener(this);
     }
 
+    @Override
+    public boolean canBeClosed() {
+        return true;
+    }
+
 }
