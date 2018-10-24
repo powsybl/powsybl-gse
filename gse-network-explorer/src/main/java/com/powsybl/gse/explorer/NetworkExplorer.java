@@ -134,6 +134,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         showName.selectedProperty().addListener((observable, oldValue, newValue) -> {
             substationsView.refresh();
             substationDetailedView.refresh();
+            refreshEquipmentView(substationDetailedView.getSelectionModel().getSelectedItem());
         });
 
         substationFilterInput.textProperty().addListener(obs -> {
@@ -287,6 +288,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     }
 
     private void fillSubstationDetailViewWithQueryResults(IdAndName substationIdAndName, List<VoltageLevelQueryResult> voltageLevelQueryResults) {
+        equipmentTabs.getTabs().clear();
         if (voltageLevelQueryResults != null) {
             TreeItem<EquipmentInfo> substationItem = new TreeItem<>(new EquipmentInfo(substationIdAndName, "SUBSTATION"));
             substationItem.setExpanded(true);
@@ -329,8 +331,8 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
             linePiModelDiagram.g2Property().set(result.getG2());
             linePiModelDiagram.b1Property().set(result.getB1());
             linePiModelDiagram.b2Property().set(result.getB2());
-            linePiModelDiagram.voltageLevel1Property().set(result.getVoltageLevel1());
-            linePiModelDiagram.voltageLevel2Property().set(result.getVoltageLevel2());
+            linePiModelDiagram.voltageLevel1Property().set(showName.isSelected() ? result.getNameVoltageLevel1() : result.getIdVoltageLevel1());
+            linePiModelDiagram.voltageLevel2Property().set(showName.isSelected() ? result.getNameVoltageLevel2() : result.getIdVoltageLevel2());
         }, equipmentExecutor);
     }
 
