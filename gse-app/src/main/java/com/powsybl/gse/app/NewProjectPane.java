@@ -63,7 +63,16 @@ public class NewProjectPane extends GridPane {
         });
         folderTextField.textProperty().bind(Bindings.createObjectBinding(() -> {
             Folder folder = folderProperty.get();
-            return folder != null ? folder.getPath().toString() : null;
+            if (folder == null) {
+                return null;
+            } else {
+                String path = folder.getPath().toString();
+                if (path.substring(path.length() - 1).equals(":")) {
+                    return path + "/";
+                } else {
+                    return path;
+                }
+            }
         }, folderProperty));
         setVgap(5);
         setHgap(5);
