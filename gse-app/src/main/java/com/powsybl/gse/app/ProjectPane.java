@@ -559,25 +559,13 @@ public class ProjectPane extends Tab {
 
     private MenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.1em"));
-        menuItem.setOnAction(event -> {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle(RESOURCE_BUNDLE.getString("ConfirmationDialog"));
-            String headerText;
-            if (selectedTreeItems.size() == 1) {
-                ProjectNode node = (ProjectNode) selectedTreeItems.get(0).getValue();
-                headerText = String.format(RESOURCE_BUNDLE.getString("FileWillBeDeleted"), node.getName());
-            } else if (selectedTreeItems.size() > 1) {
-                String names = selectedTreeItems.stream()
-                        .map(selectedTreeItem -> selectedTreeItem.getValue().toString())
-                        .collect(Collectors.joining(", "));
-                headerText = String.format(RESOURCE_BUNDLE.getString("FilesWillBeDeleted"), names);
-            } else {
-                throw new AssertionError();
-            }
-            alert.setHeaderText(headerText);
-            alert.setContentText(RESOURCE_BUNDLE.getString("DoYouConfirm"));
-            Optional<ButtonType> result = alert.showAndWait();
-            if (result.get() == ButtonType.OK) {
+        menuItem.setOnAction(event -> deleteNodesAlert(selectedTreeItems));
+        return menuItem;
+    }
+
+    private void deleteNodesAlert(List<? extends TreeItem<Object>> selectedTreeItems){
+        GseAlerts.deleteNodesAlert(selectedTreeItems).showAndWait().ifPresent(buttonType -> {
+            if(buttonType == ButtonType.OK){
                 List<TreeItem<Object>> parentTreeItems = new ArrayList<>();
                 for (TreeItem<Object> selectedTreeItem : selectedTreeItems) {
                     ProjectNode node = (ProjectNode) selectedTreeItem.getValue();
@@ -594,29 +582,31 @@ public class ProjectPane extends Tab {
                 }
             }
         });
-        return menuItem;
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
-        menuItem.setOnAction(event -> {
-            TextInputDialog dialog = new TextInputDialog(selectedTreeItem.getValue().toString());
-            dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
-            dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
-            dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
-            Optional<String> result = dialog.showAndWait();
-            result.ifPresent(newname -> {
-                if (selectedTreeItem.getValue() instanceof ProjectNode) {
-                    ProjectNode selectedTreeNode = (ProjectNode) selectedTreeItem.getValue();
-                    selectedTreeNode.rename(newname);
-                    refresh(selectedTreeItem.getParent());
-                    treeView.getSelectionModel().clearSelection();
-                    treeView.getSelectionModel().select(selectedTreeItem);
-                }
-            });
-
-        });
+        menuItem.setOnAction(event -> renameTextInputDialog(selectedTreeItem));
         return menuItem;
+    }
+
+    private void renameTextInputDialog(TreeItem selectedTreeItem){
+        TextInputDialog dialog = new TextInputDialog(selectedTreeItem.getValue().toString());
+        dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFile"));
+        dialog.setHeaderText(null);
+        dialog.setGraphic(null);
+        dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
+        Optional<String> result = dialog.showAndWait();
+        result.ifPresent(newname -> {
+            if (selectedTreeItem.getValue() instanceof ProjectNode) {
+                ProjectNode selectedTreeNode = (ProjectNode) selectedTreeItem.getValue();
+                selectedTreeNode.rename(newname);
+                refresh(selectedTreeItem.getParent());
+                treeView.getSelectionModel().clearSelection();
+                treeView.getSelectionModel().select(selectedTreeItem);
+            }
+        });
+
     }
 
     /**

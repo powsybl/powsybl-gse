@@ -594,24 +594,28 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private MenuItem createRenameProjectMenuItem() {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size(ICON_SIZE));
-        menuItem.setOnAction(event -> {
-            TextInputDialog dialog = new TextInputDialog(tree.getSelectionModel().getSelectedItem().getValue().toString());
-            dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
-            dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
-            dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
-            Optional<String> result = dialog.showAndWait();
-            result.ifPresent(newname -> {
-                TreeItem<N> selectedTreeItem = tree.getSelectionModel().getSelectedItem();
-                if (selectedTreeItem.getValue() instanceof Node) {
-                    Node localSelectednode = (Node) selectedTreeItem.getValue();
-                    localSelectednode.rename(newname);
-                    refreshTreeItem(selectedTreeItem.getParent());
-                    tree.getSelectionModel().clearSelection();
-                    tree.getSelectionModel().select(selectedTreeItem.getParent());
-                }
-            });
-        });
+        menuItem.setOnAction(event -> renameTextInputDialog());
         return menuItem;
+    }
+
+    private void renameTextInputDialog() {
+        TextInputDialog dialog = new TextInputDialog(tree.getSelectionModel().getSelectedItem().getValue().toString());
+        dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFile"));
+        dialog.setHeaderText(null);
+        dialog.setGraphic(null);
+        dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
+        Optional<String> result = dialog.showAndWait();
+        result.ifPresent(newname -> {
+            TreeItem<N> selectedTreeItem = tree.getSelectionModel().getSelectedItem();
+            if (selectedTreeItem.getValue() instanceof Node) {
+                Node localSelectednode = (Node) selectedTreeItem.getValue();
+                localSelectednode.rename(newname);
+                refreshTreeItem(selectedTreeItem.getParent());
+                tree.getSelectionModel().clearSelection();
+                tree.getSelectionModel().select(selectedTreeItem.getParent());
+            }
+        });
+
     }
 
     private MenuItem createDeleteNodeMenuItem(List<? extends TreeItem<N>> selectedTreeItems) {
@@ -633,27 +637,11 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     public void createDeleteAlert(List<? extends TreeItem<N>> selectedTreeItems) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle(RESOURCE_BUNDLE.getString("ConfirmationDialog"));
-        String headerText;
-        if (selectedTreeItems.size() == 1) {
-            Node node = (Node) selectedTreeItems.get(0).getValue();
-            headerText = String.format(RESOURCE_BUNDLE.getString("FileWillBeDeleted"), node.getName());
-        } else if (selectedTreeItems.size() > 1) {
-            String names = selectedTreeItems.stream()
-                    .map(selectedItem -> selectedItem.getValue().toString())
-                    .collect(Collectors.joining(", "));
-            headerText = String.format(RESOURCE_BUNDLE.getString("FilesWillBeDeleted"), names);
-        } else {
-            throw new AssertionError();
-        }
-        alert.setHeaderText(headerText);
-        alert.setContentText(RESOURCE_BUNDLE.getString("DoYouConfirm"));
-        alert.showAndWait().ifPresent(result -> {
-            if (result == ButtonType.OK) {
-                setOnOkButton(selectedTreeItems);
-            }
-        });
+       GseAlerts.deleteNodesAlert(selectedTreeItems).showAndWait().ifPresent(result -> {
+           if (result == ButtonType.OK) {
+               setOnOkButton(selectedTreeItems);
+           }
+       });
     }
 
     private void setOnOkButton(List<? extends TreeItem<N>> selectedTreeItems) {
