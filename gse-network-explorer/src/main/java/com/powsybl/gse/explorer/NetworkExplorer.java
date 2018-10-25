@@ -32,9 +32,7 @@ import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.input.ClipboardContent;
-import javafx.scene.input.Dragboard;
-import javafx.scene.input.TransferMode;
+import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.paint.Color;
@@ -156,17 +154,14 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         substationsView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> refreshSubstationDetailView(newValue));
 
         substationDetailedView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> refreshEquipmentView(newValue));
-        substationDetailedView.setOnDragDetected(event -> {
-            EquipmentInfo selectedEquipmentInfo = substationDetailedView.getSelectionModel().getSelectedItem().getValue();
 
-            Dragboard db = substationDetailedView.startDragAndDrop(TransferMode.ANY);
-
-            ClipboardContent content = new ClipboardContent();
-            content.put(EquipmentInfo.DATA_FORMAT, selectedEquipmentInfo);
-            db.setContent(content);
-
-            event.consume();
+        substationDetailedView.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.CONTROL) {
+                substationDetailedView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+            }
         });
+
+        substationDetailedView.setOnDragDetected(this::sendDraggedElements);
 
         voltageLevelQueryResultListType = mapper.getTypeFactory().constructCollectionType(List.class, VoltageLevelQueryResult.class);
         idAndNameListType = mapper.getTypeFactory().constructCollectionType(List.class, IdAndName.class);
@@ -191,6 +186,27 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     @Override
     public Node getContent() {
         return this;
+    }
+
+    private void sendDraggedElements(MouseEvent event) {
+        SelectionMode selectionMode = substationDetailedView.getSelectionModel().getSelectionMode();
+        Dragboard db = substationDetailedView.startDragAndDrop(TransferMode.ANY);
+        ClipboardContent content = new ClipboardContent();
+        if (selectionMode == SelectionMode.SINGLE) {
+            EquipmentInfo selectedEquipmentInfo = substationDetailedView.getSelectionModel().getSelectedItem().getValue();
+            content.put(EquipmentInfo.DATA_FORMAT, selectedEquipmentInfo);
+        } else {
+            List<EquipmentInfo> listInfo = new ArrayList<>();
+            for (TreeItem<EquipmentInfo> selectedItem : substationDetailedView.getSelectionModel().getSelectedItems()) {
+                listInfo.add(selectedItem.getValue());
+            }
+            content.put(EquipmentInfo.DATA_FORMAT_LIST, listInfo);
+        }
+
+
+        db.setContent(content);
+
+        event.consume();
     }
 
     private <T> void queryNetwork(String groovyScript, JavaType valueType, Consumer<T> updater, LastTaskOnlyExecutor lastTaskOnlyExecutor) {
