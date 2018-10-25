@@ -171,6 +171,14 @@ public class ProjectPane extends Tab {
         } else if (c.getList().size() == 1) {
             TreeItem<Object> selectedTreeItem = c.getList().get(0);
             Object value = selectedTreeItem.getValue();
+            treeView.setOnKeyPressed((KeyEvent ke) -> {
+                if (ke.getCode() == KeyCode.F2) {
+                    renameTextInputDialog(selectedTreeItem);
+                } else if (ke.getCode() == KeyCode.DELETE) {
+                    deleteNodesAlert(Collections.singletonList(c.getList().get(0)));
+                }
+            });
+
             if (value instanceof ProjectFolder) {
                 treeView.setContextMenu(createFolderContextMenu(selectedTreeItem));
             } else if (value instanceof ProjectFile) {
@@ -181,6 +189,11 @@ public class ProjectPane extends Tab {
             }
         } else {
             treeView.setContextMenu(createMultipleContextMenu(c.getList()));
+            treeView.setOnKeyPressed((KeyEvent ke) -> {
+                if (ke.getCode() == KeyCode.DELETE) {
+                    deleteNodesAlert(c.getList());
+                }
+            });
         }
     }
 

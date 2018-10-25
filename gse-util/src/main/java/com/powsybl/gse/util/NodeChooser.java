@@ -542,6 +542,14 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             N value = selectedTreeItem.getValue();
             if (value instanceof Project) {
                 tree.setContextMenu(createProjectContextMenu(selectedTreeItem));
+                tree.setOnKeyPressed((KeyEvent ke) -> {
+                    if (ke.getCode() == KeyCode.F2) {
+                        renameTextInputDialog();
+                    } else if (ke.getCode() == KeyCode.DELETE) {
+                        createDeleteAlert(Collections.singletonList(c.getList().get(0)));
+                    }
+                });
+
             } else if (value instanceof Folder) {
                 tree.setContextMenu(createFolderContextMenu(selectedTreeItem));
             } else {
@@ -549,6 +557,11 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             }
         } else {
             tree.setContextMenu(createMultipleContextMenu(c.getList()));
+            tree.setOnKeyPressed((KeyEvent ke) -> {
+                if (ke.getCode() == KeyCode.DELETE) {
+                    createDeleteAlert(c.getList());
+                }
+            });
         }
     }
 
