@@ -650,11 +650,11 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     public void createDeleteAlert(List<? extends TreeItem<N>> selectedTreeItems) {
-       GseAlerts.deleteNodesAlert(selectedTreeItems).showAndWait().ifPresent(result -> {
-           if (result == ButtonType.OK) {
-               setOnOkButton(selectedTreeItems);
-           }
-       });
+        GseAlerts.deleteNodesAlert(selectedTreeItems).showAndWait().ifPresent(result -> {
+            if (result == ButtonType.OK) {
+                setOnOkButton(selectedTreeItems);
+            }
+        });
     }
 
     private void setOnOkButton(List<? extends TreeItem<N>> selectedTreeItems) {

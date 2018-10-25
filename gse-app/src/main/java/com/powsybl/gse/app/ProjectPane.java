@@ -576,9 +576,9 @@ public class ProjectPane extends Tab {
         return menuItem;
     }
 
-    private void deleteNodesAlert(List<? extends TreeItem<Object>> selectedTreeItems){
+    private void deleteNodesAlert(List<? extends TreeItem<Object>> selectedTreeItems) {
         GseAlerts.deleteNodesAlert(selectedTreeItems).showAndWait().ifPresent(buttonType -> {
-            if(buttonType == ButtonType.OK){
+            if (buttonType == ButtonType.OK) {
                 List<TreeItem<Object>> parentTreeItems = new ArrayList<>();
                 for (TreeItem<Object> selectedTreeItem : selectedTreeItems) {
                     ProjectNode node = (ProjectNode) selectedTreeItem.getValue();
@@ -603,7 +603,7 @@ public class ProjectPane extends Tab {
         return menuItem;
     }
 
-    private void renameTextInputDialog(TreeItem selectedTreeItem){
+    private void renameTextInputDialog(TreeItem selectedTreeItem) {
         TextInputDialog dialog = new TextInputDialog(selectedTreeItem.getValue().toString());
         dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFile"));
         dialog.setHeaderText(null);
