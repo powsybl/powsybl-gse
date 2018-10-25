@@ -105,6 +105,12 @@ public class GroovyCodeEditor extends MasterDetailPane {
         resetDividerPosition();
     }
 
+    public void insertCode(String code) {
+        int caret  = codeArea.getCaretPosition();
+        String originalString = codeArea.getText();
+        setCode(originalString.substring(0, caret) + code + originalString.substring(caret));
+    }
+
     public String getCode() {
         return codeArea.getText();
     }
