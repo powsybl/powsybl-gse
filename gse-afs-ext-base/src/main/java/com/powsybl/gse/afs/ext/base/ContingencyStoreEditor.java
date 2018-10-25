@@ -13,6 +13,7 @@ import com.powsybl.gse.spi.Savable;
 import com.powsybl.gse.util.EquipmentInfo;
 import com.powsybl.gse.util.Glyph;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
@@ -257,13 +258,15 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         dialog.setTitle(RESOURCE_BUNDLE.getString("RenameContingency"));
         dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
         dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
+        TextField inputField = dialog.getEditor();
+        BooleanBinding isInvalid = Bindings.createBooleanBinding(() -> inputField.getText().equals(contingency.getId()) || inputField.getText().isEmpty(),
+                inputField.textProperty());
+        dialog.getDialogPane().lookupButton(ButtonType.OK).disableProperty().bind(isInvalid);
         Optional<String> result = dialog.showAndWait();
         result.ifPresent(newName -> {
-            if (!newName.isEmpty() && !newName.equals(contingency.getId())) {
-                contingency.setId(newName);
-                contingencyTree.refresh();
-                saved.set(false);
-            }
+            contingency.setId(newName);
+            contingencyTree.refresh();
+            saved.set(false);
         });
     }
 
