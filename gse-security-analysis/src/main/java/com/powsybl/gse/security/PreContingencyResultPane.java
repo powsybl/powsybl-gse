@@ -15,6 +15,7 @@ import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.geometry.Side;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableView;
@@ -41,7 +42,9 @@ class PreContingencyResultPane extends BorderPane implements LimitViolationsResu
 
     private final TableView<LimitViolation> tableView = new TableView<>(sortedViolations);
 
-    private final DecimalColumnFactory<LimitViolation, Double> columnFactory = new DecimalColumnFactory<>(0);
+    private final DecimalColumnFactory<LimitViolation, Double> decimalColumnFactory = new DecimalColumnFactory<>(0);
+
+    private final StringColumnFactory<LimitViolation, String> stringColumnFactory = new StringColumnFactory<>();
 
     private final LimitViolationsFilterPane filterPane;
 
@@ -50,22 +53,25 @@ class PreContingencyResultPane extends BorderPane implements LimitViolationsResu
 
         TableColumn<LimitViolation, String> equipmentColumn = createColumn("Equipment");
         equipmentColumn.setPrefWidth(200);
+        equipmentColumn.setCellFactory(stringColumnFactory);
         equipmentColumn.setCellValueFactory(callback -> new SimpleObjectProperty<>(callback.getValue().getSubjectId()));
         TableColumn<LimitViolation, String> violationTypeColumn = createColumn("ViolationType");
         violationTypeColumn.setPrefWidth(150);
+        violationTypeColumn.setCellFactory(stringColumnFactory);
         violationTypeColumn.setCellValueFactory(callback -> new SimpleObjectProperty<>(callback.getValue().getLimitType().name()));
         TableColumn<LimitViolation, String> violationNameColumn = createColumn("ViolationName");
         violationNameColumn.setPrefWidth(150);
+        violationNameColumn.setCellFactory(stringColumnFactory);
         violationNameColumn.setCellValueFactory(callback -> new SimpleObjectProperty<>(callback.getValue().getLimitName()));
         TableColumn<LimitViolation, Double> limitColumn = createColumn("Limit");
-        limitColumn.setCellFactory(columnFactory);
+        limitColumn.setCellFactory(decimalColumnFactory);
         limitColumn.setCellValueFactory(callback -> new SimpleObjectProperty<>(callback.getValue().getLimit()));
         TableColumn<LimitViolation, Double> valueColumn = createColumn("Value");
-        valueColumn.setCellFactory(columnFactory);
+        valueColumn.setCellFactory(decimalColumnFactory);
         valueColumn.setCellValueFactory(callback -> new SimpleObjectProperty<>(callback.getValue().getValue()));
         TableColumn<LimitViolation, Double> loadColumn = createColumn("Load");
         loadColumn.setPrefWidth(150);
-        loadColumn.setCellFactory(columnFactory);
+        loadColumn.setCellFactory(decimalColumnFactory);
         loadColumn.setCellValueFactory(callback -> {
             LimitViolation violation = callback.getValue();
             double load = violation.getValue() / (violation.getLimit() * violation.getLimitReduction()) * 100;
@@ -77,6 +83,13 @@ class PreContingencyResultPane extends BorderPane implements LimitViolationsResu
                                       limitColumn,
                                       valueColumn,
                                       loadColumn);
+
+        // enable multi-selection
+        tableView.getSelectionModel().setCellSelectionEnabled(true);
+        tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        // enable copy/paste
+        TableUtils.installCopyPasteHandler(tableView, true);
 
         filterPane = new LimitViolationsFilterPane(this);
         HiddenSidesPane hiddenSidesPane = new HiddenSidesPane();
@@ -116,7 +129,7 @@ class PreContingencyResultPane extends BorderPane implements LimitViolationsResu
         if (precision < 0) {
             throw new IllegalArgumentException("Bad precision: " + precision);
         }
-        columnFactory.setPrecision(precision);
+        decimalColumnFactory.setPrecision(precision);
         tableView.refresh();
     }
 

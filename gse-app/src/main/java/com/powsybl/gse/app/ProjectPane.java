@@ -100,17 +100,12 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private static class MoveContext {
-        private Object source;
-        private TreeItem sourceTreeItem;
-        private TreeItem sourceparentTreeItem;
-    }
 
     private int counter;
 
     private boolean success;
 
-    private MoveContext moveContext;
+    private DragAndDropMove dragAndDropMove;
 
     private final Project project;
 
@@ -306,7 +301,7 @@ public class ProjectPane extends Tab {
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
-        if (item instanceof ProjectFolder && item != moveContext.source) {
+        if (item instanceof ProjectFolder && item != dragAndDropMove.getSource()) {
             int count = 0;
             treeItemChildrenSize(treeItem, count);
             textFillColor(treeCell);
@@ -329,10 +324,10 @@ public class ProjectPane extends Tab {
     }
 
     private void dragDetectedEvent(Object value, TreeItem<Object> treeItem, MouseEvent event) {
-        moveContext = new MoveContext();
-        moveContext.source = value;
-        moveContext.sourceTreeItem = treeItem;
-        moveContext.sourceparentTreeItem = moveContext.sourceTreeItem.getParent();
+        dragAndDropMove = new DragAndDropMove();
+        dragAndDropMove.setSource(value);
+        dragAndDropMove.setSourceTreeItem(treeItem);
+
         if (value instanceof ProjectNode && treeItem != treeView.getRoot()) {
             Dragboard db = treeView.startDragAndDrop(TransferMode.ANY);
             ClipboardContent cb = new ClipboardContent();
@@ -343,14 +338,14 @@ public class ProjectPane extends Tab {
     }
 
     private void dragDroppedEvent(Object value, TreeItem<Object> treeItem, DragEvent event, ProjectNode projectNode) {
-        if (value instanceof ProjectFolder && value != moveContext.source) {
+        if (value instanceof ProjectFolder && value != dragAndDropMove.getSource()) {
             ProjectFolder projectFolder = (ProjectFolder) projectNode;
             int count = 0;
             success = false;
             treeItemChildrenSize(treeItem, count);
             accepTransferDrag(projectFolder, success);
             event.setDropCompleted(success);
-            refresh(moveContext.sourceparentTreeItem);
+            refresh(dragAndDropMove.getSourceTreeItem().getParent());
             refresh(treeItem);
             event.consume();
         }
@@ -364,7 +359,7 @@ public class ProjectPane extends Tab {
                 for (ProjectNode node : treeItemFolder.getChildren()) {
                     if (node == null) {
                         break;
-                    } else if (node.getName().equals(moveContext.source.toString())) {
+                    } else if (node.getName().equals(dragAndDropMove.getSource().toString())) {
                         counter++;
                     }
                 }
@@ -377,7 +372,7 @@ public class ProjectPane extends Tab {
         if (getCounter() >= 1) {
             nameAlreadyExistsAlert();
         } else if (getCounter() < 1) {
-            ProjectNode monfichier = (ProjectNode) moveContext.source;
+            ProjectNode monfichier = (ProjectNode) dragAndDropMove.getSource();
             monfichier.moveTo(projectFolder);
             success = true;
         }
