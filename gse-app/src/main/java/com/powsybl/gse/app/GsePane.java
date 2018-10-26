@@ -157,7 +157,11 @@ public class GsePane extends StackPane {
 
         appBar.getOpenButton().setOnAction(event -> {
             Optional<Project> project = NodeChooser.showAndWaitDialog(getScene().getWindow(), data, context, Project.class);
-            project.ifPresent(this::addProject);
+            project.ifPresent(selectedProject -> {
+                if (!isProjectOpen(selectedProject)) {
+                    addProject(selectedProject);
+                }
+            });
         });
 
         ContextMenu contextMenu = new ContextMenu();
