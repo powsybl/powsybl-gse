@@ -13,13 +13,7 @@ import javafx.util.Callback;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class DecimalColumnFactory<X, T extends Number> implements Callback<TableColumn<X, T>, TableCell<X, T>> {
-
-    private int precision;
-
-    public DecimalColumnFactory(int precision) {
-        this.precision = precision;
-    }
+public class StringColumnFactory<X, T extends String> implements Callback<TableColumn<X, T>, TableCell<X, T>> {
 
     @Override
     public TableCell<X, T> call(TableColumn<X, T> param) {
@@ -27,21 +21,12 @@ public class DecimalColumnFactory<X, T extends Number> implements Callback<Table
 
         cell.itemProperty().addListener((obs, oldValue, newValue) -> {
             if (newValue != null) {
-                String format = "%." + precision + "f";
-                cell.setText(String.format(format, newValue.doubleValue()));
+                cell.setText(newValue.toString());
             } else {
                 cell.setText("");
             }
         });
         return cell;
-    }
-
-    public int getPrecision() {
-        return precision;
-    }
-
-    public void setPrecision(int precision) {
-        this.precision = precision;
     }
 }
 
