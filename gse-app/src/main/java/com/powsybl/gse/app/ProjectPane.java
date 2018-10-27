@@ -124,6 +124,10 @@ public class ProjectPane extends Tab {
 
     private final TaskMonitorPane taskMonitorPane;
 
+    private  MenuItem deleteMenuItem;
+
+    private  MenuItem renameMenuItem;
+
     private static class CreationTaskList {
 
         private final Multimap<String, String> tasks = HashMultimap.create();
@@ -171,14 +175,6 @@ public class ProjectPane extends Tab {
         } else if (c.getList().size() == 1) {
             TreeItem<Object> selectedTreeItem = c.getList().get(0);
             Object value = selectedTreeItem.getValue();
-            treeView.setOnKeyPressed((KeyEvent ke) -> {
-                if (ke.getCode() == KeyCode.F2) {
-                    renameTextInputDialog(selectedTreeItem);
-                } else if (ke.getCode() == KeyCode.DELETE) {
-                    deleteNodesAlert(Collections.singletonList(c.getList().get(0)));
-                }
-            });
-
             if (value instanceof ProjectFolder) {
                 treeView.setContextMenu(createFolderContextMenu(selectedTreeItem));
             } else if (value instanceof ProjectFile) {
@@ -189,11 +185,6 @@ public class ProjectPane extends Tab {
             }
         } else {
             treeView.setContextMenu(createMultipleContextMenu(c.getList()));
-            treeView.setOnKeyPressed((KeyEvent ke) -> {
-                if (ke.getCode() == KeyCode.DELETE) {
-                    deleteNodesAlert(c.getList());
-                }
-            });
         }
     }
 
@@ -571,9 +562,10 @@ public class ProjectPane extends Tab {
     // contextual menu
 
     private MenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
-        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.1em"));
-        menuItem.setOnAction(event -> deleteNodesAlert(selectedTreeItems));
-        return menuItem;
+        deleteMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.1em"));
+        deleteMenuItem.setOnAction(event -> deleteNodesAlert(selectedTreeItems));
+        deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
+        return deleteMenuItem;
     }
 
     private void deleteNodesAlert(List<? extends TreeItem<Object>> selectedTreeItems) {
@@ -598,9 +590,10 @@ public class ProjectPane extends Tab {
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
-        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
-        menuItem.setOnAction(event -> renameTextInputDialog(selectedTreeItem));
-        return menuItem;
+        renameMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
+        renameMenuItem.setOnAction(event -> renameTextInputDialog(selectedTreeItem));
+        renameMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.F2));
+        return renameMenuItem;
     }
 
     private void renameTextInputDialog(TreeItem selectedTreeItem) {

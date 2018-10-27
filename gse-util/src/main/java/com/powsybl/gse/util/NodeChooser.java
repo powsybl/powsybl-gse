@@ -53,6 +53,10 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private int counter;
     private boolean success;
 
+    private MenuItem deleteMenuItem;
+
+    private MenuItem renameMenuItem;
+
     public interface TreeModel<N, F, D> {
         Collection<N> getChildren(D folder);
 
@@ -606,9 +610,10 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private MenuItem createRenameProjectMenuItem() {
-        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size(ICON_SIZE));
-        menuItem.setOnAction(event -> renameTextInputDialog());
-        return menuItem;
+        renameMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size(ICON_SIZE));
+        renameMenuItem.setOnAction(event -> renameTextInputDialog());
+        renameMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.F2));
+        return renameMenuItem;
     }
 
     private void renameTextInputDialog() {
@@ -632,9 +637,10 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private MenuItem createDeleteNodeMenuItem(List<? extends TreeItem<N>> selectedTreeItems) {
-        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size(ICON_SIZE));
-        menuItem.setOnAction(event -> createDeleteAlert(selectedTreeItems));
-        return menuItem;
+        deleteMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size(ICON_SIZE));
+        deleteMenuItem.setOnAction(event -> createDeleteAlert(selectedTreeItems));
+        deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
+        return deleteMenuItem;
     }
 
     private void deleleFolder(Folder folder) {
