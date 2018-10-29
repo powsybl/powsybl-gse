@@ -9,7 +9,6 @@ package com.powsybl.gse.app;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.panemu.tiwulfx.control.DetachableTabPane;
-import com.panemu.tiwulfx.table.SearchMenuItemBase;
 import com.powsybl.afs.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.*;
@@ -124,10 +123,6 @@ public class ProjectPane extends Tab {
     private final TaskItemList taskItems;
 
     private final TaskMonitorPane taskMonitorPane;
-
-    private  MenuItem deleteMenuItem;
-
-    private  MenuItem renameMenuItem;
 
     private static class CreationTaskList {
 
@@ -568,7 +563,7 @@ public class ProjectPane extends Tab {
     // contextual menu
 
     private MenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
-        deleteMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.1em"));
+        MenuItem deleteMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.1em"));
         deleteMenuItem.setOnAction(event -> deleteNodesAlert(selectedTreeItems));
         deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
         return deleteMenuItem;
@@ -596,7 +591,7 @@ public class ProjectPane extends Tab {
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
-        renameMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
+        MenuItem renameMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
         renameMenuItem.setOnAction(event -> renameTextInputDialog(selectedTreeItem));
         return renameMenuItem;
     }
