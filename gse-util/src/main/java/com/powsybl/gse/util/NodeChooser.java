@@ -549,8 +549,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 tree.setOnKeyPressed((KeyEvent ke) -> {
                     if (ke.getCode() == KeyCode.F2) {
                         renameTextInputDialog();
-                    } else if (ke.getCode() == KeyCode.DELETE) {
-                        createDeleteAlert(Collections.singletonList(c.getList().get(0)));
                     }
                 });
 
@@ -561,11 +559,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             }
         } else {
             tree.setContextMenu(createMultipleContextMenu(c.getList()));
-            tree.setOnKeyPressed((KeyEvent ke) -> {
-                if (ke.getCode() == KeyCode.DELETE) {
-                    createDeleteAlert(c.getList());
-                }
-            });
         }
     }
 
@@ -612,7 +605,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private MenuItem createRenameProjectMenuItem() {
         renameMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size(ICON_SIZE));
         renameMenuItem.setOnAction(event -> renameTextInputDialog());
-        renameMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.F2));
         return renameMenuItem;
     }
 

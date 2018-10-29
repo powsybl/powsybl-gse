@@ -9,6 +9,7 @@ package com.powsybl.gse.app;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.panemu.tiwulfx.control.DetachableTabPane;
+import com.panemu.tiwulfx.table.SearchMenuItemBase;
 import com.powsybl.afs.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.*;
@@ -175,6 +176,11 @@ public class ProjectPane extends Tab {
         } else if (c.getList().size() == 1) {
             TreeItem<Object> selectedTreeItem = c.getList().get(0);
             Object value = selectedTreeItem.getValue();
+            treeView.setOnKeyPressed((KeyEvent ke) -> {
+                if (ke.getCode() == KeyCode.F2) {
+                    renameTextInputDialog(selectedTreeItem);
+                }
+            });
             if (value instanceof ProjectFolder) {
                 treeView.setContextMenu(createFolderContextMenu(selectedTreeItem));
             } else if (value instanceof ProjectFile) {
@@ -592,7 +598,6 @@ public class ProjectPane extends Tab {
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
         renameMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
         renameMenuItem.setOnAction(event -> renameTextInputDialog(selectedTreeItem));
-        renameMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.F2));
         return renameMenuItem;
     }
 
