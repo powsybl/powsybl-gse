@@ -43,13 +43,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private static final String ICON_SIZE = "1.1em";
 
-    private static class MoveContext {
-        private Object source;
-        private TreeItem sourceTreeItem;
-        private TreeItem sourceparentTreeItem;
-    }
-
-    private MoveContext moveContext;
+    private DragAndDropMove dragAndDropMove;
     private int counter;
     private boolean success;
 
@@ -452,7 +446,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treetableCell) {
-        if (item instanceof Folder && item != moveContext.source) {
+        if (item instanceof Folder && item != dragAndDropMove.getSource()) {
             int count = 0;
             treeItemChildrenSize(treeTableRow.getTreeItem(), count);
             textFillColor(treetableCell);
@@ -466,10 +460,9 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private void dragDetectedEvent(N value, TreeItem<N> treeItem, MouseEvent event) {
-        moveContext = new MoveContext();
-        moveContext.source = value;
-        moveContext.sourceTreeItem = treeItem;
-        moveContext.sourceparentTreeItem = moveContext.sourceTreeItem.getParent();
+        dragAndDropMove = new DragAndDropMove();
+        dragAndDropMove.setSource(value);
+        dragAndDropMove.setSourceTreeItem(treeItem);
         if (value instanceof Project && treeItem != tree.getRoot()) {
             Dragboard db = tree.startDragAndDrop(TransferMode.ANY);
             ClipboardContent cb = new ClipboardContent();
@@ -480,14 +473,14 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private void dragDroppedEvent(Object value, TreeItem<N> treeItem, DragEvent event, Node node) {
-        if (value instanceof Folder && value != moveContext.source) {
+        if (value instanceof Folder && value != dragAndDropMove.getSource()) {
             Folder folder = (Folder) node;
             int count = 0;
             success = false;
             treeItemChildrenSize(treeItem, count);
             accepTransferDrag(folder, success);
             event.setDropCompleted(success);
-            refreshTreeItem(moveContext.sourceparentTreeItem);
+            refreshTreeItem(dragAndDropMove.getSourceTreeItem().getParent());
             refreshTreeItem(treeItem);
             event.consume();
         }
@@ -508,7 +501,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 for (Node node : folder.getChildren()) {
                     if (node == null) {
                         break;
-                    } else if (node.getName().equals(moveContext.source.toString())) {
+                    } else if (node.getName().equals(dragAndDropMove.getSource().toString())) {
                         counter++;
                     }
                 }
@@ -521,7 +514,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         if (getCounter() >= 1) {
             GseAlerts.showDraggingError();
         } else if (getCounter() < 1) {
-            Project monfichier = (Project) moveContext.source;
+            Project monfichier = (Project) dragAndDropMove.getSource();
             monfichier.moveTo(folder);
             success = true;
         }
@@ -609,20 +602,17 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private MenuItem createDeleteNodeMenuItem(List<? extends TreeItem<N>> selectedTreeItems) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size(ICON_SIZE));
+        if (selectedTreeItems.size() == 1) {
+            TreeItem<N> selectedTreeItem = selectedTreeItems.get(0);
+            if (selectedTreeItem.getValue() instanceof Folder) {
+                Folder folder = (Folder) selectedTreeItem.getValue();
+                if (!folder.getChildren().isEmpty()) {
+                    menuItem.setDisable(true);
+                }
+            }
+        }
         menuItem.setOnAction(event -> createDeleteAlert(selectedTreeItems));
         return menuItem;
-    }
-
-    private void deleleFolder(Folder folder) {
-        if (folder.getChildren().isEmpty()) {
-            folder.delete();
-        } else if (!folder.getChildren().isEmpty()) {
-            Alert deleteAlert = new Alert(Alert.AlertType.ERROR);
-            deleteAlert.setTitle(RESOURCE_BUNDLE.getString("DeleteError"));
-            deleteAlert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
-            deleteAlert.setContentText(String.format(RESOURCE_BUNDLE.getString("DeletedFolderContainsProjects"), folder.toString()));
-            deleteAlert.showAndWait();
-        }
     }
 
     public void createDeleteAlert(List<? extends TreeItem<N>> selectedTreeItems) {
@@ -641,7 +631,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 selectedProject.delete();
             } else if (selectedTreeItem.getValue() instanceof Folder) {
                 Folder folderSelected = (Folder) selectedTreeItem.getValue();
-                deleleFolder(folderSelected);
+                folderSelected.delete();
             }
             parentTreeItems.add(selectedTreeItem.getParent());
         }
