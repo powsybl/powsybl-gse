@@ -118,7 +118,7 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         return contingencyItem;
     }
 
-    private ContingencyElement createElement(EquipmentInfo equipmentInfo) {
+    private static ContingencyElement createElement(EquipmentInfo equipmentInfo) {
         switch (equipmentInfo.getType()) {
             case "BUSBAR_SECTION":
                 return new BusbarSectionContingency(equipmentInfo.getIdAndName().getId());
@@ -131,6 +131,8 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
 
             case "LINE":
             case "TWO_WINDINGS_TRANSFORMER":
+                return new BranchContingency(equipmentInfo.getIdAndName().getId());
+
             case "BRANCH":
                 return new BranchContingency(equipmentInfo.getIdAndName().getId());
 
@@ -139,7 +141,7 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         }
     }
 
-    private EquipmentInfo createEquipmentInfo(ContingencyElement contingencyElement) {
+    private static EquipmentInfo createEquipmentInfo(ContingencyElement contingencyElement) {
         ContingencyElementType type = contingencyElement.getType();
         if (type.equals(ContingencyElementType.BUSBAR_SECTION)) {
             return new EquipmentInfo(new IdAndName(contingencyElement.getId(), contingencyElement.getId()), "BUSBAR_SECTION");
@@ -171,6 +173,7 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
 
         contingencyTree.setCellFactory(param -> new ContingencyTreeCell());
         contingencyTree.setShowRoot(false);
+
         contingencyTree.setOnDragOver(event -> {
             Dragboard db = event.getDragboard();
             if (db.hasContent(EquipmentInfo.DATA_FORMAT)) {
