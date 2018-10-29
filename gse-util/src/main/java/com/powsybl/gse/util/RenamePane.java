@@ -26,7 +26,7 @@ import java.util.ResourceBundle;
 import java.util.function.Predicate;
 
 /**
- * @author Nassirou Nambiema <nas.housni at
+ * @author Nassirou Nambiema <nassirou.nambiema@rte-france.com>
  */
 public final class RenamePane extends GridPane {
 
