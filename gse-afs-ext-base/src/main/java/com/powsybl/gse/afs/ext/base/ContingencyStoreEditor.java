@@ -300,11 +300,8 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
             if (type == saveAndContinue) {
                 save();
                 return true;
-            } else if (type == dontSaveAndContinue) {
-                saved.set(true);
-                return true;
             } else {
-                return false;
+                return type == dontSaveAndContinue;
             }
         }).orElse(false);
     }
@@ -333,7 +330,7 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
     }
 
     @Override
-    public boolean canBeClosed() {
+    public boolean isClosable() {
         if (!saved.getValue()) {
             return alertSave();
         }

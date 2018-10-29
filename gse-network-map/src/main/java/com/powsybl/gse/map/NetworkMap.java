@@ -198,7 +198,7 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
     }
 
     @Override
-    public boolean canBeClosed() {
+    public boolean isClosable() {
         return true;
     }
 }

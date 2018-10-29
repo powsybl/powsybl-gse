@@ -141,7 +141,7 @@ public class SecurityAnalysisResultViewer extends BorderPane implements ProjectF
     }
 
     @Override
-    public boolean canBeClosed() {
+    public boolean isClosable() {
         return true;
     }
 }

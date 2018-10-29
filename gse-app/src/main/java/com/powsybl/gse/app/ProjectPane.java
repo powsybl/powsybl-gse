@@ -680,14 +680,22 @@ public class ProjectPane extends Tab {
         ProjectFileViewer viewer = viewerExtension.newViewer(file, getContent().getScene(), context);
         Tab tab = new MyTab(tabName, viewer.getContent());
         tabsOpen++;
+        if (this.isClosable()) {
+            this.setClosable(false);
+        }
         tab.setOnCloseRequest(event -> {
-            if (!viewer.canBeClosed()) {
+            if (!viewer.isClosable()) {
                 event.consume();
             } else {
                 viewer.dispose();
             }
         });
-        tab.setOnClosed(event -> tabsOpen--);
+        tab.setOnClosed(event -> {
+            tabsOpen--;
+            if (tabsOpen == 0) {
+                this.setClosable(true);
+            }
+        });
         tab.setGraphic(graphic);
         tab.setTooltip(new Tooltip(tabName));
         tab.setUserData(tabKey);
@@ -873,9 +881,5 @@ public class ProjectPane extends Tab {
     public void dispose() {
         taskItems.dispose();
         closeViews();
-    }
-
-    public boolean canBeClosed() {
-        return tabsOpen == 0;
     }
 }

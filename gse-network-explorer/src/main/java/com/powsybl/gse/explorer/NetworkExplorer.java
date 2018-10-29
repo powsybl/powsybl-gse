@@ -361,7 +361,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     }
 
     @Override
-    public boolean canBeClosed() {
+    public boolean isClosable() {
         return true;
     }
 

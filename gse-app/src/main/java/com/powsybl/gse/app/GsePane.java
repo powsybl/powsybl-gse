@@ -53,7 +53,7 @@ public class GsePane extends StackPane {
     private final Preferences preferences;
     private final Application javaxApplication;
 
-    private boolean canBeClosed = true;
+    private boolean isClosable = true;
 
     public GsePane(GseContext context, AppData data, Application app) {
         this.context = Objects.requireNonNull(context);
@@ -192,18 +192,18 @@ public class GsePane extends StackPane {
     }
 
     public void dispose() {
-        canBeClosed = true;
+        isClosable = true;
         savePreferences();
 
         for (Tab tab : tabPane.getTabs()) {
             ((ProjectPane) tab).dispose();
-            if (!((ProjectPane) tab).canBeClosed()) {
-                canBeClosed = false;
+            if (!tab.isClosable()) {
+                isClosable = false;
             }
         }
     }
 
-    public boolean canBeClosed() {
-        return canBeClosed;
+    public boolean isClosable() {
+        return isClosable;
     }
 }

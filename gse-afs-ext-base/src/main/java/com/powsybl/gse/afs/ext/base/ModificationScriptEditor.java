@@ -136,7 +136,7 @@ public class ModificationScriptEditor extends BorderPane
     }
 
     @Override
-    public boolean canBeClosed() {
+    public boolean isClosable() {
         //TODO: save before close
         return true;
     }
