@@ -67,11 +67,10 @@ public class NewProjectPane extends GridPane {
                 return null;
             } else {
                 String path = folder.getPath().toString();
-                if (path.substring(path.length() - 1).equals(":")) {
-                    return path + "/";
-                } else {
-                    return path;
+                if (!folder.getParent().isPresent()) {
+                    path += "/";
                 }
+                return path;
             }
         }, folderProperty));
         setVgap(5);
