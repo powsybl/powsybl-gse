@@ -11,14 +11,10 @@ import javafx.scene.control.*;
 import javafx.scene.input.*;
 import javafx.scene.paint.Color;
 
-import java.util.ResourceBundle;
-
 /**
  * @author Nassirou Nambiema <nassirou.nambiena@rte-france.com>
  */
 public class DragAndDropMove {
-
-    private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.DragAndDropMove");
 
     private boolean nameFound;
 
@@ -195,7 +191,7 @@ public class DragAndDropMove {
     private void accepTransferDrag(ProjectFolder projectFolder, boolean s) {
         success = s;
         if (nameExists()) {
-            nameAlreadyExistsAlert();
+            GseAlerts.showDraggingError();
         } else {
             ProjectNode monfichier = (ProjectNode) getSource();
             monfichier.moveTo(projectFolder);
@@ -210,22 +206,12 @@ public class DragAndDropMove {
     private void accepTransferDrag(Folder folder, boolean s) {
         success = s;
         if (nameExists()) {
-            nameAlreadyExistsAlert();
+            GseAlerts.showDraggingError();
         } else {
             Project monfichier = (Project) getSource();
             monfichier.moveTo(folder);
             success = true;
         }
-    }
-
-
-    private Alert nameAlreadyExistsAlert() {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
-        alert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
-        alert.setContentText(RESOURCE_BUNDLE.getString("DragFileExists"));
-        alert.showAndWait();
-        return alert;
     }
 
     private void refresh(TreeItem item) {
