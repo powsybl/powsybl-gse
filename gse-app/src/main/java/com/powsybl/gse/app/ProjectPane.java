@@ -100,11 +100,7 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private boolean nameFound;
-
-    private boolean success;
-
-    private DragAndDropMove dragAndDropMove;
+    private DragAndDropMove dragAndDropMove = new DragAndDropMove();
 
     private final Project project;
 
@@ -194,9 +190,9 @@ public class ProjectPane extends Tab {
                     setGraphic(getTreeItem().getGraphic());
                     setTextFill(Color.BLACK);
                     setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
-                    setOnDragDetected(event -> dragDetectedEvent(getItem(), getTreeItem(), event));
-                    setOnDragOver(event -> dragOverEvent(event, getItem(), getTreeItem(), this));
-                    setOnDragDropped(event -> dragDroppedEvent(getItem(), getTreeItem(), event, node));
+                    setOnDragDetected(event -> dragAndDropMove.dragDetectedEvent(getItem(), getTreeItem(), event, treeView));
+                    setOnDragOver(event -> dragAndDropMove.dragOverEvent(event, getItem(), getTreeItem(), this));
+                    setOnDragDropped(event -> dragAndDropMove.dragDroppedEvent(getItem(), getTreeItem(), event, node));
                     setOnDragExited(event -> setTextFill(Color.BLACK));
                 } else {
                     throw new AssertionError();
@@ -255,11 +251,6 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private void textFillColor(TreeCell<Object> treeCell) {
-        if (!nameExists()) {
-            treeCell.setTextFill(Color.CHOCOLATE);
-        }
-    }
 
     private void fillCellInfosForObject(Object value, TreeCell<Object> treecell, TreeItem<Object> treeItem) {
         if (value == null) {
@@ -283,99 +274,6 @@ public class ProjectPane extends Tab {
             treeCell.setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
         } else {
             throw new AssertionError("Unexpected type for value: " + value.getClass().getName());
-        }
-    }
-
-    private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> targetTreeItem, TreeCell<Object> treeCell) {
-        if (item instanceof ProjectFolder && item != dragAndDropMove.getSource() && targetTreeItem != dragAndDropMove.getSourceTreeItem().getParent()) {
-            if (!isSourceAncestorOf(targetTreeItem)) {
-                boolean nameSearch = false;
-                treeItemChildrenSize(targetTreeItem, nameSearch);
-                textFillColor(treeCell);
-                event.acceptTransferModes(TransferMode.ANY);
-                event.consume();
-            }
-        }
-    }
-
-    private boolean isSourceAncestorOf(TreeItem<Object> targetTreeItem) {
-        TreeItem treeItemParent = targetTreeItem.getParent();
-        while (treeItemParent != null) {
-            if (dragAndDropMove.getSourceTreeItem() == treeItemParent) {
-                return true;
-            } else {
-                treeItemParent = treeItemParent.getParent();
-            }
-
-        }
-        return false;
-    }
-
-    private Alert nameAlreadyExistsAlert() {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
-        alert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
-        alert.setContentText(RESOURCE_BUNDLE.getString("DragFileExists"));
-        alert.showAndWait();
-        return alert;
-    }
-
-    private boolean nameExists() {
-        return nameFound;
-    }
-
-    private void dragDetectedEvent(Object value, TreeItem<Object> treeItem, MouseEvent event) {
-        dragAndDropMove = new DragAndDropMove();
-        dragAndDropMove.setSource(value);
-        dragAndDropMove.setSourceTreeItem(treeItem);
-
-        if (value instanceof ProjectNode && treeItem != treeView.getRoot()) {
-            Dragboard db = treeView.startDragAndDrop(TransferMode.ANY);
-            ClipboardContent cb = new ClipboardContent();
-            cb.putString(((ProjectNode) value).getName());
-            db.setContent(cb);
-            event.consume();
-        }
-    }
-
-    private void dragDroppedEvent(Object value, TreeItem<Object> treeItem, DragEvent event, ProjectNode projectNode) {
-        if (value instanceof ProjectFolder && value != dragAndDropMove.getSource()) {
-            ProjectFolder projectFolder = (ProjectFolder) projectNode;
-            boolean search = false;
-            success = false;
-            treeItemChildrenSize(treeItem, search);
-            accepTransferDrag(projectFolder, success);
-            event.setDropCompleted(success);
-            refresh(dragAndDropMove.getSourceTreeItem().getParent());
-            refresh(treeItem);
-            event.consume();
-        }
-    }
-
-    private void treeItemChildrenSize(TreeItem<Object> treeItem, boolean nameMatch) {
-        nameFound = nameMatch;
-        if (!treeItem.isLeaf()) {
-            ProjectFolder treeItemFolder = (ProjectFolder) treeItem.getValue();
-            if (!treeItemFolder.getChildren().isEmpty()) {
-                for (ProjectNode node : treeItemFolder.getChildren()) {
-                    if (node == null) {
-                        break;
-                    } else if (node.getName().equals(dragAndDropMove.getSource().toString())) {
-                        nameFound = true;
-                    }
-                }
-            }
-        }
-    }
-
-    private void accepTransferDrag(ProjectFolder projectFolder, boolean s) {
-        success = s;
-        if (nameExists()) {
-            nameAlreadyExistsAlert();
-        } else  {
-            ProjectNode monfichier = (ProjectNode) dragAndDropMove.getSource();
-            monfichier.moveTo(projectFolder);
-            success = true;
         }
     }
 

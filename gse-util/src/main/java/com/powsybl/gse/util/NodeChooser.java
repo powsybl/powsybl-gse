@@ -43,9 +43,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private static final String ICON_SIZE = "1.1em";
 
-    private DragAndDropMove dragAndDropMove;
-    private int counter;
-    private boolean success;
+    private DragAndDropMove dragAndDropMove = new DragAndDropMove();
 
     public interface TreeModel<N, F, D> {
         Collection<N> getChildren(D folder);
@@ -390,14 +388,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         }
     }
 
-    private Alert nameAlreadyExistsAlert() {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
-        alert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
-        alert.setContentText(RESOURCE_BUNDLE.getString("DragFileExists"));
-        alert.showAndWait();
-        return alert;
-    }
 
     private void onMouseClickedEvent(MouseEvent event) {
         TreeItem<N> item = tree.getSelectionModel().getSelectedItem();
@@ -434,9 +424,9 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             treeTableCell.setTextFill(Color.BLACK);
             treeTableCell.setOpacity(item.getClass() == treeModel.getUnknownFileClass() ? 0.5 : 1);
             treeTableCell.setGraphic(NodeGraphics.getGraphic(item));
-            treeTableCell.setOnDragDetected(event -> dragDetectedEvent(item, treeTableRow.getTreeItem(), event));
-            treeTableCell.setOnDragOver(event -> dragOverEvent(event, item, treeTableRow, treeTableCell));
-            treeTableCell.setOnDragDropped(event -> dragDroppedEvent(item, treeTableRow.getTreeItem(), event, node));
+            treeTableCell.setOnDragDetected(event -> dragAndDropMove.dragDetectedEvent(item, treeTableRow.getTreeItem(), event, tree));
+            treeTableCell.setOnDragOver(event -> dragAndDropMove.dragOverEvent(event, item, treeTableRow, treeTableCell));
+            treeTableCell.setOnDragDropped(event -> dragAndDropMove.dragDroppedEvent(item, treeTableRow.getTreeItem(), event, node));
             treeTableCell.setOnDragExited(event -> treeTableCell.setTextFill(Color.BLACK));
         } else {
             treeTableCell.setText(treeModel.getName(item));
@@ -446,52 +436,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         }
     }
 
-    private void textFillColor(TreeTableCell<N, N> treetableCell) {
-        if (getCounter() < 1) {
-            treetableCell.setTextFill(Color.CHOCOLATE);
-        }
-    }
-
-    private void dragOverEvent(DragEvent event, Object item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treetableCell) {
-        if (item instanceof Folder && item != dragAndDropMove.getSource() && treeTableRow.getTreeItem() != dragAndDropMove.getSourceTreeItem().getParent()) {
-            int count = 0;
-            treeItemChildrenSize(treeTableRow.getTreeItem(), count);
-            textFillColor(treetableCell);
-            event.acceptTransferModes(TransferMode.ANY);
-            event.consume();
-        }
-    }
-
-    public int getCounter() {
-        return counter;
-    }
-
-    private void dragDetectedEvent(N value, TreeItem<N> treeItem, MouseEvent event) {
-        dragAndDropMove = new DragAndDropMove();
-        dragAndDropMove.setSource(value);
-        dragAndDropMove.setSourceTreeItem(treeItem);
-        if (value instanceof Project && treeItem != tree.getRoot()) {
-            Dragboard db = tree.startDragAndDrop(TransferMode.ANY);
-            ClipboardContent cb = new ClipboardContent();
-            cb.putString(((Project) value).getName());
-            db.setContent(cb);
-            event.consume();
-        }
-    }
-
-    private void dragDroppedEvent(Object value, TreeItem<N> treeItem, DragEvent event, Node node) {
-        if (value instanceof Folder && value != dragAndDropMove.getSource()) {
-            Folder folder = (Folder) node;
-            int count = 0;
-            success = false;
-            treeItemChildrenSize(treeItem, count);
-            accepTransferDrag(folder, success);
-            event.setDropCompleted(success);
-            refreshTreeItem(dragAndDropMove.getSourceTreeItem().getParent());
-            refreshTreeItem(treeItem);
-            event.consume();
-        }
-    }
 
     private void refreshTreeItem(TreeItem<N> item) {
         if (item.getValue() instanceof Folder) {
@@ -500,32 +444,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         }
     }
 
-    private void treeItemChildrenSize(TreeItem<N> treeItem, int compte) {
-        counter = compte;
-        if (!treeItem.isLeaf()) {
-            Folder folder = (Folder) treeItem.getValue();
-            if (!folder.getChildren().isEmpty()) {
-                for (Node node : folder.getChildren()) {
-                    if (node == null) {
-                        break;
-                    } else if (node.getName().equals(dragAndDropMove.getSource().toString())) {
-                        counter++;
-                    }
-                }
-            }
-        }
-    }
-
-    private void accepTransferDrag(Folder folder, boolean s) {
-        success = s;
-        if (getCounter() >= 1) {
-            nameAlreadyExistsAlert();
-        } else if (getCounter() < 1) {
-            Project monfichier = (Project) dragAndDropMove.getSource();
-            monfichier.moveTo(folder);
-            success = true;
-        }
-    }
 
     private void treeViewChangeListener(ListChangeListener.Change<? extends TreeItem<N>> c) {
         if (c.getList().isEmpty()) {
