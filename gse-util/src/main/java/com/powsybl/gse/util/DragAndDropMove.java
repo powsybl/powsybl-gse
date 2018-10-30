@@ -13,6 +13,9 @@ import javafx.scene.paint.Color;
 
 import java.util.ResourceBundle;
 
+/**
+ * @author Nassirou Nambiema <nassirou.nambiena@rte-france.com>
+ */
 public class DragAndDropMove {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.DragAndDropMove");
