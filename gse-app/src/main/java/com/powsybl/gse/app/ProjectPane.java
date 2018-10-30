@@ -100,8 +100,7 @@ public class ProjectPane extends Tab {
         }
     }
 
-
-    private int counter;
+    private boolean nameFound;
 
     private boolean success;
 
@@ -257,7 +256,7 @@ public class ProjectPane extends Tab {
     }
 
     private void textFillColor(TreeCell<Object> treeCell) {
-        if (getCounter() < 1) {
+        if (!nameExists()) {
             treeCell.setTextFill(Color.CHOCOLATE);
         }
     }
@@ -296,8 +295,8 @@ public class ProjectPane extends Tab {
                 }
             }
             if (!ancestorDetected) {
-                int count = 0;
-                treeItemChildrenSize(treeItem, count);
+                boolean nameSearch =false;
+                treeItemChildrenSize(treeItem, nameSearch);
                 textFillColor(treeCell);
                 event.acceptTransferModes(TransferMode.ANY);
                 event.consume();
@@ -324,8 +323,8 @@ public class ProjectPane extends Tab {
         return alert;
     }
 
-    private int getCounter() {
-        return counter;
+    private boolean nameExists() {
+        return nameFound;
     }
 
     private void dragDetectedEvent(Object value, TreeItem<Object> treeItem, MouseEvent event) {
@@ -345,9 +344,9 @@ public class ProjectPane extends Tab {
     private void dragDroppedEvent(Object value, TreeItem<Object> treeItem, DragEvent event, ProjectNode projectNode) {
         if (value instanceof ProjectFolder && value != dragAndDropMove.getSource()) {
             ProjectFolder projectFolder = (ProjectFolder) projectNode;
-            int count = 0;
+            boolean search = false;
             success = false;
-            treeItemChildrenSize(treeItem, count);
+            treeItemChildrenSize(treeItem, search);
             accepTransferDrag(projectFolder, success);
             event.setDropCompleted(success);
             refresh(dragAndDropMove.getSourceTreeItem().getParent());
@@ -356,8 +355,8 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private void treeItemChildrenSize(TreeItem<Object> treeItem, int compte) {
-        counter = compte;
+    private void treeItemChildrenSize(TreeItem<Object> treeItem, boolean nameMatch) {
+        nameFound = nameMatch;
         if (!treeItem.isLeaf()) {
             ProjectFolder treeItemFolder = (ProjectFolder) treeItem.getValue();
             if (!treeItemFolder.getChildren().isEmpty()) {
@@ -365,7 +364,7 @@ public class ProjectPane extends Tab {
                     if (node == null) {
                         break;
                     } else if (node.getName().equals(dragAndDropMove.getSource().toString())) {
-                        counter++;
+                        nameFound = true;
                     }
                 }
             }
@@ -374,9 +373,9 @@ public class ProjectPane extends Tab {
 
     private void accepTransferDrag(ProjectFolder projectFolder, boolean s) {
         success = s;
-        if (getCounter() >= 1) {
+        if (nameExists()) {
             nameAlreadyExistsAlert();
-        } else if (getCounter() < 1) {
+        } else  {
             ProjectNode monfichier = (ProjectNode) dragAndDropMove.getSource();
             monfichier.moveTo(projectFolder);
             success = true;
