@@ -14,11 +14,8 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.geometry.Side;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.SelectionMode;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableColumnBase;
-import javafx.scene.control.TableView;
+import javafx.scene.Group;
+import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import org.controlsfx.control.HiddenSidesPane;
 
@@ -96,11 +93,27 @@ class PreContingencyResultPane extends BorderPane implements LimitViolationsResu
         hiddenSidesPane.setContent(tableView);
         hiddenSidesPane.setRight(new ScrollPane(filterPane));
 
-        // to prevent filter pane from disappear when clicking on a control
-        filterPane.setOnMouseEntered(e -> hiddenSidesPane.setPinnedSide(Side.LEFT));
-        filterPane.setOnMouseExited(e -> hiddenSidesPane.setPinnedSide(null));
-
         setCenter(hiddenSidesPane);
+
+        ToggleButton filterButton = new ToggleButton();
+        Label label = new Label(RESOURCE_BUNDLE.getString("Filter"));
+        label.setRotate(90);
+        filterButton.setGraphic(new Group(label));
+        filterButton.setStyle("-fx-focus-color: transparent;" +
+                "-fx-faint-focus-color: transparent;" +
+                "-fx-background-color: transparent;");
+
+        setRight(filterButton);
+
+        filterButton.setOnMouseClicked(event -> {
+            if (hiddenSidesPane.getPinnedSide() != null) {
+                hiddenSidesPane.setPinnedSide(null);
+                filterButton.setStyle("-fx-background-color: transparent;");
+            } else {
+                hiddenSidesPane.setPinnedSide(Side.RIGHT);
+                filterButton.setStyle("-fx-background-color: #A3A3A4");
+            }
+        });
     }
 
     private static <S, T> TableColumn<S, T> createColumn(String type) {
