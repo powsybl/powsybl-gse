@@ -286,17 +286,11 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
-        if (item instanceof ProjectFolder && item != dragAndDropMove.getSource() && treeItem != dragAndDropMove.getSourceTreeItem().getParent()) {
-            boolean ancestorDetected = false;
-            for (TreeItem<Object> myTreeItem : findTreeItemAncesters(treeItem)) {
-                if (dragAndDropMove.getSourceTreeItem() == myTreeItem) {
-                    ancestorDetected = true;
-                }
-            }
-            if (!ancestorDetected) {
-                boolean nameSearch =false;
-                treeItemChildrenSize(treeItem, nameSearch);
+    private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> targetTreeItem, TreeCell<Object> treeCell) {
+        if (item instanceof ProjectFolder && item != dragAndDropMove.getSource() && targetTreeItem != dragAndDropMove.getSourceTreeItem().getParent()) {
+            if (!isSourceAncestorOf(targetTreeItem)) {
+                boolean nameSearch = false;
+                treeItemChildrenSize(targetTreeItem, nameSearch);
                 textFillColor(treeCell);
                 event.acceptTransferModes(TransferMode.ANY);
                 event.consume();
@@ -304,14 +298,17 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private List<TreeItem<Object>> findTreeItemAncesters(TreeItem<Object> treeItem) {
-        List<TreeItem<Object>> ancesterTreeItems = new ArrayList<>();
-        TreeItem<Object> treeItemParent = treeItem.getParent();
+    private boolean isSourceAncestorOf(TreeItem<Object> targetTreeItem) {
+        TreeItem treeItemParent = targetTreeItem.getParent();
         while (treeItemParent != null) {
-            ancesterTreeItems.add(treeItemParent);
-            treeItemParent = treeItemParent.getParent();
+            if (dragAndDropMove.getSourceTreeItem() == treeItemParent) {
+                return true;
+            } else {
+                treeItemParent = treeItemParent.getParent();
+            }
+
         }
-        return ancesterTreeItems;
+        return false;
     }
 
     private Alert nameAlreadyExistsAlert() {
