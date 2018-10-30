@@ -388,7 +388,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         }
     }
 
-
     private void onMouseClickedEvent(MouseEvent event) {
         TreeItem<N> item = tree.getSelectionModel().getSelectedItem();
         N node = item != null ? item.getValue() : null;
@@ -443,7 +442,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             item.setExpanded(true);
         }
     }
-
 
     private void treeViewChangeListener(ListChangeListener.Change<? extends TreeItem<N>> c) {
         if (c.getList().isEmpty()) {
@@ -541,23 +539,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     public void createDeleteAlert(List<? extends TreeItem<N>> selectedTreeItems) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle(RESOURCE_BUNDLE.getString("ConfirmationDialog"));
-        String headerText;
-        if (selectedTreeItems.size() == 1) {
-            Node node = (Node) selectedTreeItems.get(0).getValue();
-            headerText = String.format(RESOURCE_BUNDLE.getString("FileWillBeDeleted"), node.getName());
-        } else if (selectedTreeItems.size() > 1) {
-            String names = selectedTreeItems.stream()
-                    .map(selectedItem -> selectedItem.getValue().toString())
-                    .collect(Collectors.joining(", "));
-            headerText = String.format(RESOURCE_BUNDLE.getString("FilesWillBeDeleted"), names);
-        } else {
-            throw new AssertionError();
-        }
-        alert.setHeaderText(headerText);
-        alert.setContentText(RESOURCE_BUNDLE.getString("DoYouConfirm"));
-        alert.showAndWait().ifPresent(result -> {
+        GseAlerts.deleteNodesAlert(selectedTreeItems).showAndWait().ifPresent(result -> {
             if (result == ButtonType.OK) {
                 setOnOkButton(selectedTreeItems);
             }
