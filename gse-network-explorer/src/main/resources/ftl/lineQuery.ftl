@@ -6,6 +6,8 @@ def l = network.getLine('${lineId}')
    g2: l.g2,
    b1: l.b1,
    b2: l.b2,
-   voltageLevel1: l.terminal1.voltageLevel.id,
-   voltageLevel2: l.terminal2.voltageLevel.id
+   idVoltageLevel1: l.terminal1.voltageLevel.id,
+   idVoltageLevel2: l.terminal2.voltageLevel.id,
+   nameVoltageLevel1: l.terminal1.voltageLevel.name,
+   nameVoltageLevel2: l.terminal2.voltageLevel.name
 ]
