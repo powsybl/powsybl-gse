@@ -47,6 +47,8 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private int counter;
     private boolean success;
 
+    private static List<String> openedProjects = new ArrayList<>();
+
     public interface TreeModel<N, F, D> {
         Collection<N> getChildren(D folder);
 
@@ -391,7 +393,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
 
-
     private void onMouseClickedEvent(MouseEvent event) {
         TreeItem<N> item = tree.getSelectionModel().getSelectedItem();
         N node = item != null ? item.getValue() : null;
@@ -623,12 +624,34 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         });
     }
 
+    private void deleteOpenedProjectAction(Project project) {
+        boolean projectOpened = false;
+        for (String projectId : getOpenedProjects()) {
+            if (project.getId().equals(projectId)) {
+                projectOpened = true;
+                break;
+            }
+        }
+        if (projectOpened) {
+            GseAlerts.showDeleteProjectError();
+        } else {
+            project.delete();
+        }
+
+    }
+
+
+    public List<String> getOpenedProjects() {
+        return openedProjects;
+    }
+
+
     private void setOnOkButton(List<? extends TreeItem<N>> selectedTreeItems) {
         List<TreeItem<N>> parentTreeItems = new ArrayList<>();
         for (TreeItem<N> selectedTreeItem : selectedTreeItems) {
             if (selectedTreeItem.getValue() instanceof Project) {
                 Project selectedProject = (Project) selectedTreeItem.getValue();
-                selectedProject.delete();
+                deleteOpenedProjectAction(selectedProject);
             } else if (selectedTreeItem.getValue() instanceof Folder) {
                 Folder folderSelected = (Folder) selectedTreeItem.getValue();
                 folderSelected.delete();
@@ -738,6 +761,11 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Class<T> filter, Class<?>... otherFilters) {
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters));
+    }
+
+    public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Class<T> filter, List<String> openedProjectsList, Class<?>... otherFilters) {
+        openedProjects = openedProjectsList;
         return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters));
     }
 
