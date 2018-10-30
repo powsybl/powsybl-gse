@@ -14,12 +14,12 @@ import com.goebl.simplify.PointExtractor;
 import com.goebl.simplify.Simplify;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcType;
 import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Observable;
-import rx.functions.Action1;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -34,6 +34,8 @@ public class LineLayer extends CanvasBasedLayer {
     private static final Logger LOGGER = LoggerFactory.getLogger(LineLayer.class);
 
     private static final int PYLON_SHOW_ZOOM_THRESHOLD = 10;
+
+    private static final Color UNMAPPED_LINE_COLOR = Color.GRAY;
 
     private static final PointExtractor<Point2D> POINT_EXTRACTOR = new PointExtractor<Point2D>() {
         @Override
@@ -68,12 +70,19 @@ public class LineLayer extends CanvasBasedLayer {
         for (Map.Entry<Integer, BranchGraphicIndex> e : branchesIndexes.entrySet()) {
             BranchGraphicIndex index = e.getValue();
             Observable<Entry<BranchGraphic, Geometry>> search = index.getTree().search(Geometries.pointGeographic(c.getLon(), c.getLat()));
-            search.toBlocking().forEach(new Action1<Entry<BranchGraphic, Geometry>>() {
-                @Override
-                public void call(Entry<BranchGraphic, Geometry> entry) {
-                    LOGGER.trace(entry.value().getLine().getId());
-                }
-            });
+            search.toBlocking().forEach(entry -> LOGGER.trace(entry.value().getLine().getId()));
+        }
+    }
+
+    private void reinitGraphicsContext(GraphicsContext gc, BranchGraphic branch) {
+        if (Objects.isNull(branch.getLine().getModel())) {
+            gc.setStroke(UNMAPPED_LINE_COLOR);
+            gc.setFill(UNMAPPED_LINE_COLOR);
+            gc.setLineDashes(1., 7., 1., 7.);
+        } else {
+            gc.setStroke(branch.getLine().getColor());
+            gc.setFill(branch.getLine().getColor());
+            gc.setLineDashes(0.);
         }
     }
 
@@ -92,8 +101,7 @@ public class LineLayer extends CanvasBasedLayer {
         segmentIndex.getTree().search(getMapBounds()).toBlocking().forEach(e -> {
             BranchGraphic branch = e.value();
 
-            gc.setStroke(branch.getLine().getColor());
-            gc.setFill(branch.getLine().getColor());
+            reinitGraphicsContext(gc, branch);
 
             Point2D[] points = new Point2D[branch.getPylons().size()];
             int i = 0;
