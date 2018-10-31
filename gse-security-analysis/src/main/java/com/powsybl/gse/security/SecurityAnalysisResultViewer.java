@@ -86,7 +86,8 @@ public class SecurityAnalysisResultViewer extends BorderPane implements ProjectF
         setCenter(mainPane);
 
         preContResultPane.getFilteredViolations().addListener((ListChangeListener<LimitViolation>) c -> {
-            if (c.getList().size() > 0) {
+            preContGraphic.setPrefWrapLength(140 + String.valueOf(c.getList().size()).length() * 10);
+            if (preContResultPane.getViolations().size() > 0) {
                 preContBadge.setCount(c.getList().size());
                 preContBadge.setVisible(true);
             } else {
@@ -94,7 +95,8 @@ public class SecurityAnalysisResultViewer extends BorderPane implements ProjectF
             }
         });
         postContResultPane.getFilteredViolations().addListener((ListChangeListener<LimitViolation>) c -> {
-            if (c.getList().size() > 0) {
+            postContGraphic.setPrefWrapLength(140 + String.valueOf(c.getList().size()).length() * 10);
+            if (postContResultPane.getViolations().size() > 0) {
                 postContBadge.setCount(c.getList().size());
                 postContBadge.setVisible(true);
             } else {
