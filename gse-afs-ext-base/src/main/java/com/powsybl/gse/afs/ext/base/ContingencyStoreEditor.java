@@ -295,6 +295,11 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
     }
 
     @Override
+    public SimpleBooleanProperty savedProperty() {
+        return saved;
+    }
+
+    @Override
     public Node getContent() {
         return this;
     }
