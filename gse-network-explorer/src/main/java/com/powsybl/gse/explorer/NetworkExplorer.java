@@ -132,7 +132,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         showName.selectedProperty().addListener((observable, oldValue, newValue) -> {
             substationsView.refresh();
             substationDetailedView.refresh();
-            refreshEquipmentView(substationDetailedView.getSelectionModel().getSelectedItem());
+            refreshEquipmentView();
         });
 
         substationFilterInput.textProperty().addListener(obs -> {
@@ -153,15 +153,10 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
 
         substationsView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> refreshSubstationDetailView(newValue));
 
-        substationDetailedView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> refreshEquipmentView(newValue));
+        substationDetailedView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        substationDetailedView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> refreshEquipmentView());
 
-        substationDetailedView.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
-            if (event.getCode() == KeyCode.CONTROL) {
-                substationDetailedView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-            }
-        });
-
-        substationDetailedView.setOnDragDetected(this::sendDraggedElements);
+        substationDetailedView.setOnDragDetected(this::onDragDetected);
 
         voltageLevelQueryResultListType = mapper.getTypeFactory().constructCollectionType(List.class, VoltageLevelQueryResult.class);
         idAndNameListType = mapper.getTypeFactory().constructCollectionType(List.class, IdAndName.class);
@@ -188,7 +183,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         return this;
     }
 
-    private void sendDraggedElements(MouseEvent event) {
+    private void onDragDetected(MouseEvent event) {
         SelectionMode selectionMode = substationDetailedView.getSelectionModel().getSelectionMode();
         Dragboard db = substationDetailedView.startDragAndDrop(TransferMode.ANY);
         ClipboardContent content = new ClipboardContent();
@@ -352,17 +347,20 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         }, equipmentExecutor);
     }
 
-    private void refreshEquipmentView(TreeItem<EquipmentInfo> item) {
-        if (item != null) {
-            EquipmentInfo equipment = item.getValue();
+    private void refreshEquipmentView() {
+        if (substationDetailedView.getSelectionModel().getSelectedIndices().size() == 1) {
+            EquipmentInfo equipment = substationDetailedView.getSelectionModel().getSelectedItem().getValue();
             switch (equipment.getType()) {
                 case LINE:
                     refreshLineView(equipment);
                     break;
+
                 default:
                     equipmentTabs.getTabs().clear();
                     break;
             }
+        } else {
+            equipmentTabs.getTabs().clear();
         }
     }
 
