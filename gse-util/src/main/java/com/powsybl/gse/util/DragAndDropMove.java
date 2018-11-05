@@ -94,7 +94,7 @@ public class DragAndDropMove {
             boolean search = false;
             success = false;
             treeItemChildrenSize(treeItem, search);
-            accepTransferDrag(projectFolder, success);
+            acceptTransferDrag(projectFolder, success);
             event.setDropCompleted(success);
             refresh(getSourceTreeItem().getParent());
             refresh(treeItem);
@@ -108,7 +108,7 @@ public class DragAndDropMove {
             boolean search = false;
             success = false;
             treeItemChildrenSize(treeItem, search);
-            accepTransferDrag(folder, success);
+            acceptTransferDrag(folder, success);
             event.setDropCompleted(success);
             refresh(getSourceTreeItem().getParent());
             refresh(treeItem);
@@ -188,7 +188,7 @@ public class DragAndDropMove {
      * @param projectFolder
      * @param s
      */
-    private void accepTransferDrag(ProjectFolder projectFolder, boolean s) {
+    private void acceptTransferDrag(ProjectFolder projectFolder, boolean s) {
         success = s;
         if (nameExists()) {
             GseAlerts.showDraggingError();
@@ -203,7 +203,7 @@ public class DragAndDropMove {
      * @param folder
      * @param s
      */
-    private void accepTransferDrag(Folder folder, boolean s) {
+    private void acceptTransferDrag(Folder folder, boolean s) {
         success = s;
         if (nameExists()) {
             GseAlerts.showDraggingError();
