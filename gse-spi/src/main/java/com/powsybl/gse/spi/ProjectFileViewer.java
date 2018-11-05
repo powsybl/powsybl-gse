@@ -7,7 +7,6 @@
 package com.powsybl.gse.spi;
 
 import javafx.scene.Node;
-import javafx.beans.property.SimpleBooleanProperty;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -19,9 +18,5 @@ public interface ProjectFileViewer {
     void view();
 
     void dispose();
-
-    default SimpleBooleanProperty savedProperty() {
-        throw new UnsupportedOperationException("To implement");
-    }
 
 }

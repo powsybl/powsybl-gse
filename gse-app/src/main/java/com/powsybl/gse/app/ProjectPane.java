@@ -662,13 +662,15 @@ public class ProjectPane extends Tab {
         DetachableTabPane firstTabPane = detachableTabPanes.get(0);
         firstTabPane.getTabs().add(tab);
         firstTabPane.getSelectionModel().select(tab);
-        viewer.savedProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue) {
-                tab.setText(getTabName(treeView.getSelectionModel().getSelectedItem()) + "");
-            } else if (oldValue) {
-                tab.setText(getTabName(treeView.getSelectionModel().getSelectedItem()) + STARNOTIFICATION);
-            }
-        });
+        if (viewer instanceof Savable) {
+            ((Savable) viewer).savedProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue) {
+                    tab.setText(getTabName(treeView.getSelectionModel().getSelectedItem()));
+                } else if (oldValue) {
+                    tab.setText(getTabName(treeView.getSelectionModel().getSelectedItem()) + STARNOTIFICATION);
+                }
+            });
+        }
         viewer.view();
     }
 
