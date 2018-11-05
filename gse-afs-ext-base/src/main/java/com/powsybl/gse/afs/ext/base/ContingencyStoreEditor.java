@@ -286,9 +286,9 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         return new ContextMenu(removeItem);
     }
 
-    private boolean alertSave() {
+    private boolean showSaveAlert() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setHeaderText("'" + this.store.getName() + "' " + RESOURCE_BUNDLE.getString("UnsavedQuitConfirmation"));
+        alert.setHeaderText("'" + store.getName() + "' " + RESOURCE_BUNDLE.getString("UnsavedQuitConfirmation"));
         ButtonType saveAndContinue = new ButtonType(RESOURCE_BUNDLE.getString("SaveAndContinue"));
         ButtonType dontSaveAndContinue = new ButtonType(RESOURCE_BUNDLE.getString("DontSaveAndContinue"));
         ButtonType cancel = new ButtonType(RESOURCE_BUNDLE.getString("Cancel"));
@@ -332,7 +332,7 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
     @Override
     public boolean isClosable() {
         if (!saved.getValue()) {
-            return alertSave();
+            return showSaveAlert();
         }
         return true;
     }
