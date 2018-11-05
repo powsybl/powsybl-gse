@@ -14,7 +14,6 @@ import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TreeView;
@@ -145,14 +144,6 @@ public final class GseUtil {
                 exceptionDialog.setTitle(RESOURCE_BUNDLE.getString("Error"));
                 exceptionDialog.showAndWait();
             });
-    }
-
-    public static void showDialogError(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(RESOURCE_BUNDLE.getString("Error"));
-        alert.setResizable(true);
-        alert.setContentText(message);
-        alert.showAndWait();
     }
 
     public static <T> Service<T> createService(Task<T> task, Executor executor) {
