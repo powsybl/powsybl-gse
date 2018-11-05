@@ -7,6 +7,7 @@
 package com.powsybl.gse.app;
 
 import com.powsybl.afs.AppData;
+import com.powsybl.afs.AppFileSystem;
 import com.powsybl.afs.Folder;
 import com.powsybl.afs.Project;
 import com.powsybl.gse.spi.GseContext;
@@ -67,10 +68,7 @@ public class NewProjectPane extends GridPane {
                 return null;
             } else {
                 String path = folder.getPath().toString();
-                if (!folder.getParent().isPresent()) {
-                    path += "/";
-                }
-                return path;
+                return folder.getParent().isPresent() ? path : path + AppFileSystem.PATH_SEPARATOR;
             }
         }, folderProperty));
         setVgap(5);
