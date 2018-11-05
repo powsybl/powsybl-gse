@@ -600,7 +600,7 @@ public class ProjectPane extends Tab {
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
         menuItem.setOnAction(event -> {
-            Optional<String> result = new RenamePane().showAndWaitDialog((ProjectNode) selectedTreeItem.getValue());
+            Optional<String> result = RenamePane.showAndWaitDialog((ProjectNode) selectedTreeItem.getValue());
             result.ifPresent(newName -> {
                 if (selectedTreeItem.getValue() instanceof ProjectNode) {
                     ProjectNode selectedTreeNode = (ProjectNode) selectedTreeItem.getValue();

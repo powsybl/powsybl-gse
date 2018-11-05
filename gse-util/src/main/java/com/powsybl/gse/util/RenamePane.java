@@ -26,7 +26,7 @@ import java.util.ResourceBundle;
 import java.util.function.Predicate;
 
 /**
- * @author Nassirou Nambiema <nassirou.nambiema@rte-france.com>
+ * @author Nassirou Nambiema <nassirou.nambiena@rte-france.com>
  */
 public final class RenamePane extends GridPane {
 
@@ -37,10 +37,6 @@ public final class RenamePane extends GridPane {
     private final Label fileAlreadyExistLabel = new Label();
 
     private final BooleanProperty uniqueName = new SimpleBooleanProperty(true);
-
-    public RenamePane() {
-
-    }
 
     private RenamePane(AbstractNodeBase node, Predicate<String> nodeNameUnique) {
         Objects.requireNonNull(node);
@@ -56,8 +52,8 @@ public final class RenamePane extends GridPane {
         fileAlreadyExistLabel.setTextFill(Color.RED);
         nameTextField.textProperty().addListener((observable, oldName, newName) -> uniqueName.setValue(newName == null || nodeNameUnique.test(newName)));
         nameTextField.setText(node.getName());
-        uniqueName.addListener((observable, oldUnique, newUnique) -> {
-            if (newUnique) {
+        uniqueName.addListener((observable, oldBooleanValue, newBooleanValue) -> {
+            if (newBooleanValue) {
                 fileAlreadyExistLabel.setText("");
             } else {
                 fileAlreadyExistLabel.setText(MessageFormat.format(RESOURCE_BUNDLE.getString("FileAlreadyExistsInThisFolder"),
@@ -77,15 +73,15 @@ public final class RenamePane extends GridPane {
         return nameTextField;
     }
 
-    public Optional<String> showAndWaitDialog(ProjectNode selectedNode) {
+    public static Optional<String> showAndWaitDialog(ProjectNode selectedNode) {
         return showAndWaitDialog(selectedNode, name -> !selectedNode.getParent().get().getChild(name).isPresent());
     }
 
-    public Optional<String> showAndWaitDialog(Node selectedNode) {
+    public static Optional<String> showAndWaitDialog(Node selectedNode) {
         return showAndWaitDialog(selectedNode, name -> !selectedNode.getParent().get().getChild(name).isPresent());
     }
 
-    public Optional<String> showAndWaitDialog(AbstractNodeBase node, Predicate<String> nodeNameUnique) {
+    public static Optional<String> showAndWaitDialog(AbstractNodeBase node, Predicate<String> nodeNameUnique) {
         Dialog dialog = new Dialog<>();
         try {
             dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFile"));

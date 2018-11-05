@@ -596,7 +596,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size(ICON_SIZE));
         TreeItem<N> selectedTreeItem = tree.getSelectionModel().getSelectedItem();
         menuItem.setOnAction(event -> {
-            Optional<String> result = new RenamePane().showAndWaitDialog((Node) selectedTreeItem.getValue());
+            Optional<String> result = RenamePane.showAndWaitDialog((Node) selectedTreeItem.getValue());
             result.ifPresent(newName -> {
                 if (selectedTreeItem.getValue() instanceof Node) {
                     Node selectedTreeNode = (Node) selectedTreeItem.getValue();
