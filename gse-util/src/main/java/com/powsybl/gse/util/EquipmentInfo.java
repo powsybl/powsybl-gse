@@ -17,6 +17,8 @@ public class EquipmentInfo implements Serializable {
 
     public static final DataFormat DATA_FORMAT = new DataFormat("equipmentInfo");
 
+    public static final DataFormat DATA_FORMAT_LIST = new DataFormat("listEquipmentInfo");
+
     private IdAndName idAndName;
 
     private String type;
