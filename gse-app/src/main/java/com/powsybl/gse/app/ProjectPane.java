@@ -288,7 +288,7 @@ public class ProjectPane extends Tab {
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
-        if (item instanceof ProjectFolder && item != dragAndDropMove.getSource()) {
+        if (item instanceof ProjectNode && item != dragAndDropMove.getSource()) {
             int count = 0;
             treeItemChildrenSize(treeItem, count);
             textFillColor(treeCell);
@@ -316,17 +316,26 @@ public class ProjectPane extends Tab {
     }
 
     private void dragDroppedEvent(Object value, TreeItem<Object> treeItem, DragEvent event, ProjectNode projectNode) {
-        if (value instanceof ProjectFolder && value != dragAndDropMove.getSource()) {
-            ProjectFolder projectFolder = (ProjectFolder) projectNode;
+        if (value != dragAndDropMove.getSource()) {
             int count = 0;
             success = false;
             treeItemChildrenSize(treeItem, count);
-            accepTransferDrag(projectFolder, success);
+            if (value instanceof ProjectFolder) {
+                ProjectFolder projectFolder = (ProjectFolder) projectNode;
+                accepTransferDrag(projectFolder, success);
+                refresh(dragAndDropMove.getSourceTreeItem().getParent());
+                refresh(treeItem);
+            } else if (value instanceof ProjectFile) {
+                ProjectFile projectFile = (ProjectFile) projectNode;
+                projectFile.getParent().ifPresent(projectFolder -> {
+                    accepTransferDrag(projectFile.getParent().get(), success);
+                });
+                refresh(dragAndDropMove.getSourceTreeItem().getParent());
+                refresh(treeItem.getParent());
+            }
             event.setDropCompleted(success);
-            refresh(dragAndDropMove.getSourceTreeItem().getParent());
-            refresh(treeItem);
-            event.consume();
         }
+        event.consume();
     }
 
     private void treeItemChildrenSize(TreeItem<Object> treeItem, int compte) {
