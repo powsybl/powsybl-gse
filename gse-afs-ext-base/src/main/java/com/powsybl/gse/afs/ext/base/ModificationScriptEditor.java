@@ -11,7 +11,6 @@ import com.powsybl.afs.ext.base.StorableScript;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.spi.Savable;
-import com.powsybl.gse.util.EquipmentInfo;
 import com.powsybl.gse.util.Glyph;
 import com.powsybl.gse.util.GroovyCodeEditor;
 import com.powsybl.gse.util.GseUtil;
@@ -26,8 +25,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.ToolBar;
-import javafx.scene.input.Dragboard;
-import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
@@ -87,29 +84,6 @@ public class ModificationScriptEditor extends BorderPane
 
         // listen to modifications
         storableScript.addListener(this);
-
-        codeEditor.setOnDragOver(event -> {
-            Dragboard db = event.getDragboard();
-            if (event.getGestureSource() != codeEditor &&
-                    db.hasContent(EquipmentInfo.DATA_FORMAT) &&
-                    db.getContent(EquipmentInfo.DATA_FORMAT) instanceof EquipmentInfo) {
-                event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
-            }
-            event.consume();
-        });
-
-        codeEditor.setOnDragDropped(event -> {
-            Dragboard db = event.getDragboard();
-            boolean success = false;
-            if (event.getGestureSource() != codeEditor &&
-                    db.hasContent(EquipmentInfo.DATA_FORMAT)) {
-                EquipmentInfo equipmentInfo = (EquipmentInfo) db.getContent(EquipmentInfo.DATA_FORMAT);
-                codeEditor.insertCode("'" + equipmentInfo.getIdAndName().getId() + "'");
-                success = true;
-            }
-            event.setDropCompleted(success);
-            event.consume();
-        });
     }
 
     @Override
