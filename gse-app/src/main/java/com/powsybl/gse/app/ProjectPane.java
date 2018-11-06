@@ -327,9 +327,7 @@ public class ProjectPane extends Tab {
                 refresh(treeItem);
             } else if (value instanceof ProjectFile) {
                 ProjectFile projectFile = (ProjectFile) projectNode;
-                projectFile.getParent().ifPresent(projectFolder -> {
-                    accepTransferDrag(projectFile.getParent().get(), success);
-                });
+                projectFile.getParent().ifPresent(projectFolder -> accepTransferDrag(projectFile.getParent().get(), success));
                 refresh(dragAndDropMove.getSourceTreeItem().getParent());
                 refresh(treeItem.getParent());
             }
