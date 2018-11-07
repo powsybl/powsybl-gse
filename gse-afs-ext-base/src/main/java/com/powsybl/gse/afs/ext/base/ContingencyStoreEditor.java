@@ -333,7 +333,7 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
 
     @Override
     public boolean isClosable() {
-        if (!saved.getValue()) {
+        if (!saved.get()) {
             return showSaveAlert();
         }
         return true;

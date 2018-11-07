@@ -30,6 +30,8 @@ public class GseApp extends Application {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GseApp.class);
 
+    private GsePane gsePane;
+
     private ExecutorService executor;
 
     private LocalComputationManager computationManager;
@@ -38,7 +40,7 @@ public class GseApp extends Application {
 
     @Override
     public void start(Stage stage) {
-        GsePane gsePane = new GsePane(new GseContext(executor), appData, this);
+        gsePane = new GsePane(new GseContext(executor), appData, this);
         stage.setTitle(gsePane.getTitle());
         stage.getIcons().addAll(gsePane.getIcons());
         Scene scene = new Scene(gsePane, 1200, 800);
@@ -56,7 +58,6 @@ public class GseApp extends Application {
         stage.show();
 
         stage.setOnCloseRequest(event -> {
-            gsePane.dispose();
             if (!gsePane.isClosable()) {
                 event.consume();
             }
@@ -81,6 +82,7 @@ public class GseApp extends Application {
     @Override
     public void stop() throws Exception {
         super.stop();
+        gsePane.dispose();
         appData.close();
         computationManager.close();
         executor.shutdownNow();
