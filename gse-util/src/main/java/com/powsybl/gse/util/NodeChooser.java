@@ -391,14 +391,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         }
     }
 
-    private Alert nameAlreadyExistsAlert() {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
-        alert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
-        alert.setContentText(RESOURCE_BUNDLE.getString("DragFileExists"));
-        alert.showAndWait();
-        return alert;
-    }
+
 
     private void onMouseClickedEvent(MouseEvent event) {
         TreeItem<N> item = tree.getSelectionModel().getSelectedItem();
@@ -520,7 +513,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private void accepTransferDrag(Folder folder, boolean s) {
         success = s;
         if (getCounter() >= 1) {
-            nameAlreadyExistsAlert();
+            GseAlerts.showDraggingError();
         } else if (getCounter() < 1) {
             Project monfichier = (Project) dragAndDropMove.getSource();
             monfichier.moveTo(folder);

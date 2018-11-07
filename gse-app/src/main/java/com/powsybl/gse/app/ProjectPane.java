@@ -302,15 +302,6 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private Alert nameAlreadyExistsAlert() {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
-        alert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
-        alert.setContentText(RESOURCE_BUNDLE.getString("DragFileExists"));
-        alert.showAndWait();
-        return alert;
-    }
-
     private int getCounter() {
         return counter;
     }
@@ -362,7 +353,7 @@ public class ProjectPane extends Tab {
     private void accepTransferDrag(ProjectFolder projectFolder, boolean s) {
         success = s;
         if (getCounter() >= 1) {
-            nameAlreadyExistsAlert();
+            GseAlerts.showDraggingError();
         } else if (getCounter() < 1) {
             ProjectNode monfichier = (ProjectNode) dragAndDropMove.getSource();
             monfichier.moveTo(projectFolder);

@@ -32,9 +32,7 @@ import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.input.ClipboardContent;
-import javafx.scene.input.Dragboard;
-import javafx.scene.input.TransferMode;
+import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.paint.Color;
@@ -134,7 +132,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         showName.selectedProperty().addListener((observable, oldValue, newValue) -> {
             substationsView.refresh();
             substationDetailedView.refresh();
-            refreshEquipmentView(substationDetailedView.getSelectionModel().getSelectedItem());
+            refreshEquipmentView();
         });
 
         substationFilterInput.textProperty().addListener(obs -> {
@@ -155,18 +153,10 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
 
         substationsView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> refreshSubstationDetailView(newValue));
 
-        substationDetailedView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> refreshEquipmentView(newValue));
-        substationDetailedView.setOnDragDetected(event -> {
-            EquipmentInfo selectedEquipmentInfo = substationDetailedView.getSelectionModel().getSelectedItem().getValue();
+        substationDetailedView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        substationDetailedView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> refreshEquipmentView());
 
-            Dragboard db = substationDetailedView.startDragAndDrop(TransferMode.ANY);
-
-            ClipboardContent content = new ClipboardContent();
-            content.put(EquipmentInfo.DATA_FORMAT, selectedEquipmentInfo);
-            db.setContent(content);
-
-            event.consume();
-        });
+        substationDetailedView.setOnDragDetected(this::onDragDetected);
 
         voltageLevelQueryResultListType = mapper.getTypeFactory().constructCollectionType(List.class, VoltageLevelQueryResult.class);
         idAndNameListType = mapper.getTypeFactory().constructCollectionType(List.class, IdAndName.class);
@@ -191,6 +181,26 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     @Override
     public Node getContent() {
         return this;
+    }
+
+    private void onDragDetected(MouseEvent event) {
+        Dragboard db = substationDetailedView.startDragAndDrop(TransferMode.ANY);
+        ClipboardContent content = new ClipboardContent();
+        if (substationDetailedView.getSelectionModel().getSelectedItems().size() == 1) {
+            EquipmentInfo selectedEquipmentInfo = substationDetailedView.getSelectionModel().getSelectedItem().getValue();
+            content.put(EquipmentInfo.DATA_FORMAT, selectedEquipmentInfo);
+        } else {
+            List<EquipmentInfo> listInfo = new ArrayList<>();
+            for (TreeItem<EquipmentInfo> selectedItem : substationDetailedView.getSelectionModel().getSelectedItems()) {
+                listInfo.add(selectedItem.getValue());
+            }
+            content.put(EquipmentInfo.DATA_FORMAT_LIST, listInfo);
+        }
+
+
+        db.setContent(content);
+
+        event.consume();
     }
 
     private <T> void queryNetwork(String groovyScript, JavaType valueType, Consumer<T> updater, LastTaskOnlyExecutor lastTaskOnlyExecutor) {
@@ -336,17 +346,20 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         }, equipmentExecutor);
     }
 
-    private void refreshEquipmentView(TreeItem<EquipmentInfo> item) {
-        if (item != null) {
-            EquipmentInfo equipment = item.getValue();
+    private void refreshEquipmentView() {
+        if (substationDetailedView.getSelectionModel().getSelectedIndices().size() == 1) {
+            EquipmentInfo equipment = substationDetailedView.getSelectionModel().getSelectedItem().getValue();
             switch (equipment.getType()) {
                 case LINE:
                     refreshLineView(equipment);
                     break;
+
                 default:
                     equipmentTabs.getTabs().clear();
                     break;
             }
+        } else {
+            equipmentTabs.getTabs().clear();
         }
     }
 

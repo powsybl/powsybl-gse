@@ -16,8 +16,10 @@ import java.util.List;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
 
+/**
+ * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
+ */
 public final class GseAlerts {
-
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.GseAlerts");
 
     private GseAlerts() {
