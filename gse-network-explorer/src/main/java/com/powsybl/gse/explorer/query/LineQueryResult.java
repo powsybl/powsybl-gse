@@ -23,9 +23,13 @@ public class LineQueryResult {
 
     private double b2;
 
-    private String voltageLevel1;
+    private String idVoltageLevel1;
 
-    private String voltageLevel2;
+    private String idVoltageLevel2;
+
+    private String nameVoltageLevel1;
+
+    private String nameVoltageLevel2;
 
     public double getR() {
         return r;
@@ -75,19 +79,35 @@ public class LineQueryResult {
         this.b2 = b2;
     }
 
-    public String getVoltageLevel1() {
-        return voltageLevel1;
+    public String getIdVoltageLevel1() {
+        return idVoltageLevel1;
     }
 
-    public void setVoltageLevel1(String voltageLevel1) {
-        this.voltageLevel1 = voltageLevel1;
+    public void setIdVoltageLevel1(String idVoltageLevel1) {
+        this.idVoltageLevel1 = idVoltageLevel1;
     }
 
-    public String getVoltageLevel2() {
-        return voltageLevel2;
+    public String getIdVoltageLevel2() {
+        return idVoltageLevel2;
     }
 
-    public void setVoltageLevel2(String voltageLevel2) {
-        this.voltageLevel2 = voltageLevel2;
+    public void setIdVoltageLevel2(String idVoltageLevel2) {
+        this.idVoltageLevel2 = idVoltageLevel2;
+    }
+
+    public String getNameVoltageLevel1() {
+        return nameVoltageLevel1;
+    }
+
+    public void setNameVoltageLevel1(String nameVoltageLevel1) {
+        this.nameVoltageLevel1 = nameVoltageLevel1;
+    }
+
+    public String getNameVoltageLevel2() {
+        return nameVoltageLevel2;
+    }
+
+    public void setNameVoltageLevel2(String nameVoltageLevel2) {
+        this.nameVoltageLevel2 = nameVoltageLevel2;
     }
 }
