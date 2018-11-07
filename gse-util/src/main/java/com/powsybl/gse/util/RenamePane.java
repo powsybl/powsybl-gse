@@ -26,7 +26,7 @@ import java.util.ResourceBundle;
 import java.util.function.Predicate;
 
 /**
- * @author Nassirou Nambiema <nassirou.nambiena@rte-france.com>
+ * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
  */
 public final class RenamePane extends GridPane {
 
@@ -74,15 +74,15 @@ public final class RenamePane extends GridPane {
     }
 
     public static Optional<String> showAndWaitDialog(ProjectNode selectedNode) {
-        return showAndWaitDialog(selectedNode, name -> !selectedNode.getParent().get().getChild(name).isPresent());
+        return showAndWaitDialog(selectedNode, name -> !selectedNode.getParent().map(f -> f.getChild(name).isPresent()).orElse(false));
     }
 
     public static Optional<String> showAndWaitDialog(Node selectedNode) {
-        return showAndWaitDialog(selectedNode, name -> !selectedNode.getParent().get().getChild(name).isPresent());
+        return showAndWaitDialog(selectedNode, name -> !selectedNode.getParent().map(f -> f.getChild(name).isPresent()).orElse(false));
     }
 
     public static Optional<String> showAndWaitDialog(AbstractNodeBase node, Predicate<String> nodeNameUnique) {
-        Dialog dialog = new Dialog<>();
+        Dialog<String> dialog = new Dialog<>();
         try {
             dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFile"));
             dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
