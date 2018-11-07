@@ -25,6 +25,7 @@ import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Text;
 
+import java.text.MessageFormat;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.ResourceBundle;
@@ -288,12 +289,13 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
 
     private boolean showSaveAlert() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setHeaderText("'" + store.getName() + "' " + RESOURCE_BUNDLE.getString("UnsavedQuitConfirmation"));
+        alert.setHeaderText(MessageFormat.format(RESOURCE_BUNDLE.getString("UnsavedQuitConfirmation"), store.getName()));
         ButtonType saveAndContinue = new ButtonType(RESOURCE_BUNDLE.getString("SaveAndContinue"));
         ButtonType dontSaveAndContinue = new ButtonType(RESOURCE_BUNDLE.getString("DontSaveAndContinue"));
         ButtonType cancel = new ButtonType(RESOURCE_BUNDLE.getString("Cancel"));
 
         alert.getButtonTypes().setAll(saveAndContinue, dontSaveAndContinue, cancel);
+        alert.getDialogPane().setMinWidth(800);
 
         Optional<ButtonType> result = alert.showAndWait();
         return result.map(type -> {
