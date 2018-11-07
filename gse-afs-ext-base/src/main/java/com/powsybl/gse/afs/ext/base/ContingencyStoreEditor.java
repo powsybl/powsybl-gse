@@ -23,9 +23,7 @@ import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Text;
 
-import java.util.Objects;
-import java.util.Optional;
-import java.util.ResourceBundle;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -59,6 +57,15 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
                     ContingencyElement element = createElement(equipmentInfo);
                     if (element != null) {
                         addContingencyElement(element);
+                    }
+                    success = true;
+                } else if (db.hasContent(EquipmentInfo.DATA_FORMAT_LIST)) {
+                    List<EquipmentInfo> equipmentInfoList = (List<EquipmentInfo>) db.getContent(EquipmentInfo.DATA_FORMAT_LIST);
+                    for (EquipmentInfo equipmentInfo : equipmentInfoList) {
+                        ContingencyElement element = createElement(equipmentInfo);
+                        if (element != null) {
+                            addContingencyElement(element);
+                        }
                     }
                     success = true;
                 }
@@ -174,17 +181,7 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         contingencyTree.setCellFactory(param -> new ContingencyTreeCell());
         contingencyTree.setShowRoot(false);
 
-        contingencyTree.setOnDragOver(event -> {
-            Dragboard db = event.getDragboard();
-            if (db.hasContent(EquipmentInfo.DATA_FORMAT)) {
-                EquipmentInfo equipmentInfo = (EquipmentInfo) db.getContent(EquipmentInfo.DATA_FORMAT);
-                ContingencyElement element = createElement(equipmentInfo);
-                if (element != null) {
-                    event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
-                }
-            }
-            event.consume();
-        });
+        contingencyTree.setOnDragOver(this::onDragOver);
 
         contingencyTree.setOnDragDetected(event -> {
             TreeItem<Object> item = contingencyTree.getSelectionModel().getSelectedItem();
@@ -216,10 +213,55 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
             }
         });
 
-        contingencyTree.addEventHandler(KeyEvent.KEY_PRESSED, this::keyBind);
+        contingencyTree.addEventHandler(KeyEvent.KEY_PRESSED, this::onKeyPressed);
 
         setTop(toolBar);
         setCenter(contingencyTree);
+    }
+
+    private void onKeyPressed(KeyEvent e) {
+        if (e.getCode() == KeyCode.DELETE) {
+            alertRemove();
+        } else if (e.getCode() == KeyCode.F2) {
+            TreeItem<Object> item = contingencyTree.getSelectionModel().getSelectedItem();
+            if (item.getValue() instanceof Contingency) {
+                rename();
+            }
+        }
+    }
+
+    private static void acceptSingleDraggedElement(DragEvent event) {
+        EquipmentInfo equipmentInfo = (EquipmentInfo) event.getDragboard().getContent(EquipmentInfo.DATA_FORMAT);
+        ContingencyElement element = createElement(equipmentInfo);
+        if (element != null) {
+            event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+        }
+    }
+
+    private static void acceptMultipleDraggedElements(DragEvent event) {
+        List<ContingencyElement> contingencyElementList = new ArrayList<>();
+        List<EquipmentInfo> equipmentInfoList = (List<EquipmentInfo>) event.getDragboard().getContent(EquipmentInfo.DATA_FORMAT_LIST);
+        for (EquipmentInfo equipmentInfo : equipmentInfoList) {
+            ContingencyElement element = createElement(equipmentInfo);
+            if (element != null) {
+                contingencyElementList.add(element);
+            }
+        }
+        if (contingencyElementList.size() == equipmentInfoList.size()) {
+            event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+        }
+    }
+
+    private void onDragOver(DragEvent event) {
+        if (event.getGestureSource() != contingencyTree) {
+            Dragboard db = event.getDragboard();
+            if (db.hasContent(EquipmentInfo.DATA_FORMAT)) {
+                acceptSingleDraggedElement(event);
+            } else if (db.hasContent(EquipmentInfo.DATA_FORMAT_LIST)) {
+                acceptMultipleDraggedElements(event);
+            }
+        }
+        event.consume();
     }
 
     private void readContingencies() {
@@ -241,17 +283,6 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         MenuItem removeItem = new MenuItem(REMOVE);
         removeItem.setOnAction(event -> remove());
         return new ContextMenu(renameItem, removeItem);
-    }
-
-    private void keyBind(KeyEvent e) {
-        if (e.getCode() == KeyCode.DELETE) {
-            alertRemove();
-        } else if (e.getCode() == KeyCode.F2) {
-            TreeItem<Object> item = contingencyTree.getSelectionModel().getSelectedItem();
-            if (item.getValue() instanceof Contingency) {
-                rename();
-            }
-        }
     }
 
     private void rename() {
