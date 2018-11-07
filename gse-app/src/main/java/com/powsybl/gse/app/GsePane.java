@@ -157,11 +157,7 @@ public class GsePane extends StackPane {
 
         appBar.getOpenButton().setOnAction(event -> {
             Optional<Project> project = NodeChooser.showAndWaitDialog(getScene().getWindow(), data, context, Project.class);
-            project.ifPresent(selectedProject -> {
-                if (!isProjectOpen(selectedProject)) {
-                    addProject(selectedProject);
-                }
-            });
+            project.ifPresent(this::openProject);
         });
 
         ContextMenu contextMenu = new ContextMenu();
@@ -176,11 +172,22 @@ public class GsePane extends StackPane {
         aboutMenuItem.setOnAction(event -> showAbout());
         contextMenu.getItems().add(aboutMenuItem);
 
-        appBar.getHelpButton().setOnAction(event -> {
-            contextMenu.show(appBar.getHelpButton(), Side.BOTTOM, 0, 0);
-        });
+        appBar.getHelpButton().setOnAction(event -> contextMenu.show(appBar.getHelpButton(), Side.BOTTOM, 0, 0));
 
         return appBar;
+    }
+
+    private void openProject(Project project) {
+        if (!isProjectOpen(project)) {
+            addProject(project);
+        } else {
+            for (Tab tab : tabPane.getTabs()) {
+                ProjectPane projectPane = (ProjectPane) tab;
+                if (projectPane.getProject().getId().equals(project.getId())) {
+                    tab.getTabPane().getSelectionModel().select(tab);
+                }
+            }
+        }
     }
 
     public String getTitle() {
