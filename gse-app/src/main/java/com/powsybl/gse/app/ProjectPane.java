@@ -100,17 +100,12 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private static class MoveContext {
-        private Object source;
-        private TreeItem sourceTreeItem;
-        private TreeItem sourceparentTreeItem;
-    }
 
     private int counter;
 
     private boolean success;
 
-    private MoveContext moveContext;
+    private DragAndDropMove dragAndDropMove;
 
     private final Project project;
 
@@ -293,7 +288,7 @@ public class ProjectPane extends Tab {
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
-        if (item instanceof ProjectFolder && item != moveContext.source) {
+        if (item instanceof ProjectFolder && item != dragAndDropMove.getSource()) {
             int count = 0;
             treeItemChildrenSize(treeItem, count);
             setDragOverStyle(treeCell);
@@ -302,24 +297,15 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private Alert nameAlreadyExistsAlert() {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
-        alert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
-        alert.setContentText(RESOURCE_BUNDLE.getString("DragFileExists"));
-        alert.showAndWait();
-        return alert;
-    }
-
     private int getCounter() {
         return counter;
     }
 
     private void dragDetectedEvent(Object value, TreeItem<Object> treeItem, MouseEvent event) {
-        moveContext = new MoveContext();
-        moveContext.source = value;
-        moveContext.sourceTreeItem = treeItem;
-        moveContext.sourceparentTreeItem = moveContext.sourceTreeItem.getParent();
+        dragAndDropMove = new DragAndDropMove();
+        dragAndDropMove.setSource(value);
+        dragAndDropMove.setSourceTreeItem(treeItem);
+
         if (value instanceof ProjectNode && treeItem != treeView.getRoot()) {
             Dragboard db = treeView.startDragAndDrop(TransferMode.ANY);
             ClipboardContent cb = new ClipboardContent();
@@ -330,14 +316,14 @@ public class ProjectPane extends Tab {
     }
 
     private void dragDroppedEvent(Object value, TreeItem<Object> treeItem, DragEvent event, ProjectNode projectNode) {
-        if (value instanceof ProjectFolder && value != moveContext.source) {
+        if (value instanceof ProjectFolder && value != dragAndDropMove.getSource()) {
             ProjectFolder projectFolder = (ProjectFolder) projectNode;
             int count = 0;
             success = false;
             treeItemChildrenSize(treeItem, count);
             accepTransferDrag(projectFolder, success);
             event.setDropCompleted(success);
-            refresh(moveContext.sourceparentTreeItem);
+            refresh(dragAndDropMove.getSourceTreeItem().getParent());
             refresh(treeItem);
             treeView.getSelectionModel().clearSelection();
             event.consume();
@@ -352,7 +338,7 @@ public class ProjectPane extends Tab {
                 for (ProjectNode node : treeItemFolder.getChildren()) {
                     if (node == null) {
                         break;
-                    } else if (node.getName().equals(moveContext.source.toString())) {
+                    } else if (node.getName().equals(dragAndDropMove.getSource().toString())) {
                         counter++;
                     }
                 }
@@ -363,9 +349,9 @@ public class ProjectPane extends Tab {
     private void accepTransferDrag(ProjectFolder projectFolder, boolean s) {
         success = s;
         if (getCounter() >= 1) {
-            nameAlreadyExistsAlert();
+            GseAlerts.showDraggingError();
         } else if (getCounter() < 1) {
-            ProjectNode monfichier = (ProjectNode) moveContext.source;
+            ProjectNode monfichier = (ProjectNode) dragAndDropMove.getSource();
             monfichier.moveTo(projectFolder);
             success = true;
         }
@@ -561,22 +547,7 @@ public class ProjectPane extends Tab {
     private MenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.1em"));
         menuItem.setOnAction(event -> {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle(RESOURCE_BUNDLE.getString("ConfirmationDialog"));
-            String headerText;
-            if (selectedTreeItems.size() == 1) {
-                ProjectNode node = (ProjectNode) selectedTreeItems.get(0).getValue();
-                headerText = String.format(RESOURCE_BUNDLE.getString("FileWillBeDeleted"), node.getName());
-            } else if (selectedTreeItems.size() > 1) {
-                String names = selectedTreeItems.stream()
-                        .map(selectedTreeItem -> selectedTreeItem.getValue().toString())
-                        .collect(Collectors.joining(", "));
-                headerText = String.format(RESOURCE_BUNDLE.getString("FilesWillBeDeleted"), names);
-            } else {
-                throw new AssertionError();
-            }
-            alert.setHeaderText(headerText);
-            alert.setContentText(RESOURCE_BUNDLE.getString("DoYouConfirm"));
+            Alert alert = GseAlerts.deleteNodesAlert(selectedTreeItems);
             Optional<ButtonType> result = alert.showAndWait();
             if (result.get() == ButtonType.OK) {
                 List<TreeItem<Object>> parentTreeItems = new ArrayList<>();
@@ -599,7 +570,7 @@ public class ProjectPane extends Tab {
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
-        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"));
+        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
         menuItem.setOnAction(event -> {
             TextInputDialog dialog = new TextInputDialog(selectedTreeItem.getValue().toString());
             dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
@@ -645,6 +616,14 @@ public class ProjectPane extends Tab {
         } else if (node instanceof Pane) {
             for (Node child : ((Pane) node).getChildren()) {
                 findDetachableTabPanes(child, detachableTabPanes);
+            }
+        }
+    }
+
+    private void closeViews() {
+        for (DetachableTabPane tabPane : findDetachableTabPanes()) {
+            for (Tab tab : new ArrayList<>(tabPane.getTabs())) {
+                ((MyTab) tab).requestClose();
             }
         }
     }
@@ -860,5 +839,6 @@ public class ProjectPane extends Tab {
 
     public void dispose() {
         taskItems.dispose();
+        closeViews();
     }
 }

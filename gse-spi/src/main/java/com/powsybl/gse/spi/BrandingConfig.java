@@ -33,7 +33,7 @@ public interface BrandingConfig {
 
     String getTitle();
 
-    Image getIcon16x16();
+    List<Image> getIcons();
 
     Region getLogo();
 

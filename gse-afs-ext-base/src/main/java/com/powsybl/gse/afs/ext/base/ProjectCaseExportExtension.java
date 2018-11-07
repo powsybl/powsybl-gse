@@ -13,6 +13,7 @@ import com.powsybl.afs.ext.base.ProjectCase;
 import com.powsybl.gse.spi.ExecutionTaskConfigurator;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileExecutionTaskExtension;
+import com.powsybl.gse.util.Glyph;
 import com.powsybl.iidm.xml.NetworkXml;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -58,6 +59,11 @@ public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExten
     }
 
     @Override
+    public Node getMenuGraphic(ProjectFile file) {
+        return Glyph.createAwesomeFont('\uf093').size("1em");
+    }
+
+    @Override
     public ExecutionTaskConfigurator<ProjectCaseExportParameters> createConfigurator(ProjectFile projectCase, Scene scene, GseContext context) {
         return new ExecutionTaskConfigurator<ProjectCaseExportParameters>() {
 
@@ -91,6 +97,7 @@ public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExten
                     FileChooser fileChooser = new FileChooser();
                     fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
                     fileChooser.setTitle(RESOURCE_BUNDLE.getString("SelectTargetFile"));
+                    fileChooser.setInitialFileName(fileTextField.getText());
                     File file = fileChooser.showSaveDialog(scene.getWindow());
                     if (file != null) {
                         fileTextField.setText(file.toString());

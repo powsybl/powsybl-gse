@@ -15,6 +15,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -22,10 +23,14 @@ import javafx.scene.shape.Line;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 
+import java.util.Objects;
+
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
 public class LinePiModelDiagram extends Pane {
+
+    private static final int MAX_NAME_ID_LENGTH = 15;
 
     private final DoubleProperty r = new SimpleDoubleProperty(Double.NaN);
 
@@ -164,10 +169,16 @@ public class LinePiModelDiagram extends Pane {
         b2Text.setTextAlignment(TextAlignment.CENTER);
 
         Text voltageLevel1Text = new Text(15, 40, "");
-        voltageLevel1Text.textProperty().bind(voltageLevel1);
+        voltageLevel1Text.textProperty().bind(Bindings.createStringBinding(() -> formatNameId(this.voltageLevel1), this.voltageLevel1));
+        Tooltip tooltipVoltageLevel1 = new Tooltip();
+        tooltipVoltageLevel1.textProperty().bind(this.voltageLevel1);
+        Tooltip.install(voltageLevel1Text, tooltipVoltageLevel1);
 
         Text voltageLevel2Text = new Text(365, 40, "");
-        voltageLevel2Text.textProperty().bind(voltageLevel2);
+        voltageLevel2Text.textProperty().bind(Bindings.createStringBinding(() -> formatNameId(this.voltageLevel2), this.voltageLevel2));
+        Tooltip tooltipVoltageLevel2 = new Tooltip();
+        tooltipVoltageLevel2.textProperty().bind(this.voltageLevel2);
+        Tooltip.install(voltageLevel2Text, tooltipVoltageLevel2);
 
         getChildren().addAll(rSymbol, xSymbol, g1Symbol, b1Symbol, g2Symbol, b2Symbol,
                 ground1, ground2,
@@ -183,6 +194,14 @@ public class LinePiModelDiagram extends Pane {
 
     private static String formatSiemens(DoubleProperty d) {
         return Double.isNaN(d.get()) ? "?" : String.format("%.3e", d.get());
+    }
+
+    private static String formatNameId(StringProperty s) {
+        String nameId = s.get();
+        if (Objects.isNull(nameId)) {
+            return "?";
+        }
+        return nameId.length() <= MAX_NAME_ID_LENGTH ? nameId : nameId.substring(0, MAX_NAME_ID_LENGTH - 3) + "...";
     }
 
     public DoubleProperty rProperty() {
