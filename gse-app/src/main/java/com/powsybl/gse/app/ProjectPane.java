@@ -667,9 +667,9 @@ public class ProjectPane extends Tab {
         if (viewer instanceof Savable) {
             ((Savable) viewer).savedProperty().addListener((observable, oldValue, newValue) -> {
                 if (newValue) {
-                    tab.setText(getTabName(treeView.getSelectionModel().getSelectedItem()));
+                    tab.setText(tabName);
                 } else if (oldValue) {
-                    tab.setText(getTabName(treeView.getSelectionModel().getSelectedItem()) + STARNOTIFICATION);
+                    tab.setText(tabName + STARNOTIFICATION);
                 }
             });
         }
