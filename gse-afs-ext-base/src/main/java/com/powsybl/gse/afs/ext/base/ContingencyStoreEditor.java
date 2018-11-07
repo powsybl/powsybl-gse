@@ -194,8 +194,6 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
 
             case "LINE":
             case "TWO_WINDINGS_TRANSFORMER":
-                return new BranchContingency(equipmentInfo.getIdAndName().getId());
-
             case "BRANCH":
                 return new BranchContingency(equipmentInfo.getIdAndName().getId());
 
