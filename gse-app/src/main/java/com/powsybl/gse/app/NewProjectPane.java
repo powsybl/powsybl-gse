@@ -7,6 +7,7 @@
 package com.powsybl.gse.app;
 
 import com.powsybl.afs.AppData;
+import com.powsybl.afs.AppFileSystem;
 import com.powsybl.afs.Folder;
 import com.powsybl.afs.Project;
 import com.powsybl.gse.spi.GseContext;
@@ -63,7 +64,12 @@ public class NewProjectPane extends GridPane {
         });
         folderTextField.textProperty().bind(Bindings.createObjectBinding(() -> {
             Folder folder = folderProperty.get();
-            return folder != null ? folder.getPath().toString() : null;
+            if (folder == null) {
+                return null;
+            } else {
+                String path = folder.getPath().toString();
+                return folder.getParent().isPresent() ? path : path + AppFileSystem.PATH_SEPARATOR;
+            }
         }, folderProperty));
         setVgap(5);
         setHgap(5);
