@@ -17,6 +17,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.text.Text;
 import org.codehaus.groovy.antlr.GroovySourceToken;
 import org.codehaus.groovy.antlr.SourceBuffer;
 import org.codehaus.groovy.antlr.UnicodeEscapingReader;
@@ -35,8 +36,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.UncheckedIOException;
-import java.util.Collection;
-import java.util.Collections;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -49,6 +49,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private final SearchableCodeArea codeArea = new SearchableCodeArea();
 
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
+
+    private String mouseClickedBracket;
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
@@ -96,6 +98,98 @@ public class GroovyCodeEditor extends MasterDetailPane {
             }
 
         });
+
+        codeArea.setOnMouseClicked(event -> {
+            if (event.getPickResult().getIntersectedNode() instanceof Text) {
+                Text intersectedNode = (Text) event.getPickResult().getIntersectedNode();
+                mouseClickedBracket = intersectedNode.getText();
+                if(areBracketsMatched(codeArea.getText())) {
+                    findBracketsMatches(codeArea.getText());
+                }
+            }
+            event.consume();
+        });
+
+    }
+
+    public boolean areBracketsMatched(String text) {
+        Stack<Character> stack = new Stack<>();
+        char current, previous;
+        for (int i = 0; i < text.length(); i++) {
+            current = text.charAt(i);
+            if (current == '(' || current == '[' || current == '{') {
+                stack.push(current);
+            } else if (current == ')' || current == ']' || current == '}') {
+                if (stack.isEmpty()) {
+                    return false;
+                } else {
+                    previous = stack.peek();
+                    if ((current == ')' && previous == '(') || (current == ']' && previous == '[') || (current == '}' && previous == '{')) {
+                            stack.pop();
+                    } else {
+                        return false;
+                    }
+                }
+            }
+        }
+        return stack.isEmpty();
+    }
+
+    private void findBracketsMatches(String text) {
+        if (mouseClickedBracket.equals(Character.toString(')'))) {
+            highlightLeftBracketsMatches(text, ')', '(');
+        } else if (mouseClickedBracket.equals(Character.toString('}'))) {
+            highlightLeftBracketsMatches(text, '}', '{');
+        } else if (mouseClickedBracket.equals(Character.toString(']'))) {
+            highlightLeftBracketsMatches(text, ']', '[');
+        } else if (mouseClickedBracket.equals(Character.toString('('))) {
+            highlightRightBracketsMatches(text, '(', ')');
+        } else if (mouseClickedBracket.equals(Character.toString('{'))) {
+            highlightRightBracketsMatches(text, '{', '}');
+        } else if (mouseClickedBracket.equals(Character.toString('['))) {
+            highlightRightBracketsMatches(text, '[', ']');
+        }
+
+    }
+
+    private void highlightLeftBracketsMatches(String text, char c1, char c2) {
+        Integer value = codeArea.caretPositionProperty().getValue();
+        int counter =0;
+        for (int i = value - 1; i >= 0; i--) {
+            if (text.charAt(i) == c1) {
+                counter++;
+            } else if (text.charAt(i) == c2) {
+                if (counter == 0) {
+                    codeArea.select(i, i + 1);
+                    break;
+                } else if (counter == 1) {
+                    counter = 0;
+                    continue;
+                } else {
+                    counter --;
+                }
+            }
+        }
+    }
+
+    private void highlightRightBracketsMatches(String text, char c1, char c2){
+        Integer value = codeArea.caretPositionProperty().getValue();
+        int counter =0;
+        for (int i = value +1 ; i <= text.length(); i++) {
+            if (text.charAt(i) == c1) {
+                counter++;
+            } else if (text.charAt(i) == c2) {
+                if (counter == 0) {
+                    codeArea.select(i, i + 1);
+                    break;
+                } else if (counter == 1) {
+                    counter = 0;
+                    continue;
+                } else {
+                    counter --;
+                }
+            }
+        }
     }
 
     public void setCode(String code) {
@@ -209,7 +303,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
     }
 
     private int length(GroovySourceToken token) {
-        int offset1 = codeArea.getDocument().position(token.getLine() -  1, token.getColumn() - 1).toOffset();
+        int offset1 = codeArea.getDocument().position(token.getLine() - 1, token.getColumn() - 1).toOffset();
         int offset2 = codeArea.getDocument().position(token.getLineLast() - 1, token.getColumnLast() - 1).toOffset();
         return offset2 - offset1;
     }
