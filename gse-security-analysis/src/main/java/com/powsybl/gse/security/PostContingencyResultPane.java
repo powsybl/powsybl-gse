@@ -13,16 +13,13 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
-import javafx.geometry.Side;
 import javafx.scene.Group;
 import javafx.scene.control.*;
-import javafx.scene.layout.BorderPane;
 import org.controlsfx.control.HiddenSidesPane;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.ResourceBundle;
 import java.util.function.Predicate;
 import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
@@ -31,9 +28,7 @@ import java.util.stream.Stream;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-class PostContingencyResultPane extends BorderPane implements LimitViolationsResultPane {
-
-    private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.SecurityAnalysis");
+class PostContingencyResultPane extends AbstractContingencyResultPane implements LimitViolationsResultPane {
 
     class ResultRow {
 
@@ -167,22 +162,8 @@ class PostContingencyResultPane extends BorderPane implements LimitViolationsRes
 
         setRight(filterButton);
 
-        filterButton.setOnMouseClicked(event -> {
-            if (hiddenSidesPane.getPinnedSide() != null) {
-                hiddenSidesPane.setPinnedSide(null);
-                filterButton.setStyle("-fx-background-color: transparent;");
-            } else {
-                hiddenSidesPane.setPinnedSide(Side.RIGHT);
-                filterButton.setStyle("-fx-background-color: #A3A3A4");
-            }
-        });
+        filterButton.setOnMouseClicked(event -> onMouseClickedOnFilter(hiddenSidesPane, filterButton));
 
-    }
-
-    private static <S, T> TableColumn<S, T> createColumn(String type) {
-        TableColumn<S, T> column = new TableColumn<>(RESOURCE_BUNDLE.getString(type));
-        column.setUserData(type);
-        return column;
     }
 
     @Override
