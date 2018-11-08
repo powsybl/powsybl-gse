@@ -297,15 +297,6 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private Alert nameAlreadyExistsAlert() {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
-        alert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
-        alert.setContentText(RESOURCE_BUNDLE.getString("DragFileExists"));
-        alert.showAndWait();
-        return alert;
-    }
-
     private int getCounter() {
         return counter;
     }
@@ -357,7 +348,7 @@ public class ProjectPane extends Tab {
     private void accepTransferDrag(ProjectFolder projectFolder, boolean s) {
         success = s;
         if (getCounter() >= 1) {
-            nameAlreadyExistsAlert();
+            GseAlerts.showDraggingError();
         } else if (getCounter() < 1) {
             ProjectNode monfichier = (ProjectNode) dragAndDropMove.getSource();
             monfichier.moveTo(projectFolder);
@@ -555,22 +546,7 @@ public class ProjectPane extends Tab {
     private MenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.1em"));
         menuItem.setOnAction(event -> {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle(RESOURCE_BUNDLE.getString("ConfirmationDialog"));
-            String headerText;
-            if (selectedTreeItems.size() == 1) {
-                ProjectNode node = (ProjectNode) selectedTreeItems.get(0).getValue();
-                headerText = String.format(RESOURCE_BUNDLE.getString("FileWillBeDeleted"), node.getName());
-            } else if (selectedTreeItems.size() > 1) {
-                String names = selectedTreeItems.stream()
-                        .map(selectedTreeItem -> selectedTreeItem.getValue().toString())
-                        .collect(Collectors.joining(", "));
-                headerText = String.format(RESOURCE_BUNDLE.getString("FilesWillBeDeleted"), names);
-            } else {
-                throw new AssertionError();
-            }
-            alert.setHeaderText(headerText);
-            alert.setContentText(RESOURCE_BUNDLE.getString("DoYouConfirm"));
+            Alert alert = GseAlerts.deleteNodesAlert(selectedTreeItems);
             Optional<ButtonType> result = alert.showAndWait();
             if (result.get() == ButtonType.OK) {
                 List<TreeItem<Object>> parentTreeItems = new ArrayList<>();
@@ -595,21 +571,16 @@ public class ProjectPane extends Tab {
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
         menuItem.setOnAction(event -> {
-            TextInputDialog dialog = new TextInputDialog(selectedTreeItem.getValue().toString());
-            dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
-            dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
-            dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
-            Optional<String> result = dialog.showAndWait();
-            result.ifPresent(newname -> {
+            Optional<String> result = RenamePane.showAndWaitDialog((ProjectNode) selectedTreeItem.getValue());
+            result.ifPresent(newName -> {
                 if (selectedTreeItem.getValue() instanceof ProjectNode) {
                     ProjectNode selectedTreeNode = (ProjectNode) selectedTreeItem.getValue();
-                    selectedTreeNode.rename(newname);
+                    selectedTreeNode.rename(newName);
                     refresh(selectedTreeItem.getParent());
                     treeView.getSelectionModel().clearSelection();
                     treeView.getSelectionModel().select(selectedTreeItem);
                 }
             });
-
         });
         return menuItem;
     }

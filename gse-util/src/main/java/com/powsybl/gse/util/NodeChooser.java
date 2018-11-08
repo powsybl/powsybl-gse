@@ -390,14 +390,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         }
     }
 
-    private Alert nameAlreadyExistsAlert() {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
-        alert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
-        alert.setContentText(RESOURCE_BUNDLE.getString("DragFileExists"));
-        alert.showAndWait();
-        return alert;
-    }
+
 
     private void onMouseClickedEvent(MouseEvent event) {
         TreeItem<N> item = tree.getSelectionModel().getSelectedItem();
@@ -519,7 +512,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private void accepTransferDrag(Folder folder, boolean s) {
         success = s;
         if (getCounter() >= 1) {
-            nameAlreadyExistsAlert();
+            GseAlerts.showDraggingError();
         } else if (getCounter() < 1) {
             Project monfichier = (Project) dragAndDropMove.getSource();
             monfichier.moveTo(folder);
@@ -587,22 +580,19 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private MenuItem createRenameProjectMenuItem() {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size(ICON_SIZE));
+        TreeItem<N> selectedTreeItem = tree.getSelectionModel().getSelectedItem();
         menuItem.setOnAction(event -> {
-            TextInputDialog dialog = new TextInputDialog(tree.getSelectionModel().getSelectedItem().getValue().toString());
-            dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
-            dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
-            dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
-            Optional<String> result = dialog.showAndWait();
-            result.ifPresent(newname -> {
-                TreeItem<N> selectedTreeItem = tree.getSelectionModel().getSelectedItem();
+            Optional<String> result = RenamePane.showAndWaitDialog((Node) selectedTreeItem.getValue());
+            result.ifPresent(newName -> {
                 if (selectedTreeItem.getValue() instanceof Node) {
-                    Node localSelectednode = (Node) selectedTreeItem.getValue();
-                    localSelectednode.rename(newname);
-                    refreshTreeItem(selectedTreeItem.getParent());
+                    Node selectedTreeNode = (Node) selectedTreeItem.getValue();
+                    selectedTreeNode.rename(newName);
+                    refresh(selectedTreeItem.getParent());
                     tree.getSelectionModel().clearSelection();
-                    tree.getSelectionModel().select(selectedTreeItem.getParent());
+                    tree.getSelectionModel().select(selectedTreeItem);
                 }
             });
+
         });
         return menuItem;
     }
@@ -623,23 +613,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     public void createDeleteAlert(List<? extends TreeItem<N>> selectedTreeItems) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle(RESOURCE_BUNDLE.getString("ConfirmationDialog"));
-        String headerText;
-        if (selectedTreeItems.size() == 1) {
-            Node node = (Node) selectedTreeItems.get(0).getValue();
-            headerText = String.format(RESOURCE_BUNDLE.getString("FileWillBeDeleted"), node.getName());
-        } else if (selectedTreeItems.size() > 1) {
-            String names = selectedTreeItems.stream()
-                    .map(selectedItem -> selectedItem.getValue().toString())
-                    .collect(Collectors.joining(", "));
-            headerText = String.format(RESOURCE_BUNDLE.getString("FilesWillBeDeleted"), names);
-        } else {
-            throw new AssertionError();
-        }
-        alert.setHeaderText(headerText);
-        alert.setContentText(RESOURCE_BUNDLE.getString("DoYouConfirm"));
-        alert.showAndWait().ifPresent(result -> {
+        GseAlerts.deleteNodesAlert(selectedTreeItems).showAndWait().ifPresent(result -> {
             if (result == ButtonType.OK) {
                 setOnOkButton(selectedTreeItems);
             }
