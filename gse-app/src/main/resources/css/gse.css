@@ -100,3 +100,7 @@
 .transparent-button.hover {
      -fx-background-color: derive(-fx-mark-color, -30%);
 }
+
+.tab_text_unsaved {
+     -fx-text-base-color: #0000cd ;
+}

@@ -668,8 +668,10 @@ public class ProjectPane extends Tab {
             ((Savable) viewer).savedProperty().addListener((observable, oldValue, newValue) -> {
                 if (newValue) {
                     tab.setText(tabName);
+                    tab.getStyleClass().remove("tab_text_unsaved");
                 } else if (oldValue) {
                     tab.setText(tabName + STARNOTIFICATION);
+                    tab.getStyleClass().add("tab_text_unsaved");
                 }
             });
         }
