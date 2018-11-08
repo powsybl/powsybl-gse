@@ -20,6 +20,7 @@ import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -118,6 +119,8 @@ public class ProjectPane extends Tab {
     private final TaskItemList taskItems;
 
     private final TaskMonitorPane taskMonitorPane;
+
+    private static final String STARNOTIFICATION = " *";
 
     private static class CreationTaskList {
 
@@ -648,6 +651,7 @@ public class ProjectPane extends Tab {
         Node graphic = viewerExtension.getMenuGraphic(file);
         ProjectFileViewer viewer = viewerExtension.newViewer(file, getContent().getScene(), context);
         Tab tab = new MyTab(tabName, viewer.getContent());
+        tab.setOnCloseRequest(event -> setTabOnCloseRequest(viewer, event, tab));
         tab.setOnClosed(event -> viewer.dispose());
         tab.setGraphic(graphic);
         tab.setTooltip(new Tooltip(tabName));
@@ -655,7 +659,40 @@ public class ProjectPane extends Tab {
         DetachableTabPane firstTabPane = detachableTabPanes.get(0);
         firstTabPane.getTabs().add(tab);
         firstTabPane.getSelectionModel().select(tab);
+        if (viewer instanceof Savable) {
+            ((Savable) viewer).savedProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue) {
+                    tab.setText(tabName);
+                    tab.getStyleClass().remove("tab_text_unsaved");
+                } else if (oldValue) {
+                    tab.setText(tabName + STARNOTIFICATION);
+                    tab.getStyleClass().add("tab_text_unsaved");
+                }
+            });
+        }
         viewer.view();
+    }
+
+    private void setTabOnCloseRequest(ProjectFileViewer projectFileViewer, Event event, Tab tab) {
+        String tabName = tab.getText();
+        if (projectFileViewer instanceof Savable && !((Savable) projectFileViewer).savedProperty().get()) {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle(RESOURCE_BUNDLE.getString("SaveRessource"));
+            alert.setHeaderText(String.format(RESOURCE_BUNDLE.getString("SaveModifiedFile"), tabName.substring(0, tabName.length() - 1)));
+            alert.getButtonTypes().remove(ButtonType.OK);
+            ButtonType save = new ButtonType(RESOURCE_BUNDLE.getString("Save"));
+            ButtonType discard = new ButtonType(RESOURCE_BUNDLE.getString("Discard"));
+            alert.getButtonTypes().addAll(save, discard);
+            alert.showAndWait().ifPresent(buttonType -> {
+                if (buttonType == ButtonType.CANCEL) {
+                    event.consume();
+                } else if (buttonType == save) {
+                    ((Savable) projectFileViewer).save();
+                } else {
+                    tab.setOnClosed(event1 -> projectFileViewer.dispose());
+                }
+            });
+        }
     }
 
     private MenuItem initMenuItem(ProjectFileMenuConfigurableExtension menuConfigurable, ProjectFile file) {
