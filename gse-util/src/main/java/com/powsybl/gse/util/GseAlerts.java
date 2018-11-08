@@ -24,7 +24,6 @@ public final class GseAlerts {
     private static final String FILEWILLBEDELETED = RESOURCE_BUNDLE.getString("FileWillBeDeleted");
     private static final String GSERROR = RESOURCE_BUNDLE.getString("Error");
 
-
     private GseAlerts() {
     }
 
