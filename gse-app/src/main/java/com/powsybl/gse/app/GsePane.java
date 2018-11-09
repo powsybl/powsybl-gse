@@ -191,9 +191,17 @@ public class GsePane extends StackPane {
 
     public void dispose() {
         savePreferences();
-
         for (Tab tab : tabPane.getTabs()) {
             ((ProjectPane) tab).dispose();
         }
+    }
+
+    public boolean isClosable() {
+        for (Tab tab : tabPane.getTabs()) {
+            if (!(((ProjectPane) tab).canBeClosed())) {
+                return false;
+            }
+        }
+        return true;
     }
 }

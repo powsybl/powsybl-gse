@@ -135,4 +135,10 @@ public class ModificationScriptEditor extends BorderPane
         storableScript.removeListener(this);
     }
 
+    @Override
+    public boolean isClosable() {
+        //TODO: save before close
+        return true;
+    }
+
 }
