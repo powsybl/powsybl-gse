@@ -185,6 +185,7 @@ public class GsePane extends StackPane {
                 ProjectPane projectPane = (ProjectPane) tab;
                 if (projectPane.getProject().getId().equals(project.getId())) {
                     tab.getTabPane().getSelectionModel().select(tab);
+                    break;
                 }
             }
         }
