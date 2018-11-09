@@ -410,7 +410,7 @@ public class ProjectPane extends Tab {
         splitPane.setDividerPositions(0.3);
         SplitPane.setResizableWithParent(ctrlPane, Boolean.FALSE);
         setText(project.getName());
-        setTooltip(new Tooltip(project.getName() + ": " + project.getDescription()));
+        setTooltip(new Tooltip(project.getDescription().equals("") ? project.getName() : project.getName() + ": " + project.getDescription()));
         setContent(splitPane);
 
         createRootFolderTreeItem(project);
