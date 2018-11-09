@@ -13,10 +13,7 @@ import groovyjarjarantlr.TokenStreamException;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCodeCombination;
-import javafx.scene.input.KeyCombination;
-import javafx.scene.input.KeyEvent;
+import javafx.scene.input.*;
 import org.codehaus.groovy.antlr.GroovySourceToken;
 import org.codehaus.groovy.antlr.SourceBuffer;
 import org.codehaus.groovy.antlr.UnicodeEscapingReader;
@@ -25,6 +22,7 @@ import org.codehaus.groovy.antlr.parser.GroovyLexer;
 import org.codehaus.groovy.antlr.parser.GroovyTokenTypes;
 import org.controlsfx.control.MasterDetailPane;
 import org.fxmisc.flowless.VirtualizedScrollPane;
+import org.fxmisc.richtext.Caret;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
 import org.fxmisc.richtext.model.StyleSpans;
@@ -96,6 +94,36 @@ public class GroovyCodeEditor extends MasterDetailPane {
             }
 
         });
+
+        codeArea.setOnDragEntered(event -> codeArea.setShowCaret(Caret.CaretVisibility.ON));
+        codeArea.setOnDragExited(event -> codeArea.setShowCaret(Caret.CaretVisibility.AUTO));
+        codeArea.setOnDragOver(this::onDragOver);
+        codeArea.setOnDragDropped(this::onDragDropped);
+    }
+
+    private void onDragOver(DragEvent event) {
+        Dragboard db = event.getDragboard();
+        if ((db.hasContent(EquipmentInfo.DATA_FORMAT) && db.getContent(EquipmentInfo.DATA_FORMAT) instanceof EquipmentInfo) ||
+                db.hasString()) {
+            event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+        }
+        event.consume();
+    }
+
+    private void onDragDropped(DragEvent event) {
+        codeArea.setShowCaret(Caret.CaretVisibility.AUTO);
+        Dragboard db = event.getDragboard();
+        boolean success = false;
+        if (db.hasContent(EquipmentInfo.DATA_FORMAT)) {
+            EquipmentInfo equipmentInfo = (EquipmentInfo) db.getContent(EquipmentInfo.DATA_FORMAT);
+            codeArea.insertText(codeArea.getCaretPosition(), equipmentInfo.getIdAndName().getId());
+            success = true;
+        } else if (db.hasString()) {
+            codeArea.insertText(codeArea.getCaretPosition(), db.getString());
+            success = true;
+        }
+        event.setDropCompleted(success);
+        event.consume();
     }
 
     public void setCode(String code) {
