@@ -580,22 +580,19 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private MenuItem createRenameProjectMenuItem() {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size(ICON_SIZE));
+        TreeItem<N> selectedTreeItem = tree.getSelectionModel().getSelectedItem();
         menuItem.setOnAction(event -> {
-            TextInputDialog dialog = new TextInputDialog(tree.getSelectionModel().getSelectedItem().getValue().toString());
-            dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
-            dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
-            dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
-            Optional<String> result = dialog.showAndWait();
-            result.ifPresent(newname -> {
-                TreeItem<N> selectedTreeItem = tree.getSelectionModel().getSelectedItem();
+            Optional<String> result = RenamePane.showAndWaitDialog((Node) selectedTreeItem.getValue());
+            result.ifPresent(newName -> {
                 if (selectedTreeItem.getValue() instanceof Node) {
-                    Node localSelectednode = (Node) selectedTreeItem.getValue();
-                    localSelectednode.rename(newname);
-                    refreshTreeItem(selectedTreeItem.getParent());
+                    Node selectedTreeNode = (Node) selectedTreeItem.getValue();
+                    selectedTreeNode.rename(newName);
+                    refresh(selectedTreeItem.getParent());
                     tree.getSelectionModel().clearSelection();
-                    tree.getSelectionModel().select(selectedTreeItem.getParent());
+                    tree.getSelectionModel().select(selectedTreeItem);
                 }
             });
+
         });
         return menuItem;
     }
