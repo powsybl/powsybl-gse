@@ -413,7 +413,7 @@ public class ProjectPane extends Tab {
         splitPane.setDividerPositions(0.3);
         SplitPane.setResizableWithParent(ctrlPane, Boolean.FALSE);
         setText(project.getName());
-        setTooltip(new Tooltip(project.getName() + ": " + project.getDescription()));
+        setTooltip(new Tooltip(project.getDescription().equals("") ? project.getName() : project.getName() + ": " + project.getDescription()));
         setContent(splitPane);
 
         createRootFolderTreeItem(project);
@@ -576,21 +576,16 @@ public class ProjectPane extends Tab {
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
         menuItem.setOnAction(event -> {
-            TextInputDialog dialog = new TextInputDialog(selectedTreeItem.getValue().toString());
-            dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
-            dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
-            dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
-            Optional<String> result = dialog.showAndWait();
-            result.ifPresent(newname -> {
+            Optional<String> result = RenamePane.showAndWaitDialog((ProjectNode) selectedTreeItem.getValue());
+            result.ifPresent(newName -> {
                 if (selectedTreeItem.getValue() instanceof ProjectNode) {
                     ProjectNode selectedTreeNode = (ProjectNode) selectedTreeItem.getValue();
-                    selectedTreeNode.rename(newname);
+                    selectedTreeNode.rename(newName);
                     refresh(selectedTreeItem.getParent());
                     treeView.getSelectionModel().clearSelection();
                     treeView.getSelectionModel().select(selectedTreeItem);
                 }
             });
-
         });
         return menuItem;
     }
