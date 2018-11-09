@@ -84,15 +84,20 @@ public class ProjectPane extends Tab {
 
     public static class MyTab extends Tab {
 
-        public MyTab(String text, Node content) {
-            super(text, content);
+        private ProjectFileViewer viewer;
+
+        public MyTab(String text, ProjectFileViewer viewer) {
+            super(text, viewer.getContent());
+            this.viewer = viewer;
+        }
+
+        public ProjectFileViewer getViewer() {
+            return viewer;
         }
 
         public void requestClose() {
             TabPaneBehavior behavior = getBehavior();
-            if (behavior.canCloseTab(this)) {
-                behavior.closeTab(this);
-            }
+            behavior.closeTab(this);
         }
 
         private TabPaneBehavior getBehavior() {
@@ -297,15 +302,6 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private Alert nameAlreadyExistsAlert() {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
-        alert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
-        alert.setContentText(RESOURCE_BUNDLE.getString("DragFileExists"));
-        alert.showAndWait();
-        return alert;
-    }
-
     private int getCounter() {
         return counter;
     }
@@ -357,7 +353,7 @@ public class ProjectPane extends Tab {
     private void accepTransferDrag(ProjectFolder projectFolder, boolean s) {
         success = s;
         if (getCounter() >= 1) {
-            nameAlreadyExistsAlert();
+            GseAlerts.showDraggingError();
         } else if (getCounter() < 1) {
             ProjectNode monfichier = (ProjectNode) dragAndDropMove.getSource();
             monfichier.moveTo(projectFolder);
@@ -417,7 +413,7 @@ public class ProjectPane extends Tab {
         splitPane.setDividerPositions(0.3);
         SplitPane.setResizableWithParent(ctrlPane, Boolean.FALSE);
         setText(project.getName());
-        setTooltip(new Tooltip(project.getName() + ": " + project.getDescription()));
+        setTooltip(new Tooltip(project.getDescription().equals("") ? project.getName() : project.getName() + ": " + project.getDescription()));
         setContent(splitPane);
 
         createRootFolderTreeItem(project);
@@ -555,22 +551,7 @@ public class ProjectPane extends Tab {
     private MenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.1em"));
         menuItem.setOnAction(event -> {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle(RESOURCE_BUNDLE.getString("ConfirmationDialog"));
-            String headerText;
-            if (selectedTreeItems.size() == 1) {
-                ProjectNode node = (ProjectNode) selectedTreeItems.get(0).getValue();
-                headerText = String.format(RESOURCE_BUNDLE.getString("FileWillBeDeleted"), node.getName());
-            } else if (selectedTreeItems.size() > 1) {
-                String names = selectedTreeItems.stream()
-                        .map(selectedTreeItem -> selectedTreeItem.getValue().toString())
-                        .collect(Collectors.joining(", "));
-                headerText = String.format(RESOURCE_BUNDLE.getString("FilesWillBeDeleted"), names);
-            } else {
-                throw new AssertionError();
-            }
-            alert.setHeaderText(headerText);
-            alert.setContentText(RESOURCE_BUNDLE.getString("DoYouConfirm"));
+            Alert alert = GseAlerts.deleteNodesAlert(selectedTreeItems);
             Optional<ButtonType> result = alert.showAndWait();
             if (result.get() == ButtonType.OK) {
                 List<TreeItem<Object>> parentTreeItems = new ArrayList<>();
@@ -595,21 +576,16 @@ public class ProjectPane extends Tab {
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
         menuItem.setOnAction(event -> {
-            TextInputDialog dialog = new TextInputDialog(selectedTreeItem.getValue().toString());
-            dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
-            dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
-            dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
-            Optional<String> result = dialog.showAndWait();
-            result.ifPresent(newname -> {
+            Optional<String> result = RenamePane.showAndWaitDialog((ProjectNode) selectedTreeItem.getValue());
+            result.ifPresent(newName -> {
                 if (selectedTreeItem.getValue() instanceof ProjectNode) {
                     ProjectNode selectedTreeNode = (ProjectNode) selectedTreeItem.getValue();
-                    selectedTreeNode.rename(newname);
+                    selectedTreeNode.rename(newName);
                     refresh(selectedTreeItem.getParent());
                     treeView.getSelectionModel().clearSelection();
                     treeView.getSelectionModel().select(selectedTreeItem);
                 }
             });
-
         });
         return menuItem;
     }
@@ -676,7 +652,12 @@ public class ProjectPane extends Tab {
         }
         Node graphic = viewerExtension.getMenuGraphic(file);
         ProjectFileViewer viewer = viewerExtension.newViewer(file, getContent().getScene(), context);
-        Tab tab = new MyTab(tabName, viewer.getContent());
+        Tab tab = new MyTab(tabName, viewer);
+        tab.setOnCloseRequest(event -> {
+            if (!viewer.isClosable()) {
+                event.consume();
+            }
+        });
         tab.setOnClosed(event -> viewer.dispose());
         tab.setGraphic(graphic);
         tab.setTooltip(new Tooltip(tabName));
@@ -863,5 +844,16 @@ public class ProjectPane extends Tab {
     public void dispose() {
         taskItems.dispose();
         closeViews();
+    }
+
+    public boolean canBeClosed() {
+        for (DetachableTabPane tabPane : findDetachableTabPanes()) {
+            for (Tab tab : new ArrayList<>(tabPane.getTabs())) {
+                if (!((MyTab) tab).getViewer().isClosable()) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }
