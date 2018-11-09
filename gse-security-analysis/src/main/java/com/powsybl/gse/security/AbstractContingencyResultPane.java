@@ -8,7 +8,6 @@ package com.powsybl.gse.security;
 
 import javafx.geometry.Side;
 import javafx.scene.control.TableColumn;
-import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.BorderPane;
 import org.controlsfx.control.HiddenSidesPane;
 
