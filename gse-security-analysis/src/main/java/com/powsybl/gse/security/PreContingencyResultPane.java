@@ -94,13 +94,11 @@ class PreContingencyResultPane extends AbstractContingencyResultPane implements 
         Label label = new Label(RESOURCE_BUNDLE.getString("Filter"));
         label.setRotate(90);
         filterButton.setGraphic(new Group(label));
-        filterButton.setStyle("-fx-focus-color: transparent;" +
-                "-fx-faint-focus-color: transparent;" +
-                "-fx-background-color: transparent;");
+        filterButton.getStyleClass().add("filter-button");
 
         setRight(filterButton);
 
-        filterButton.setOnMouseClicked(event -> onMouseClickedOnFilter(hiddenSidesPane, filterButton));
+        filterButton.setOnMouseClicked(event -> onMouseClickedOnFilter(hiddenSidesPane));
     }
 
     @Override

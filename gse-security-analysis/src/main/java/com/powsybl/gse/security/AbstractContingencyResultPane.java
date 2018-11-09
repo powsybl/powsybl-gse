@@ -21,13 +21,11 @@ abstract class AbstractContingencyResultPane extends BorderPane {
 
     static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.SecurityAnalysis");
 
-    static void onMouseClickedOnFilter(HiddenSidesPane hiddenSidesPane, ToggleButton filterButton) {
+    static void onMouseClickedOnFilter(HiddenSidesPane hiddenSidesPane) {
         if (hiddenSidesPane.getPinnedSide() != null) {
             hiddenSidesPane.setPinnedSide(null);
-            filterButton.setStyle("-fx-background-color: transparent;");
         } else {
             hiddenSidesPane.setPinnedSide(Side.RIGHT);
-            filterButton.setStyle("-fx-background-color: #A3A3A4");
         }
     }
 
