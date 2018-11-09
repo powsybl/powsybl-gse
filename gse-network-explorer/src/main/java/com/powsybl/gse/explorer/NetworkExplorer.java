@@ -27,6 +27,7 @@ import freemarker.template.TemplateException;
 import freemarker.template.Version;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
@@ -154,7 +155,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         substationsView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> refreshSubstationDetailView(newValue));
 
         substationDetailedView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        substationDetailedView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> refreshEquipmentView());
+        substationDetailedView.getSelectionModel().getSelectedItems().addListener((ListChangeListener<TreeItem<EquipmentInfo>>) change -> refreshEquipmentView());
 
         substationDetailedView.setOnDragDetected(this::onDragDetected);
 
@@ -184,10 +185,9 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     }
 
     private void onDragDetected(MouseEvent event) {
-        SelectionMode selectionMode = substationDetailedView.getSelectionModel().getSelectionMode();
         Dragboard db = substationDetailedView.startDragAndDrop(TransferMode.ANY);
         ClipboardContent content = new ClipboardContent();
-        if (selectionMode == SelectionMode.SINGLE) {
+        if (substationDetailedView.getSelectionModel().getSelectedItems().size() == 1) {
             EquipmentInfo selectedEquipmentInfo = substationDetailedView.getSelectionModel().getSelectedItem().getValue();
             content.put(EquipmentInfo.DATA_FORMAT, selectedEquipmentInfo);
         } else {
@@ -348,15 +348,18 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     }
 
     private void refreshEquipmentView() {
-        if (substationDetailedView.getSelectionModel().getSelectedIndices().size() == 1) {
+        if (substationDetailedView.getSelectionModel().getSelectedItems().size() == 1) {
+            substationDetailedView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
             EquipmentInfo equipment = substationDetailedView.getSelectionModel().getSelectedItem().getValue();
             switch (equipment.getType()) {
                 case LINE:
                     refreshLineView(equipment);
+                    substationDetailedView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
                     break;
 
                 default:
                     equipmentTabs.getTabs().clear();
+                    substationDetailedView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
                     break;
             }
         } else {
