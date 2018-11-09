@@ -12,6 +12,7 @@ import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.spi.Savable;
 import com.powsybl.gse.util.EquipmentInfo;
 import com.powsybl.gse.util.Glyph;
+import com.powsybl.gse.util.GseAlerts;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -22,7 +23,6 @@ import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Text;
 
-import java.text.MessageFormat;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.ResourceBundle;
@@ -319,23 +319,13 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
     }
 
     private boolean showSaveAlert() {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setHeaderText(MessageFormat.format(RESOURCE_BUNDLE.getString("UnsavedQuitConfirmation"), store.getName()));
-        ButtonType saveAndContinue = new ButtonType(RESOURCE_BUNDLE.getString("SaveAndContinue"));
-        ButtonType dontSaveAndContinue = new ButtonType(RESOURCE_BUNDLE.getString("DontSaveAndContinue"));
-        ButtonType cancel = new ButtonType(RESOURCE_BUNDLE.getString("Cancel"));
-
-        alert.getButtonTypes().setAll(saveAndContinue, dontSaveAndContinue, cancel);
-        alert.getDialogPane().setMinWidth(800);
-
-        Optional<ButtonType> result = alert.showAndWait();
+        Optional<ButtonType> result = GseAlerts.showSaveAndQuitDialog(store.getName());
         return result.map(type -> {
-            if (type == saveAndContinue) {
+            if (type.getButtonData() == ButtonBar.ButtonData.YES) {
                 save();
-                return true;
-            } else {
-                return type == dontSaveAndContinue;
             }
+
+            return type != ButtonType.CANCEL;
         }).orElse(false);
     }
 
