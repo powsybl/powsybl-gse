@@ -84,15 +84,20 @@ public class ProjectPane extends Tab {
 
     public static class MyTab extends Tab {
 
-        public MyTab(String text, Node content) {
-            super(text, content);
+        private ProjectFileViewer viewer;
+
+        public MyTab(String text, ProjectFileViewer viewer) {
+            super(text, viewer.getContent());
+            this.viewer = viewer;
+        }
+
+        public ProjectFileViewer getViewer() {
+            return viewer;
         }
 
         public void requestClose() {
             TabPaneBehavior behavior = getBehavior();
-            if (behavior.canCloseTab(this)) {
-                behavior.closeTab(this);
-            }
+            behavior.closeTab(this);
         }
 
         private TabPaneBehavior getBehavior() {
@@ -648,7 +653,12 @@ public class ProjectPane extends Tab {
         }
         Node graphic = viewerExtension.getMenuGraphic(file);
         ProjectFileViewer viewer = viewerExtension.newViewer(file, getContent().getScene(), context);
-        Tab tab = new MyTab(tabName, viewer.getContent());
+        Tab tab = new MyTab(tabName, viewer);
+        tab.setOnCloseRequest(event -> {
+            if (!viewer.isClosable()) {
+                event.consume();
+            }
+        });
         tab.setOnClosed(event -> viewer.dispose());
         tab.setGraphic(graphic);
         tab.setTooltip(new Tooltip(tabName));
@@ -835,5 +845,16 @@ public class ProjectPane extends Tab {
     public void dispose() {
         taskItems.dispose();
         closeViews();
+    }
+
+    public boolean canBeClosed() {
+        for (DetachableTabPane tabPane : findDetachableTabPanes()) {
+            for (Tab tab : new ArrayList<>(tabPane.getTabs())) {
+                if (!((MyTab) tab).getViewer().isClosable()) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }
