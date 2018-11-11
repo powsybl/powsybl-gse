@@ -12,6 +12,7 @@ import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.spi.Savable;
 import com.powsybl.gse.util.EquipmentInfo;
 import com.powsybl.gse.util.Glyph;
+import com.powsybl.gse.util.GseAlerts;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -22,7 +23,11 @@ import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Text;
 
+import java.util.Objects;
+import java.util.Optional;
+import java.util.ResourceBundle;
 import java.util.*;
+
 import java.util.stream.Collectors;
 
 /**
@@ -313,6 +318,17 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         return new ContextMenu(removeItem);
     }
 
+    private boolean showSaveAlert() {
+        Optional<ButtonType> result = GseAlerts.showSaveAndQuitDialog(store.getName());
+        return result.map(type -> {
+            if (type.getButtonData() == ButtonBar.ButtonData.YES) {
+                save();
+            }
+
+            return type != ButtonType.CANCEL;
+        }).orElse(false);
+    }
+
     @Override
     public void save() {
         if (!saved.get()) {
@@ -338,6 +354,14 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
 
     @Override
     public void dispose() {
-        // nothing to dispose
+        //noting to dispose
+    }
+
+    @Override
+    public boolean isClosable() {
+        if (!saved.get()) {
+            return showSaveAlert();
+        }
+        return true;
     }
 }
