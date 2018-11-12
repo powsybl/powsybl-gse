@@ -7,6 +7,7 @@
 package com.powsybl.gse.security;
 
 import com.google.auto.service.AutoService;
+import com.powsybl.action.dsl.afs.ActionScript;
 import com.powsybl.contingency.ContingenciesProvider;
 import com.powsybl.gse.spi.NodeGraphicProvider;
 import com.powsybl.gse.util.Glyph;
@@ -21,7 +22,10 @@ public class SecurityAnalysisNodeGraphicProvider implements NodeGraphicProvider 
 
     @Override
     public Node getGraphic(Object file) {
-        if (file instanceof ContingenciesProvider) {
+        if (file instanceof ActionScript) {
+            return Glyph.createAwesomeFont('\uf0f6')
+                    .size("1.2em");
+        } else if (file instanceof ContingenciesProvider) {
             return Glyph.createAwesomeFont('\uf0e7')
                     .size("1.4em")
                     .color("orange");
