@@ -328,14 +328,13 @@ public class ProjectPane extends Tab {
             if (value instanceof ProjectFolder) {
                 ProjectFolder projectFolder = (ProjectFolder) projectNode;
                 accepTransferDrag(projectFolder, success);
-                refresh(dragAndDropMove.getSourceTreeItem().getParent());
                 refresh(treeItem);
             } else if (value instanceof ProjectFile) {
                 ProjectFile projectFile = (ProjectFile) projectNode;
                 projectFile.getParent().ifPresent(projectFolder -> accepTransferDrag(projectFile.getParent().get(), success));
-                refresh(dragAndDropMove.getSourceTreeItem().getParent());
                 refresh(treeItem.getParent());
             }
+            refresh(dragAndDropMove.getSourceTreeItem().getParent());
             event.setDropCompleted(success);
         }
         event.consume();
