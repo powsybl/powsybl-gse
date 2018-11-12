@@ -19,4 +19,5 @@ public interface ProjectFileViewer {
 
     void dispose();
 
+    boolean isClosable();
 }
