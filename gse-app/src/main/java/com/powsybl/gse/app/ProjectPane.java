@@ -610,7 +610,7 @@ public class ProjectPane extends Tab {
                                                 .findFirst()
                                                 .orElseThrow(NoSuchElementException::new));
                                 refreshTabs();
-                                parentItem.getChildren().removeListener(this);
+                                change.getList().removeListener(this);
                             }
                         }
                     });
