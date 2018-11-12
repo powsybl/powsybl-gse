@@ -450,6 +450,20 @@ public class ProjectPane extends Tab {
         }
     }
 
+    private void refreshTabs() {
+        TreeItem<Object> selectedItem = treeView.getSelectionModel().getSelectedItem();
+        if (selectedItem.getValue() instanceof ProjectFile) {
+            ProjectFile selectedFile = (ProjectFile) selectedItem.getValue();
+            for (DetachableTabPane tabPane : findDetachableTabPanes()) {
+                for (Tab tab : tabPane.getTabs()) {
+                    if (((TabKey) tab.getUserData()).nodeId.equals(selectedFile.getId())) {
+                        tab.setText(getTabName(selectedItem));
+                    }
+                }
+            }
+        }
+    }
+
     private TreeItem<Object> createNodeTreeItem(ProjectNode node) {
         return node.isFolder() ? createFolderTreeItem((ProjectFolder) node)
                 : createFileTreeItem((ProjectFile) node);
@@ -573,7 +587,7 @@ public class ProjectPane extends Tab {
         return menuItem;
     }
 
-    private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
+    private MenuItem createRenameProjectNodeItem(TreeItem<Object> selectedTreeItem) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
         menuItem.setOnAction(event -> {
             Optional<String> result = RenamePane.showAndWaitDialog((ProjectNode) selectedTreeItem.getValue());
@@ -581,9 +595,25 @@ public class ProjectPane extends Tab {
                 if (selectedTreeItem.getValue() instanceof ProjectNode) {
                     ProjectNode selectedTreeNode = (ProjectNode) selectedTreeItem.getValue();
                     selectedTreeNode.rename(newName);
-                    refresh(selectedTreeItem.getParent());
-                    treeView.getSelectionModel().clearSelection();
-                    treeView.getSelectionModel().select(selectedTreeItem);
+                    TreeItem<Object> parentItem = selectedTreeItem.getParent();
+                    refresh(parentItem);
+                    parentItem.getChildren().addListener(new ListChangeListener<TreeItem<Object>>() {
+                        @Override
+                        public void onChanged(Change<? extends TreeItem<Object>> change) {
+                            if (change.getList().size() != 1 || change.getList().get(0).getValue() != null) {
+                                treeView.getSelectionModel().clearSelection();
+                                treeView.getSelectionModel()
+                                        .select(parentItem.getChildren()
+                                                .stream()
+                                                .filter(item -> item.getValue() instanceof ProjectNode &&
+                                                        ((ProjectNode) item.getValue()).getId().equals(selectedTreeNode.getId()))
+                                                .findFirst()
+                                                .orElseThrow(NoSuchElementException::new));
+                                refreshTabs();
+                                parentItem.getChildren().removeListener(this);
+                            }
+                        }
+                    });
                 }
             });
         });
