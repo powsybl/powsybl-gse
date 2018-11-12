@@ -9,10 +9,11 @@ package com.powsybl.gse.util;
 import com.powsybl.afs.AbstractNodeBase;
 import com.powsybl.afs.ProjectNode;
 import com.powsybl.afs.Node;
-import javafx.scene.control.Alert;
-import javafx.scene.control.TreeItem;
+import javafx.scene.control.*;
 
+import java.text.MessageFormat;
 import java.util.List;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
 
@@ -39,6 +40,17 @@ public final class GseAlerts {
         alert.setResizable(true);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    public static Optional<ButtonType> showSaveAndQuitDialog(String documentName) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setHeaderText(MessageFormat.format(RESOURCE_BUNDLE.getString("SaveBeforeClosing"), documentName));
+        alert.setContentText(RESOURCE_BUNDLE.getString("WarnSaveBeforeClosing"));
+        ButtonType save = new ButtonType(RESOURCE_BUNDLE.getString("Save"), ButtonBar.ButtonData.YES);
+        ButtonType dontSave = new ButtonType(RESOURCE_BUNDLE.getString("DontSave"), ButtonBar.ButtonData.NO);
+        alert.getButtonTypes().setAll(save, dontSave, ButtonType.CANCEL);
+
+        return alert.showAndWait();
     }
 
     public static Alert deleteNodesAlert(List<? extends TreeItem> selectedTreeItems) {
