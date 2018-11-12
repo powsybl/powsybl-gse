@@ -176,11 +176,23 @@ public class GsePane extends StackPane {
         aboutMenuItem.setOnAction(event -> showAbout());
         contextMenu.getItems().add(aboutMenuItem);
 
-        appBar.getHelpButton().setOnAction(event -> {
-            contextMenu.show(appBar.getHelpButton(), Side.BOTTOM, 0, 0);
-        });
+        appBar.getHelpButton().setOnAction(event -> contextMenu.show(appBar.getHelpButton(), Side.BOTTOM, 0, 0));
 
         return appBar;
+    }
+
+    private void openProject(Project project) {
+        if (!isProjectOpen(project)) {
+            addProject(project);
+        } else {
+            for (Tab tab : tabPane.getTabs()) {
+                ProjectPane projectPane = (ProjectPane) tab;
+                if (projectPane.getProject().getId().equals(project.getId())) {
+                    tab.getTabPane().getSelectionModel().select(tab);
+                    break;
+                }
+            }
+        }
     }
 
     public String getTitle() {
@@ -195,9 +207,17 @@ public class GsePane extends StackPane {
 
     public void dispose() {
         savePreferences();
-
         for (Tab tab : tabPane.getTabs()) {
             ((ProjectPane) tab).dispose();
         }
+    }
+
+    public boolean isClosable() {
+        for (Tab tab : tabPane.getTabs()) {
+            if (!(((ProjectPane) tab).canBeClosed())) {
+                return false;
+            }
+        }
+        return true;
     }
 }
