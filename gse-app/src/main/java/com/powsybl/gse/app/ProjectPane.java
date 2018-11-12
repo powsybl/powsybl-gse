@@ -84,15 +84,20 @@ public class ProjectPane extends Tab {
 
     public static class MyTab extends Tab {
 
-        public MyTab(String text, Node content) {
-            super(text, content);
+        private ProjectFileViewer viewer;
+
+        public MyTab(String text, ProjectFileViewer viewer) {
+            super(text, viewer.getContent());
+            this.viewer = viewer;
+        }
+
+        public ProjectFileViewer getViewer() {
+            return viewer;
         }
 
         public void requestClose() {
             TabPaneBehavior behavior = getBehavior();
-            if (behavior.canCloseTab(this)) {
-                behavior.closeTab(this);
-            }
+            behavior.closeTab(this);
         }
 
         private TabPaneBehavior getBehavior() {
@@ -168,7 +173,7 @@ public class ProjectPane extends Tab {
             Object value = selectedTreeItem.getValue();
             treeView.setOnKeyPressed((KeyEvent ke) -> {
                 if (ke.getCode() == KeyCode.F2) {
-                    renameTextInputDialog(selectedTreeItem);
+                    renameProjectNode(selectedTreeItem);
                 }
             });
             if (value instanceof ProjectFolder) {
@@ -413,7 +418,7 @@ public class ProjectPane extends Tab {
         splitPane.setDividerPositions(0.3);
         SplitPane.setResizableWithParent(ctrlPane, Boolean.FALSE);
         setText(project.getName());
-        setTooltip(new Tooltip(project.getName() + ": " + project.getDescription()));
+        setTooltip(new Tooltip(project.getDescription().equals("") ? project.getName() : project.getName() + ": " + project.getDescription()));
         setContent(splitPane);
 
         createRootFolderTreeItem(project);
@@ -577,28 +582,22 @@ public class ProjectPane extends Tab {
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
-        MenuItem renameMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
-        renameMenuItem.setOnAction(event -> renameTextInputDialog(selectedTreeItem));
-        return renameMenuItem;
+        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
+        menuItem.setOnAction(event -> renameProjectNode(selectedTreeItem));
+        return menuItem;
     }
 
-    private void renameTextInputDialog(TreeItem selectedTreeItem) {
-        TextInputDialog dialog = new TextInputDialog(selectedTreeItem.getValue().toString());
-        dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFile"));
-        dialog.setHeaderText(null);
-        dialog.setGraphic(null);
-        dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
-        Optional<String> result = dialog.showAndWait();
-        result.ifPresent(newname -> {
+    private void renameProjectNode(TreeItem selectedTreeItem) {
+        Optional<String> result = RenamePane.showAndWaitDialog((ProjectNode) selectedTreeItem.getValue());
+        result.ifPresent(newName -> {
             if (selectedTreeItem.getValue() instanceof ProjectNode) {
                 ProjectNode selectedTreeNode = (ProjectNode) selectedTreeItem.getValue();
-                selectedTreeNode.rename(newname);
+                selectedTreeNode.rename(newName);
                 refresh(selectedTreeItem.getParent());
                 treeView.getSelectionModel().clearSelection();
                 treeView.getSelectionModel().select(selectedTreeItem);
             }
         });
-
     }
 
     /**
@@ -663,7 +662,12 @@ public class ProjectPane extends Tab {
         }
         Node graphic = viewerExtension.getMenuGraphic(file);
         ProjectFileViewer viewer = viewerExtension.newViewer(file, getContent().getScene(), context);
-        Tab tab = new MyTab(tabName, viewer.getContent());
+        Tab tab = new MyTab(tabName, viewer);
+        tab.setOnCloseRequest(event -> {
+            if (!viewer.isClosable()) {
+                event.consume();
+            }
+        });
         tab.setOnClosed(event -> viewer.dispose());
         tab.setGraphic(graphic);
         tab.setTooltip(new Tooltip(tabName));
@@ -850,5 +854,16 @@ public class ProjectPane extends Tab {
     public void dispose() {
         taskItems.dispose();
         closeViews();
+    }
+
+    public boolean canBeClosed() {
+        for (DetachableTabPane tabPane : findDetachableTabPanes()) {
+            for (Tab tab : new ArrayList<>(tabPane.getTabs())) {
+                if (!((MyTab) tab).getViewer().isClosable()) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }

@@ -531,7 +531,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 tree.setContextMenu(createProjectContextMenu(selectedTreeItem));
                 tree.setOnKeyPressed((KeyEvent ke) -> {
                     if (ke.getCode() == KeyCode.F2) {
-                        renameTextInputDialog();
+                        renameNode(selectedTreeItem);
                     }
                 });
 
@@ -586,29 +586,23 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private MenuItem createRenameProjectMenuItem() {
-        MenuItem renameMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size(ICON_SIZE));
-        renameMenuItem.setOnAction(event -> renameTextInputDialog());
-        return renameMenuItem;
+        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size(ICON_SIZE));
+        TreeItem<N> selectedTreeItem = tree.getSelectionModel().getSelectedItem();
+        menuItem.setOnAction(event -> renameNode(selectedTreeItem));
+       return menuItem;
     }
 
-    private void renameTextInputDialog() {
-        TextInputDialog dialog = new TextInputDialog(tree.getSelectionModel().getSelectedItem().getValue().toString());
-        dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFile"));
-        dialog.setHeaderText(null);
-        dialog.setGraphic(null);
-        dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
-        Optional<String> result = dialog.showAndWait();
-        result.ifPresent(newname -> {
-            TreeItem<N> selectedTreeItem = tree.getSelectionModel().getSelectedItem();
+    private void renameNode(TreeItem selectedTreeItem) {
+        Optional<String> result = RenamePane.showAndWaitDialog((Node) selectedTreeItem.getValue());
+        result.ifPresent(newName -> {
             if (selectedTreeItem.getValue() instanceof Node) {
-                Node localSelectednode = (Node) selectedTreeItem.getValue();
-                localSelectednode.rename(newname);
-                refreshTreeItem(selectedTreeItem.getParent());
+                Node selectedTreeNode = (Node) selectedTreeItem.getValue();
+                selectedTreeNode.rename(newName);
+                refresh(selectedTreeItem.getParent());
                 tree.getSelectionModel().clearSelection();
-                tree.getSelectionModel().select(selectedTreeItem.getParent());
+                tree.getSelectionModel().select(selectedTreeItem);
             }
         });
-
     }
 
     private MenuItem createDeleteNodeMenuItem(List<? extends TreeItem<N>> selectedTreeItems) {
