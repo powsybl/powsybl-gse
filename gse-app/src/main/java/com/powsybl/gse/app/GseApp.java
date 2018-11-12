@@ -56,6 +56,12 @@ public class GseApp extends Application {
         }
 
         stage.show();
+
+        stage.setOnCloseRequest(event -> {
+            if (!gsePane.isClosable()) {
+                event.consume();
+            }
+        });
     }
 
     @Override
