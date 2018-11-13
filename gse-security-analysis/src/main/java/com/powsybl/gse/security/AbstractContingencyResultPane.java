@@ -7,7 +7,10 @@
 package com.powsybl.gse.security;
 
 import javafx.geometry.Side;
+import javafx.scene.Group;
+import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.BorderPane;
 import org.controlsfx.control.HiddenSidesPane;
 
@@ -18,9 +21,9 @@ import java.util.ResourceBundle;
  */
 abstract class AbstractContingencyResultPane extends BorderPane {
 
-    static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.SecurityAnalysis");
+    private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.SecurityAnalysis");
 
-    static void onMouseClickedOnFilter(HiddenSidesPane hiddenSidesPane) {
+    private static void onMouseClickedOnFilter(HiddenSidesPane hiddenSidesPane) {
         if (hiddenSidesPane.getPinnedSide() != null) {
             hiddenSidesPane.setPinnedSide(null);
         } else {
@@ -32,6 +35,16 @@ abstract class AbstractContingencyResultPane extends BorderPane {
         TableColumn<S, T> column = new TableColumn<>(RESOURCE_BUNDLE.getString(type));
         column.setUserData(type);
         return column;
+    }
+
+    static ToggleButton createFilterButton(HiddenSidesPane hiddenSidesPane) {
+        ToggleButton filterButton = new ToggleButton();
+        Label label = new Label(RESOURCE_BUNDLE.getString("Filter"));
+        label.setRotate(90);
+        filterButton.setGraphic(new Group(label));
+        filterButton.getStyleClass().add("filter-button");
+        filterButton.setOnMouseClicked(event -> onMouseClickedOnFilter(hiddenSidesPane));
+        return filterButton;
     }
 
 }
