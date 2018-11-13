@@ -13,7 +13,6 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
-import javafx.scene.Group;
 import javafx.scene.control.*;
 import org.controlsfx.control.HiddenSidesPane;
 
