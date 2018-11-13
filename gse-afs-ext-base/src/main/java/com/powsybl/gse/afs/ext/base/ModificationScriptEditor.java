@@ -6,6 +6,7 @@
  */
 package com.powsybl.gse.afs.ext.base;
 
+import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.ext.base.ScriptListener;
 import com.powsybl.afs.ext.base.StorableScript;
 import com.powsybl.gse.spi.GseContext;
@@ -21,11 +22,7 @@ import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.ProgressIndicator;
-import javafx.scene.control.SplitPane;
-import javafx.scene.control.ToolBar;
-import javafx.scene.layout.BorderPane;
+import javafx.scene.control.*;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
 import org.slf4j.Logger;
@@ -36,8 +33,8 @@ import java.util.ResourceBundle;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class ModificationScriptEditor extends BorderPane
-        implements ProjectFileViewer, Savable, ScriptListener {
+public class ModificationScriptEditor extends AbstractSavableEditor
+        implements ProjectFileViewer, ScriptListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ModificationScriptEditor.class);
 
@@ -137,7 +134,9 @@ public class ModificationScriptEditor extends BorderPane
 
     @Override
     public boolean isClosable() {
-        //TODO: save before close
+        if (!saved.get()) {
+            return showSaveAlert(((ProjectFile) storableScript).getName());
+        }
         return true;
     }
 

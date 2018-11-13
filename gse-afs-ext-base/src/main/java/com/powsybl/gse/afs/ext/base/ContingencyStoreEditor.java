@@ -9,10 +9,8 @@ package com.powsybl.gse.afs.ext.base;
 import com.powsybl.contingency.*;
 import com.powsybl.contingency.afs.ContingencyStore;
 import com.powsybl.gse.spi.ProjectFileViewer;
-import com.powsybl.gse.spi.Savable;
 import com.powsybl.gse.util.EquipmentInfo;
 import com.powsybl.gse.util.Glyph;
-import com.powsybl.gse.util.GseAlerts;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -20,7 +18,6 @@ import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Text;
 
 import java.util.Objects;
@@ -33,7 +30,7 @@ import java.util.stream.Collectors;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class ContingencyStoreEditor extends BorderPane implements ProjectFileViewer, Savable {
+public class ContingencyStoreEditor extends AbstractSavableEditor implements ProjectFileViewer {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ContingencyStore");
 
@@ -318,17 +315,6 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         return new ContextMenu(removeItem);
     }
 
-    private boolean showSaveAlert() {
-        Optional<ButtonType> result = GseAlerts.showSaveAndQuitDialog(store.getName());
-        return result.map(type -> {
-            if (type.getButtonData() == ButtonBar.ButtonData.YES) {
-                save();
-            }
-
-            return type != ButtonType.CANCEL;
-        }).orElse(false);
-    }
-
     @Override
     public void save() {
         if (!saved.get()) {
@@ -355,7 +341,7 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
     @Override
     public boolean isClosable() {
         if (!saved.get()) {
-            return showSaveAlert();
+            return showSaveAlert(store.getName());
         }
         return true;
     }
