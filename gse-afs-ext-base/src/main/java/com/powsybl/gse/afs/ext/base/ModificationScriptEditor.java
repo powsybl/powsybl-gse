@@ -11,7 +11,6 @@ import com.powsybl.afs.ext.base.ScriptListener;
 import com.powsybl.afs.ext.base.StorableScript;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileViewer;
-import com.powsybl.gse.spi.Savable;
 import com.powsybl.gse.util.Glyph;
 import com.powsybl.gse.util.GroovyCodeEditor;
 import com.powsybl.gse.util.GseUtil;
