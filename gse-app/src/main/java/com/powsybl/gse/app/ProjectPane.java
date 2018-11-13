@@ -603,7 +603,7 @@ public class ProjectPane extends Tab {
                             if (change.getList().size() != 1 || change.getList().get(0).getValue() != null) {
                                 treeView.getSelectionModel().clearSelection();
                                 treeView.getSelectionModel()
-                                        .select(parentItem.getChildren()
+                                        .select(change.getList()
                                                 .stream()
                                                 .filter(item -> item.getValue() instanceof ProjectNode &&
                                                         ((ProjectNode) item.getValue()).getId().equals(selectedTreeNode.getId()))
