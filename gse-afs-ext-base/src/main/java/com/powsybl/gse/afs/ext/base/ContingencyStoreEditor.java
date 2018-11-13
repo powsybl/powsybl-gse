@@ -50,18 +50,21 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
     private final class ContingencyTreeCell extends TreeCell<Object> {
 
         private ContingencyTreeCell() {
-            setOnDragDropped(event -> {
-                Dragboard db = event.getDragboard();
-                boolean success = false;
-                if (db.hasContent(EquipmentInfo.DATA_FORMAT)) {
-                    EquipmentInfo equipmentInfo = (EquipmentInfo) db.getContent(EquipmentInfo.DATA_FORMAT);
-                    ContingencyElement element = createElement(equipmentInfo);
+            setOnDragDropped(this::onDragDropped);
+        }
+
+        private void onDragDropped(DragEvent event) {
+            Dragboard db = event.getDragboard();
+            boolean success = false;
+            if (db.hasContent(EquipmentInfo.DATA_FORMAT_LIST)) {
+                List<EquipmentInfo> equipmentInfoList = (List<EquipmentInfo>) db.getContent(EquipmentInfo.DATA_FORMAT_LIST);
+                if (equipmentInfoList.size() == 1) {
+                    ContingencyElement element = createElement(equipmentInfoList.get(0));
                     if (element != null) {
                         addContingencyElement(element);
                     }
                     success = true;
-                } else if (db.hasContent(EquipmentInfo.DATA_FORMAT_LIST)) {
-                    List<EquipmentInfo> equipmentInfoList = (List<EquipmentInfo>) db.getContent(EquipmentInfo.DATA_FORMAT_LIST);
+                } else {
                     for (EquipmentInfo equipmentInfo : equipmentInfoList) {
                         ContingencyElement element = createElement(equipmentInfo);
                         if (element != null) {
@@ -70,9 +73,9 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
                     }
                     success = true;
                 }
-                event.setDropCompleted(success);
-                event.consume();
-            });
+            }
+            event.setDropCompleted(success);
+            event.consume();
         }
 
         private void addContingencyElement(ContingencyElement element) {
