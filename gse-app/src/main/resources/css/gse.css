@@ -16,7 +16,7 @@
     -fx-font-size: 1.7em;
 }
 
-.cell_DragOver_class {
+.cell_drag_over_class {
     -fx-background-color: #87ceeb;
 }
 
