@@ -363,6 +363,15 @@ public class ProjectPane extends Tab {
         }
     }
 
+    private static String createProjectTooltip(Project project) {
+        String result = project.getName() + " (" + project.getPath().toString() + ")";
+        if (project.getDescription().isEmpty()) {
+            return result;
+        }
+        return result + "\n" +
+                "description: " + project.getDescription();
+    }
+
     private final CreationTaskList tasks = new CreationTaskList();
 
     public ProjectPane(Scene scene, Project project, GseContext context) {
@@ -415,7 +424,7 @@ public class ProjectPane extends Tab {
         splitPane.setDividerPositions(0.3);
         SplitPane.setResizableWithParent(ctrlPane, Boolean.FALSE);
         setText(project.getName());
-        setTooltip(new Tooltip(project.getDescription().equals("") ? project.getName() : project.getName() + ": " + project.getDescription()));
+        setTooltip(new Tooltip(createProjectTooltip(project)));
         setContent(splitPane);
 
         createRootFolderTreeItem(project);
