@@ -101,6 +101,6 @@
      -fx-background-color: derive(-fx-mark-color, -30%);
 }
 
-.tab_text_unsaved {
+.tab-text-unsaved {
      -fx-text-base-color: #0000cd ;
 }
