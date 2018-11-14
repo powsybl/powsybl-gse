@@ -124,9 +124,9 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         setTop(toolBar);
 
         Function<IdAndName, String> listViewToString = idAndName -> showName.isSelected() ? idAndName.getName()
-                : idAndName.getId();
+                                                                                          : idAndName.getId();
         Function<EquipmentInfo, String> treeViewToString = equipmentInfo -> showName.isSelected() ? equipmentInfo.getIdAndName().getName()
-                : equipmentInfo.getIdAndName().getId();
+                                                                                                  : equipmentInfo.getIdAndName().getId();
         GseUtil.setWaitingCellFactory(substationsView, LIST_BUSY, listViewToString);
         GseUtil.setWaitingCellFactory(substationDetailedView, TREEVIEW_BUSY, treeViewToString);
 
@@ -191,7 +191,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         for (TreeItem<EquipmentInfo> selectedItem : substationDetailedView.getSelectionModel().getSelectedItems()) {
             listInfo.add(selectedItem.getValue());
         }
-        content.put(EquipmentInfo.DATA_FORMAT_LIST, listInfo);
+        content.put(EquipmentInfo.DATA_FORMAT, listInfo);
 
         db.setContent(content);
 
@@ -317,8 +317,9 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         if (substationIdAndName != null && substationIdAndName != LIST_BUSY) {
             substationDetailedView.setRoot(new TreeItem<>(TREEVIEW_BUSY));
             String query = processTemplate(voltageLevelTemplate, ImmutableMap.of("substationId", substationIdAndName.getId()));
-            queryNetwork(query, voltageLevelQueryResultListType, (List<VoltageLevelQueryResult> voltageLevelQueryResults) -> fillSubstationDetailViewWithQueryResults(substationIdAndName, voltageLevelQueryResults),
-                    substationDetailsExecutor);
+            queryNetwork(query, voltageLevelQueryResultListType,
+                (List<VoltageLevelQueryResult> voltageLevelQueryResults) -> fillSubstationDetailViewWithQueryResults(substationIdAndName, voltageLevelQueryResults),
+                substationDetailsExecutor);
         } else {
             substationDetailedView.setRoot(null);
         }

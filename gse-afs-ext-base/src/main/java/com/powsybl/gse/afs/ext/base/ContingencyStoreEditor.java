@@ -56,23 +56,15 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         private void onDragDropped(DragEvent event) {
             Dragboard db = event.getDragboard();
             boolean success = false;
-            if (db.hasContent(EquipmentInfo.DATA_FORMAT_LIST)) {
-                List<EquipmentInfo> equipmentInfoList = (List<EquipmentInfo>) db.getContent(EquipmentInfo.DATA_FORMAT_LIST);
-                if (equipmentInfoList.size() == 1) {
-                    ContingencyElement element = createElement(equipmentInfoList.get(0));
+            if (db.hasContent(EquipmentInfo.DATA_FORMAT)) {
+                List<EquipmentInfo> equipmentInfoList = (List<EquipmentInfo>) db.getContent(EquipmentInfo.DATA_FORMAT);
+                for (EquipmentInfo equipmentInfo : equipmentInfoList) {
+                    ContingencyElement element = createElement(equipmentInfo);
                     if (element != null) {
                         addContingencyElement(element);
                     }
-                    success = true;
-                } else {
-                    for (EquipmentInfo equipmentInfo : equipmentInfoList) {
-                        ContingencyElement element = createElement(equipmentInfo);
-                        if (element != null) {
-                            addContingencyElement(element);
-                        }
-                    }
-                    success = true;
                 }
+                success = true;
             }
             event.setDropCompleted(success);
             event.consume();
@@ -204,17 +196,10 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         }
     }
 
-    private static void acceptSingleDraggedElement(DragEvent event) {
-        EquipmentInfo equipmentInfo = (EquipmentInfo) event.getDragboard().getContent(EquipmentInfo.DATA_FORMAT);
-        ContingencyElement element = createElement(equipmentInfo);
-        if (element != null) {
-            event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
-        }
-    }
 
-    private static void acceptMultipleDraggedElements(DragEvent event) {
+    private static void acceptDraggedElements(DragEvent event) {
         List<ContingencyElement> contingencyElementList = new ArrayList<>();
-        List<EquipmentInfo> equipmentInfoList = (List<EquipmentInfo>) event.getDragboard().getContent(EquipmentInfo.DATA_FORMAT_LIST);
+        List<EquipmentInfo> equipmentInfoList = (List<EquipmentInfo>) event.getDragboard().getContent(EquipmentInfo.DATA_FORMAT);
         for (EquipmentInfo equipmentInfo : equipmentInfoList) {
             ContingencyElement element = createElement(equipmentInfo);
             if (element != null) {
@@ -230,9 +215,7 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         if (event.getGestureSource() != contingencyTree) {
             Dragboard db = event.getDragboard();
             if (db.hasContent(EquipmentInfo.DATA_FORMAT)) {
-                acceptSingleDraggedElement(event);
-            } else if (db.hasContent(EquipmentInfo.DATA_FORMAT_LIST)) {
-                acceptMultipleDraggedElements(event);
+                acceptDraggedElements(event);
             }
         }
         event.consume();

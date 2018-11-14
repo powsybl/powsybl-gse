@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
  */
 public final class GseAlerts {
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.GseAlerts");
+    private static final String GSEERROR = RESOURCE_BUNDLE.getString("Error");
 
     private GseAlerts() {
     }
@@ -29,14 +30,14 @@ public final class GseAlerts {
     public static void showDraggingError() {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
-        alert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
+        alert.setHeaderText(GSEERROR);
         alert.setContentText(RESOURCE_BUNDLE.getString("FileExists"));
         alert.showAndWait();
     }
 
     public static void showDialogError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(RESOURCE_BUNDLE.getString("Error"));
+        alert.setTitle(GSEERROR);
         alert.setResizable(true);
         alert.setContentText(message);
         alert.showAndWait();
@@ -80,5 +81,13 @@ public final class GseAlerts {
         alert.setHeaderText(headerText);
         alert.setContentText(RESOURCE_BUNDLE.getString("DoYouConfirm"));
         return alert;
+    }
+
+    public static void showMultipleDragElementsAlert() {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
+        alert.setHeaderText(GSEERROR);
+        alert.setContentText(RESOURCE_BUNDLE.getString("CannotDropMultipleFiles"));
+        alert.showAndWait();
     }
 }
