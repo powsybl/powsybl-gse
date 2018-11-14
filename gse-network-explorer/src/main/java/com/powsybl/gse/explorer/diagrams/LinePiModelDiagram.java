@@ -24,6 +24,7 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -145,37 +146,55 @@ public class LinePiModelDiagram extends Pane {
 
         // labels
         Text rText = new Text(140, 20, "");
-        rText.textProperty().bind(Bindings.createStringBinding(() -> "r=\n" + formatOhm(this.r) + "\n\u2126", this.r));
+        rText.textProperty().bind(Bindings.createStringBinding(() -> formatOhm(this.r)
+                .map(ohm -> "r=\n" + ohm + "\n\u2126")
+                .orElse(null),
+                this.r));
         rText.setTextAlignment(TextAlignment.CENTER);
 
         Text xText = new Text(210, 20, "");
-        xText.textProperty().bind(Bindings.createStringBinding(() -> "x=\n" + formatOhm(this.x) + "\n\u2126", this.x));
+        xText.textProperty().bind(Bindings.createStringBinding(() -> formatOhm(this.r)
+                .map(ohm -> "x=\n" + ohm + "\n\u2126")
+                .orElse(null),
+                this.x));
         xText.setTextAlignment(TextAlignment.CENTER);
 
         Text g1Text = new Text(110, 110, "");
-        g1Text.textProperty().bind(Bindings.createStringBinding(() -> "g1=\n" + formatSiemens(this.g1) + "\nS", this.g1));
+        g1Text.textProperty().bind(Bindings.createStringBinding(() -> formatSiemens(this.g1)
+                .map(siemens -> "g1=\n" + siemens + "\nS")
+                .orElse(null),
+                this.g1));
         g1Text.setTextAlignment(TextAlignment.CENTER);
 
         Text g2Text = new Text(330, 110, "");
-        g2Text.textProperty().bind(Bindings.createStringBinding(() -> "g2=\n" + formatSiemens(this.g2) + "\nS", this.g2));
+        g2Text.textProperty().bind(Bindings.createStringBinding(() -> formatSiemens(this.g2)
+                        .map(siemens -> "g2=\n" + siemens + "\nS")
+                        .orElse(null),
+                this.g2));
         g2Text.setTextAlignment(TextAlignment.CENTER);
 
         Text b1Text = new Text(110, 180, "");
-        b1Text.textProperty().bind(Bindings.createStringBinding(() -> "b1=\n" + formatSiemens(this.b1) + "\nS", this.b1));
+        b1Text.textProperty().bind(Bindings.createStringBinding(() -> formatSiemens(this.b1)
+                        .map(siemens -> "b1=\n" + siemens + "\nS")
+                        .orElse(null),
+                this.b1));
         b1Text.setTextAlignment(TextAlignment.CENTER);
 
         Text b2Text = new Text(330, 180, "");
-        b2Text.textProperty().bind(Bindings.createStringBinding(() -> "b2=\n" + formatSiemens(this.b2) + "\nS", this.b2));
+        b2Text.textProperty().bind(Bindings.createStringBinding(() -> formatSiemens(this.b2)
+                        .map(siemens -> "b2=\n" + siemens + "\nS")
+                        .orElse(null),
+                this.b2));
         b2Text.setTextAlignment(TextAlignment.CENTER);
 
         Text voltageLevel1Text = new Text(15, 40, "");
-        voltageLevel1Text.textProperty().bind(Bindings.createStringBinding(() -> formatNameId(this.voltageLevel1), this.voltageLevel1));
+        voltageLevel1Text.textProperty().bind(Bindings.createStringBinding(() -> formatNameId(this.voltageLevel1).orElse(null), this.voltageLevel1));
         Tooltip tooltipVoltageLevel1 = new Tooltip();
         tooltipVoltageLevel1.textProperty().bind(this.voltageLevel1);
         Tooltip.install(voltageLevel1Text, tooltipVoltageLevel1);
 
         Text voltageLevel2Text = new Text(365, 40, "");
-        voltageLevel2Text.textProperty().bind(Bindings.createStringBinding(() -> formatNameId(this.voltageLevel2), this.voltageLevel2));
+        voltageLevel2Text.textProperty().bind(Bindings.createStringBinding(() -> formatNameId(this.voltageLevel2).orElse(null), this.voltageLevel2));
         Tooltip tooltipVoltageLevel2 = new Tooltip();
         tooltipVoltageLevel2.textProperty().bind(this.voltageLevel2);
         Tooltip.install(voltageLevel2Text, tooltipVoltageLevel2);
@@ -188,20 +207,20 @@ public class LinePiModelDiagram extends Pane {
                 voltageLevel1Text, voltageLevel2Text);
     }
 
-    private static String formatOhm(DoubleProperty d) {
-        return Double.isNaN(d.get()) ? "?" : String.format("%.3f", d.get());
+    private static Optional<String> formatOhm(DoubleProperty d) {
+        return Double.isNaN(d.get()) ? Optional.empty() : Optional.of(String.format("%.3f", d.get()));
     }
 
-    private static String formatSiemens(DoubleProperty d) {
-        return Double.isNaN(d.get()) ? "?" : String.format("%.3e", d.get());
+    private static Optional<String> formatSiemens(DoubleProperty d) {
+        return Double.isNaN(d.get()) ? Optional.empty() : Optional.of(String.format("%.3e", d.get()));
     }
 
-    private static String formatNameId(StringProperty s) {
+    private static Optional<String> formatNameId(StringProperty s) {
         String nameId = s.get();
         if (Objects.isNull(nameId)) {
-            return "?";
+            return Optional.empty();
         }
-        return nameId.length() <= MAX_NAME_ID_LENGTH ? nameId : nameId.substring(0, MAX_NAME_ID_LENGTH - 3) + "...";
+        return nameId.length() <= MAX_NAME_ID_LENGTH ? Optional.of(nameId) : Optional.of(nameId.substring(0, MAX_NAME_ID_LENGTH - 3) + "...");
     }
 
     public DoubleProperty rProperty() {

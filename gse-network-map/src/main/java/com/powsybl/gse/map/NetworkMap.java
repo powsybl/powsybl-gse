@@ -196,4 +196,9 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
     public void dispose() {
         // nothing to dispose
     }
+
+    @Override
+    public boolean isClosable() {
+        return true;
+    }
 }
