@@ -124,7 +124,7 @@ public class ProjectPane extends Tab {
 
     private final TaskMonitorPane taskMonitorPane;
 
-    private static final String STARNOTIFICATION = " *";
+    private static final String STAR_NOTIFICATION = " *";
 
     private static class CreationTaskList {
 
@@ -673,7 +673,7 @@ public class ProjectPane extends Tab {
                     tab.setText(tabName);
                     tab.getStyleClass().remove("tab_text_unsaved");
                 } else if (oldValue) {
-                    tab.setText(tabName + STARNOTIFICATION);
+                    tab.setText(tabName + STAR_NOTIFICATION);
                     tab.getStyleClass().add("tab_text_unsaved");
                 }
             });
