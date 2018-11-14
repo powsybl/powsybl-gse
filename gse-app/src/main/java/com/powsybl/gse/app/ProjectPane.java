@@ -363,7 +363,7 @@ public class ProjectPane extends Tab {
 
     private static String createProjectTooltip(Project project) {
         String result = project.getName() + " (" + project.getPath().toString() + ")";
-        if (project.getDescription().equals("")) {
+        if (project.getDescription().isEmpty()) {
             return result;
         }
         return result + "\n" +
