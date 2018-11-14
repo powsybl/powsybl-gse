@@ -9,8 +9,10 @@ package com.powsybl.gse.afs.ext.base;
 import com.powsybl.contingency.*;
 import com.powsybl.contingency.afs.ContingencyStore;
 import com.powsybl.gse.spi.ProjectFileViewer;
+import com.powsybl.gse.spi.Savable;
 import com.powsybl.gse.util.EquipmentInfo;
 import com.powsybl.gse.util.Glyph;
+import com.powsybl.gse.util.GseAlerts;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -18,6 +20,7 @@ import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Text;
 
 import java.util.Objects;
@@ -30,7 +33,7 @@ import java.util.stream.Collectors;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class ContingencyStoreEditor extends AbstractSavableEditor implements ProjectFileViewer {
+public class ContingencyStoreEditor extends BorderPane implements ProjectFileViewer, Savable {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ContingencyStore");
 
@@ -341,7 +344,7 @@ public class ContingencyStoreEditor extends AbstractSavableEditor implements Pro
     @Override
     public boolean isClosable() {
         if (!saved.get()) {
-            return showSaveAlert(store.getName());
+            return GseAlerts.showSaveDialog(store.getName(), this);
         }
         return true;
     }

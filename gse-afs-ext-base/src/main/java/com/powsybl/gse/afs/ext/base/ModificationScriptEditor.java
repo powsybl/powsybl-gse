@@ -11,8 +11,10 @@ import com.powsybl.afs.ext.base.ScriptListener;
 import com.powsybl.afs.ext.base.StorableScript;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileViewer;
+import com.powsybl.gse.spi.Savable;
 import com.powsybl.gse.util.Glyph;
 import com.powsybl.gse.util.GroovyCodeEditor;
+import com.powsybl.gse.util.GseAlerts;
 import com.powsybl.gse.util.GseUtil;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.concurrent.Service;
@@ -22,6 +24,7 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
 import org.slf4j.Logger;
@@ -32,8 +35,8 @@ import java.util.ResourceBundle;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class ModificationScriptEditor extends AbstractSavableEditor
-        implements ProjectFileViewer, ScriptListener {
+public class ModificationScriptEditor extends BorderPane
+        implements ProjectFileViewer, Savable, ScriptListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ModificationScriptEditor.class);
 
@@ -134,7 +137,7 @@ public class ModificationScriptEditor extends AbstractSavableEditor
     @Override
     public boolean isClosable() {
         if (!saved.get()) {
-            return showSaveAlert(((ProjectFile) storableScript).getName());
+            return GseAlerts.showSaveDialog(((ProjectFile) storableScript).getName(), this);
         }
         return true;
     }
