@@ -23,8 +23,7 @@ import java.util.stream.Collectors;
  */
 public final class GseAlerts {
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.GseAlerts");
-    private static final String FILEWILLBEDELETED = RESOURCE_BUNDLE.getString("FileWillBeDeleted");
-    private static final String GSERROR = RESOURCE_BUNDLE.getString("Error");
+    private static final String GSE_ERROR = RESOURCE_BUNDLE.getString("Error");
 
     private GseAlerts() {
     }
@@ -32,24 +31,16 @@ public final class GseAlerts {
     public static void showDraggingError() {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
-        alert.setHeaderText(GSERROR);
+        alert.setHeaderText(GSE_ERROR);
         alert.setContentText(RESOURCE_BUNDLE.getString("FileExists"));
         alert.showAndWait();
     }
 
     public static void showDialogError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(GSERROR);
+        alert.setTitle(GSE_ERROR);
         alert.setResizable(true);
         alert.setContentText(message);
-        alert.showAndWait();
-    }
-
-    public static void showDeleteProjectError() {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(RESOURCE_BUNDLE.getString("DeleteError"));
-        alert.setHeaderText(GSERROR);
-        alert.setContentText(RESOURCE_BUNDLE.getString("ProjectIsOpened"));
         alert.showAndWait();
     }
 
@@ -79,16 +70,17 @@ public final class GseAlerts {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle(RESOURCE_BUNDLE.getString("ConfirmationDialog"));
         String headerText;
+        final String fileWillBeDeleted = RESOURCE_BUNDLE.getString("FileWillBeDeleted");
         AbstractNodeBase node;
         if (selectedTreeItems.size() == 1) {
             if (selectedTreeItems.get(0).getValue() instanceof ProjectNode) {
                 node = (ProjectNode) selectedTreeItems.get(0).getValue();
-                headerText = String.format(FILEWILLBEDELETED, node.getName());
+                headerText = String.format(fileWillBeDeleted, node.getName());
             } else if (selectedTreeItems.get(0).getValue() instanceof Node) {
                 node = (Node) selectedTreeItems.get(0).getValue();
-                headerText = String.format(FILEWILLBEDELETED, node.getName());
+                headerText = String.format(fileWillBeDeleted, node.getName());
             } else {
-                headerText = String.format(FILEWILLBEDELETED, "the selected file");
+                headerText = String.format(fileWillBeDeleted, "the selected");
             }
         } else if (selectedTreeItems.size() > 1) {
             String names = selectedTreeItems.stream()
