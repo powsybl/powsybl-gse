@@ -124,6 +124,8 @@ public class ProjectPane extends Tab {
 
     private final TaskMonitorPane taskMonitorPane;
 
+    private static final String STAR_NOTIFICATION = " *";
+
     private static class CreationTaskList {
 
         private final Multimap<String, String> tasks = HashMultimap.create();
@@ -674,6 +676,17 @@ public class ProjectPane extends Tab {
         DetachableTabPane firstTabPane = detachableTabPanes.get(0);
         firstTabPane.getTabs().add(tab);
         firstTabPane.getSelectionModel().select(tab);
+        if (viewer instanceof Savable) {
+            ((Savable) viewer).savedProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue) {
+                    tab.setText(tabName);
+                    tab.getStyleClass().remove("tab-text-unsaved");
+                } else if (oldValue) {
+                    tab.setText(tabName + STAR_NOTIFICATION);
+                    tab.getStyleClass().add("tab-text-unsaved");
+                }
+            });
+        }
         viewer.view();
     }
 

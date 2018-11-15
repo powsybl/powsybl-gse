@@ -372,23 +372,17 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         return new ContextMenu(removeItem);
     }
 
-    private boolean showSaveAlert() {
-        Optional<ButtonType> result = GseAlerts.showSaveAndQuitDialog(store.getName());
-        return result.map(type -> {
-            if (type.getButtonData() == ButtonBar.ButtonData.YES) {
-                save();
-            }
-
-            return type != ButtonType.CANCEL;
-        }).orElse(false);
-    }
-
     @Override
     public void save() {
         if (!saved.get()) {
             writeContingencies();
             saved.set(true);
         }
+    }
+
+    @Override
+    public SimpleBooleanProperty savedProperty() {
+        return saved;
     }
 
     @Override
@@ -409,7 +403,7 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
     @Override
     public boolean isClosable() {
         if (!saved.get()) {
-            return showSaveAlert();
+            return GseAlerts.showSaveDialog(store.getName(), this);
         }
         return true;
     }
