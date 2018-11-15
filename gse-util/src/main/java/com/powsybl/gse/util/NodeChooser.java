@@ -393,6 +393,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
 
+
     private void onMouseClickedEvent(MouseEvent event) {
         TreeItem<N> item = tree.getSelectionModel().getSelectedItem();
         N node = item != null ? item.getValue() : null;
@@ -602,10 +603,18 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size(ICON_SIZE));
         if (selectedTreeItems.size() == 1) {
             TreeItem<N> selectedTreeItem = selectedTreeItems.get(0);
-            if (selectedTreeItem.getValue() instanceof Folder) {
-                Folder folder = (Folder) selectedTreeItem.getValue();
+            N selectedTreeItemValue = selectedTreeItem.getValue();
+            if (selectedTreeItemValue instanceof Folder) {
+                Folder folder = (Folder) selectedTreeItemValue;
                 if (!folder.getChildren().isEmpty()) {
                     menuItem.setDisable(true);
+                }
+            } else if (selectedTreeItemValue instanceof Project) {
+                Project project = (Project) selectedTreeItemValue;
+                for (String openedProject : openedProjects) {
+                    if (openedProject.equals(project.getId())) {
+                        menuItem.setDisable(true);
+                    }
                 }
             }
         }
@@ -621,22 +630,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         });
     }
 
-    private void deleteOpenedProjectAction(Project project) {
-        boolean projectOpened = false;
-        for (String projectId : getOpenedProjects()) {
-            if (project.getId().equals(projectId)) {
-                projectOpened = true;
-                break;
-            }
-        }
-        if (projectOpened) {
-            GseAlerts.showDeleteProjectError();
-        } else {
-            project.delete();
-        }
-
-    }
-
 
     public List<String> getOpenedProjects() {
         return openedProjects;
@@ -646,12 +639,9 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private void setOnOkButton(List<? extends TreeItem<N>> selectedTreeItems) {
         List<TreeItem<N>> parentTreeItems = new ArrayList<>();
         for (TreeItem<N> selectedTreeItem : selectedTreeItems) {
-            if (selectedTreeItem.getValue() instanceof Project) {
-                Project selectedProject = (Project) selectedTreeItem.getValue();
-                deleteOpenedProjectAction(selectedProject);
-            } else if (selectedTreeItem.getValue() instanceof Folder) {
-                Folder folderSelected = (Folder) selectedTreeItem.getValue();
-                folderSelected.delete();
+            if (selectedTreeItem.getValue() instanceof Node) {
+                Node nodeSelected = (Node) selectedTreeItem.getValue();
+                nodeSelected.delete();
             }
             parentTreeItems.add(selectedTreeItem.getParent());
         }
