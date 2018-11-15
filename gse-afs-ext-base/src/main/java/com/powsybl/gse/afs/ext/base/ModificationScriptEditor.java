@@ -6,6 +6,7 @@
  */
 package com.powsybl.gse.afs.ext.base;
 
+import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.ext.base.ScriptListener;
 import com.powsybl.afs.ext.base.StorableScript;
 import com.powsybl.gse.spi.GseContext;
@@ -13,6 +14,7 @@ import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.spi.Savable;
 import com.powsybl.gse.util.Glyph;
 import com.powsybl.gse.util.GroovyCodeEditor;
+import com.powsybl.gse.util.GseAlerts;
 import com.powsybl.gse.util.GseUtil;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.concurrent.Service;
@@ -21,10 +23,7 @@ import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.ProgressIndicator;
-import javafx.scene.control.SplitPane;
-import javafx.scene.control.ToolBar;
+import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
@@ -137,7 +136,9 @@ public class ModificationScriptEditor extends BorderPane
 
     @Override
     public boolean isClosable() {
-        //TODO: save before close
+        if (!saved.get()) {
+            return GseAlerts.showSaveDialog(((ProjectFile) storableScript).getName(), this);
+        }
         return true;
     }
 
