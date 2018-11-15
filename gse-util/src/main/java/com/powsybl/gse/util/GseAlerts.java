@@ -9,6 +9,7 @@ package com.powsybl.gse.util;
 import com.powsybl.afs.AbstractNodeBase;
 import com.powsybl.afs.ProjectNode;
 import com.powsybl.afs.Node;
+import com.powsybl.gse.spi.Savable;
 import javafx.scene.control.*;
 
 import java.text.MessageFormat;
@@ -52,6 +53,17 @@ public final class GseAlerts {
         alert.getButtonTypes().setAll(save, dontSave, ButtonType.CANCEL);
 
         return alert.showAndWait();
+    }
+
+    public static boolean showSaveDialog(String documentName, Savable savable) {
+        Optional<ButtonType> result = GseAlerts.showSaveAndQuitDialog(documentName);
+        return result.map(type -> {
+            if (type.getButtonData() == ButtonBar.ButtonData.YES) {
+                savable.save();
+            }
+
+            return type != ButtonType.CANCEL;
+        }).orElse(false);
     }
 
     public static Alert deleteNodesAlert(List<? extends TreeItem> selectedTreeItems) {
