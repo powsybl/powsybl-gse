@@ -120,6 +120,11 @@ public class ModificationScriptEditor extends BorderPane
     }
 
     @Override
+    public SimpleBooleanProperty savedProperty() {
+        return saved;
+    }
+
+    @Override
     public void scriptUpdated() {
         updateScript();
     }
