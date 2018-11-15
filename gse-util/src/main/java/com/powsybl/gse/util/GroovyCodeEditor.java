@@ -108,8 +108,6 @@ public class GroovyCodeEditor extends MasterDetailPane {
             List<EquipmentInfo> equipmentInfoList = (List<EquipmentInfo>) db.getContent(EquipmentInfo.DATA_FORMAT);
             if (equipmentInfoList.size() == 1 && equipmentInfoList.get(0) instanceof EquipmentInfo || db.hasString()) {
                 event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
-            } else if (equipmentInfoList.size() > 1) {
-                GseAlerts.showMultipleDragElementsAlert();
             }
             event.consume();
         }

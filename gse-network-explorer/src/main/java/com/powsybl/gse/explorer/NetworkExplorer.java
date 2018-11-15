@@ -187,10 +187,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private void onDragDetected(MouseEvent event) {
         Dragboard db = substationDetailedView.startDragAndDrop(TransferMode.ANY);
         ClipboardContent content = new ClipboardContent();
-        List<EquipmentInfo> listInfo = new ArrayList<>();
-        for (TreeItem<EquipmentInfo> selectedItem : substationDetailedView.getSelectionModel().getSelectedItems()) {
-            listInfo.add(selectedItem.getValue());
-        }
+        List<EquipmentInfo> listInfo = substationDetailedView.getSelectionModel().getSelectedItems().stream().map(TreeItem :: getValue).collect(Collectors.toList());
         content.put(EquipmentInfo.DATA_FORMAT, listInfo);
 
         db.setContent(content);
