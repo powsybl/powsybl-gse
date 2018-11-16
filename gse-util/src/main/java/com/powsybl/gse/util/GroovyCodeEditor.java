@@ -47,6 +47,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
 
+    private boolean allowedDrag = false;
+
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
         @Override
@@ -96,16 +98,21 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
         codeArea.setOnDragEntered(event -> codeArea.setShowCaret(Caret.CaretVisibility.ON));
         codeArea.setOnDragExited(event -> codeArea.setShowCaret(Caret.CaretVisibility.AUTO));
-        codeArea.setOnDragDetected(e -> onDragDetected());
+        codeArea.setOnDragDetected(this::onDragDetected);
         codeArea.setOnDragOver(this::onDragOver);
         codeArea.setOnDragDropped(this::onDragDropped);
+        codeArea.setOnSelectionDrag(p -> allowedDrag = true);
     }
 
-    private void onDragDetected() {
-        Dragboard db = codeArea.startDragAndDrop(TransferMode.COPY_OR_MOVE);
-        ClipboardContent content = new ClipboardContent();
-        content.putString(codeArea.getSelectedText());
-        db.setContent(content);
+    private void onDragDetected(MouseEvent event) {
+        if (allowedDrag) {
+            Dragboard db = codeArea.startDragAndDrop(TransferMode.COPY_OR_MOVE);
+            ClipboardContent content = new ClipboardContent();
+            content.putString(codeArea.getSelectedText());
+            db.setContent(content);
+            event.consume();
+            allowedDrag = false;
+        }
     }
 
     private void onDragOver(DragEvent event) {
@@ -116,7 +123,6 @@ public class GroovyCodeEditor extends MasterDetailPane {
             } else {
                 event.acceptTransferModes(TransferMode.COPY);
             }
-
             CharacterHit hit = codeArea.hit(event.getX(), event.getY());
             codeArea.displaceCaret(hit.getInsertionIndex());
         }
