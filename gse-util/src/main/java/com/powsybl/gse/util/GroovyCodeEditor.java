@@ -121,6 +121,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 dragEvent.consume();
                 dragging = true;
             }
+            codeArea.setOnDragDetected(baseDetectedDragEvent);
         });
     }
 
@@ -157,7 +158,6 @@ public class GroovyCodeEditor extends MasterDetailPane {
             codeArea.moveSelectedText(hit.getInsertionIndex());
             success = true;
             dragging = false;
-            codeArea.setOnDragDetected(baseDetectedDragEvent);
         }
         event.setDropCompleted(success);
         event.consume();
