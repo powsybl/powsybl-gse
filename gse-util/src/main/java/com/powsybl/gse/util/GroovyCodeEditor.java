@@ -14,6 +14,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.input.*;
+import javafx.scene.layout.VBox;
 import org.codehaus.groovy.antlr.GroovySourceToken;
 import org.codehaus.groovy.antlr.SourceBuffer;
 import org.codehaus.groovy.antlr.UnicodeEscapingReader;
@@ -22,9 +23,7 @@ import org.codehaus.groovy.antlr.parser.GroovyLexer;
 import org.codehaus.groovy.antlr.parser.GroovyTokenTypes;
 import org.controlsfx.control.MasterDetailPane;
 import org.fxmisc.flowless.VirtualizedScrollPane;
-import org.fxmisc.richtext.Caret;
-import org.fxmisc.richtext.CodeArea;
-import org.fxmisc.richtext.LineNumberFactory;
+import org.fxmisc.richtext.*;
 import org.fxmisc.richtext.model.StyleSpans;
 import org.fxmisc.richtext.model.StyleSpansBuilder;
 import org.slf4j.Logger;
@@ -35,6 +34,7 @@ import java.io.StringReader;
 import java.io.UncheckedIOException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -47,6 +47,14 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private final SearchableCodeArea codeArea = new SearchableCodeArea();
 
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
+
+    private final KeyCombination replaceWordKeyCombination = new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN);
+
+    private ReplaceWordBar replaceWordBar;
+
+    private SearchBar searchBar;
+
+    private boolean allowedDrag = false;
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
@@ -72,42 +80,103 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.richChanges()
                 .filter(ch -> !ch.getInserted().equals(ch.getRemoved()))
                 .subscribe(change -> codeArea.setStyleSpans(0, computeHighlighting(codeArea.getText())));
-        SearchBar searchBar = new SearchBar(codeArea);
+        searchBar = new SearchBar(codeArea);
         searchBar.setCloseAction(e -> {
             setShowDetailNode(false);
             codeArea.requestFocus();
         });
+        replaceWordBar = new ReplaceWordBar();
         setMasterNode(new VirtualizedScrollPane(codeArea));
-        setDetailNode(searchBar);
+        VBox vBox1 = new VBox();
+        vBox1.getChildren().addAll(searchBar, replaceWordBar);
+        vBox1.setSpacing(7);
+        setDetailNode(vBox1);
         setDetailSide(Side.TOP);
         setShowDetailNode(false);
 
         setOnKeyPressed((KeyEvent ke) -> {
             if (searchKeyCombination.match(ke)) {
+                setShowDetailNode(false);
+                vBox1.getChildren().remove(replaceWordBar);
+                setDetailNode(vBox1);
+                resetDividerPosition();
                 if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
                     searchBar.setSearchPattern(codeArea.getSelectedText());
                 }
-                if (!isShowDetailNode()) {
-                    setShowDetailNode(true);
+                showDetailNode();
+            } else if (replaceWordKeyCombination.match(ke)) {
+                setShowDetailNode(false);
+                if (!vBox1.getChildren().contains(replaceWordBar)) {
+                    vBox1.getChildren().add(replaceWordBar);
                 }
-                searchBar.requestFocus();
+                setDetailNode(vBox1);
+                resetDividerPosition();
+                replaceWordBar.getReplaceAllButton().disableProperty().bind(searchBar.matcher.nbMatchesProperty().isEqualTo(0));
+                replaceWordBar.getReplaceButton().disableProperty().bind(searchBar.matcher.nbMatchesProperty().isEqualTo(0));
+                replaceWordBar.getReplaceAllButton().setOnAction(event -> replaceAllOccurences(searchBar.getSearchField().getText()));
+                replaceWordBar.getReplaceButton().setOnAction(event -> replaceCurrentOccurence(searchBar.matcher.currentMatchStart(), searchBar.matcher.currentMatchEnd()));
+                if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
+                    searchBar.setSearchPattern(codeArea.getSelectedText());
+                }
+                showDetailNode();
             }
+
+            vBox1.requestFocus();
 
         });
 
         codeArea.setOnDragEntered(event -> codeArea.setShowCaret(Caret.CaretVisibility.ON));
         codeArea.setOnDragExited(event -> codeArea.setShowCaret(Caret.CaretVisibility.AUTO));
+        codeArea.setOnDragDetected(this::onDragDetected);
         codeArea.setOnDragOver(this::onDragOver);
         codeArea.setOnDragDropped(this::onDragDropped);
+        codeArea.setOnSelectionDrag(p -> allowedDrag = true);
+    }
+
+    private void showDetailNode() {
+        if (!isShowDetailNode()) {
+            setShowDetailNode(true);
+        }
+    }
+
+    private void replaceAllOccurences(String word) {
+        int size = word.length();
+        for (int i = 0; i <= codeArea.getText().length() - size; i++) {
+            String str = codeArea.getText().substring(i, i + size);
+            if (str.equals(word)) {
+                codeArea.replaceText(i, i + size, replaceWordBar.getSearchField().getText());
+            }
+        }
+        searchBar.matcher.find(searchBar.getSearchField().getText(), codeArea.getText());
+    }
+
+    private void replaceCurrentOccurence(int startPosition, int endPosition) {
+        codeArea.replaceText(startPosition, endPosition, replaceWordBar.getSearchField().getText());
+        searchBar.matcher.find(searchBar.getSearchField().getText(), codeArea.getText());
+    }
+
+    private void onDragDetected(MouseEvent event) {
+        if (allowedDrag) {
+            Dragboard db = codeArea.startDragAndDrop(TransferMode.COPY_OR_MOVE);
+            ClipboardContent content = new ClipboardContent();
+            content.putString(codeArea.getSelectedText());
+            db.setContent(content);
+            event.consume();
+            allowedDrag = false;
+        }
     }
 
     private void onDragOver(DragEvent event) {
         Dragboard db = event.getDragboard();
-        if ((db.hasContent(EquipmentInfo.DATA_FORMAT) && db.getContent(EquipmentInfo.DATA_FORMAT) instanceof EquipmentInfo) ||
-                db.hasString()) {
-            event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+        if ((db.hasContent(EquipmentInfo.DATA_FORMAT) && db.getContent(EquipmentInfo.DATA_FORMAT) instanceof EquipmentInfo) || db.hasString()) {
+            if (event.getGestureSource() == codeArea) {
+                event.acceptTransferModes(TransferMode.MOVE);
+            } else {
+                event.acceptTransferModes(TransferMode.COPY);
+            }
+            CharacterHit hit = codeArea.hit(event.getX(), event.getY());
+            codeArea.displaceCaret(hit.getInsertionIndex());
         }
-        event.consume();
     }
 
     private void onDragDropped(DragEvent event) {
@@ -115,11 +184,15 @@ public class GroovyCodeEditor extends MasterDetailPane {
         Dragboard db = event.getDragboard();
         boolean success = false;
         if (db.hasContent(EquipmentInfo.DATA_FORMAT)) {
-            EquipmentInfo equipmentInfo = (EquipmentInfo) db.getContent(EquipmentInfo.DATA_FORMAT);
-            codeArea.insertText(codeArea.getCaretPosition(), equipmentInfo.getIdAndName().getId());
+            List<EquipmentInfo> equipmentInfoList = (List<EquipmentInfo>) db.getContent(EquipmentInfo.DATA_FORMAT);
+            codeArea.insertText(codeArea.getCaretPosition(), equipmentInfoList.get(0).getIdAndName().getId());
             success = true;
-        } else if (db.hasString()) {
+        } else if (db.hasString() && event.getGestureSource() != codeArea) {
             codeArea.insertText(codeArea.getCaretPosition(), db.getString());
+            success = true;
+        } else if (event.getGestureSource() == codeArea) {
+            CharacterHit hit = codeArea.hit(event.getX(), event.getY());
+            codeArea.moveSelectedText(hit.getInsertionIndex());
             success = true;
         }
         event.setDropCompleted(success);
