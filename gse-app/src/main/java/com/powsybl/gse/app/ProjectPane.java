@@ -124,6 +124,8 @@ public class ProjectPane extends Tab {
 
     private final TaskMonitorPane taskMonitorPane;
 
+    private static final String STAR_NOTIFICATION = " *";
+
     private static class CreationTaskList {
 
         private final Multimap<String, String> tasks = HashMultimap.create();
@@ -293,7 +295,7 @@ public class ProjectPane extends Tab {
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
-        if (item instanceof ProjectFolder && item != dragAndDropMove.getSource()) {
+        if (item instanceof ProjectFolder && dragAndDropMove != null && item != dragAndDropMove.getSource()) {
             int count = 0;
             treeItemChildrenSize(treeItem, count);
             textFillColor(treeCell);
@@ -361,6 +363,15 @@ public class ProjectPane extends Tab {
         }
     }
 
+    private static String createProjectTooltip(Project project) {
+        String result = project.getName() + " (" + project.getPath().toString() + ")";
+        if (project.getDescription().isEmpty()) {
+            return result;
+        }
+        return result + "\n" +
+                "description: " + project.getDescription();
+    }
+
     private final CreationTaskList tasks = new CreationTaskList();
 
     public ProjectPane(Scene scene, Project project, GseContext context) {
@@ -413,7 +424,7 @@ public class ProjectPane extends Tab {
         splitPane.setDividerPositions(0.3);
         SplitPane.setResizableWithParent(ctrlPane, Boolean.FALSE);
         setText(project.getName());
-        setTooltip(new Tooltip(project.getDescription().equals("") ? project.getName() : project.getName() + ": " + project.getDescription()));
+        setTooltip(new Tooltip(createProjectTooltip(project)));
         setContent(splitPane);
 
         createRootFolderTreeItem(project);
@@ -665,6 +676,17 @@ public class ProjectPane extends Tab {
         DetachableTabPane firstTabPane = detachableTabPanes.get(0);
         firstTabPane.getTabs().add(tab);
         firstTabPane.getSelectionModel().select(tab);
+        if (viewer instanceof Savable) {
+            ((Savable) viewer).savedProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue) {
+                    tab.setText(tabName);
+                    tab.getStyleClass().remove("tab-text-unsaved");
+                } else if (oldValue) {
+                    tab.setText(tabName + STAR_NOTIFICATION);
+                    tab.getStyleClass().add("tab-text-unsaved");
+                }
+            });
+        }
         viewer.view();
     }
 
