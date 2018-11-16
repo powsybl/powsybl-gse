@@ -23,6 +23,7 @@ import org.codehaus.groovy.antlr.parser.GroovyTokenTypes;
 import org.controlsfx.control.MasterDetailPane;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.Caret;
+import org.fxmisc.richtext.CharacterHit;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
 import org.fxmisc.richtext.model.StyleSpans;
@@ -106,6 +107,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
         if ((db.hasContent(EquipmentInfo.DATA_FORMAT) && db.getContent(EquipmentInfo.DATA_FORMAT) instanceof EquipmentInfo) ||
                 db.hasString()) {
             event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+            CharacterHit hit = codeArea.hit(event.getX(), event.getY());
+            codeArea.displaceCaret(hit.getInsertionIndex());
         }
         event.consume();
     }
