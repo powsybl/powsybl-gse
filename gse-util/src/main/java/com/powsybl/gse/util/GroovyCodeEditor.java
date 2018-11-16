@@ -134,7 +134,6 @@ public class GroovyCodeEditor extends MasterDetailPane {
             } else {
                 event.acceptTransferModes(TransferMode.COPY);
             }
-            
             CharacterHit hit = codeArea.hit(event.getX(), event.getY());
             codeArea.displaceCaret(hit.getInsertionIndex());
         }
