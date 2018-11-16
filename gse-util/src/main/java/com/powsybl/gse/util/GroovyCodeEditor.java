@@ -34,6 +34,7 @@ import java.io.StringReader;
 import java.io.UncheckedIOException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -127,17 +128,16 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private void onDragOver(DragEvent event) {
         Dragboard db = event.getDragboard();
-        if ((db.hasContent(EquipmentInfo.DATA_FORMAT) && db.getContent(EquipmentInfo.DATA_FORMAT) instanceof EquipmentInfo) ||
-                db.hasString()) {
+        if ((db.hasContent(EquipmentInfo.DATA_FORMAT) && db.getContent(EquipmentInfo.DATA_FORMAT) instanceof EquipmentInfo) || db.hasString()) {
             if (event.getGestureSource() == codeArea) {
                 event.acceptTransferModes(TransferMode.MOVE);
             } else {
                 event.acceptTransferModes(TransferMode.COPY);
             }
+            
             CharacterHit hit = codeArea.hit(event.getX(), event.getY());
             codeArea.displaceCaret(hit.getInsertionIndex());
         }
-        event.consume();
     }
 
     private void onDragDropped(DragEvent event) {
@@ -145,8 +145,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
         Dragboard db = event.getDragboard();
         boolean success = false;
         if (db.hasContent(EquipmentInfo.DATA_FORMAT)) {
-            EquipmentInfo equipmentInfo = (EquipmentInfo) db.getContent(EquipmentInfo.DATA_FORMAT);
-            codeArea.insertText(codeArea.getCaretPosition(), equipmentInfo.getIdAndName().getId());
+            List<EquipmentInfo> equipmentInfoList = (List<EquipmentInfo>) db.getContent(EquipmentInfo.DATA_FORMAT);
+            codeArea.insertText(codeArea.getCaretPosition(), equipmentInfoList.get(0).getIdAndName().getId());
             success = true;
             dragging = false;
         } else if (db.hasString() && event.getGestureSource() != codeArea) {
