@@ -96,12 +96,12 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
         codeArea.setOnDragEntered(event -> codeArea.setShowCaret(Caret.CaretVisibility.ON));
         codeArea.setOnDragExited(event -> codeArea.setShowCaret(Caret.CaretVisibility.AUTO));
-        codeArea.setOnDragDetected(this::onDragDetected);
+        codeArea.setOnDragDetected(e -> onDragDetected());
         codeArea.setOnDragOver(this::onDragOver);
         codeArea.setOnDragDropped(this::onDragDropped);
     }
 
-    private void onDragDetected(MouseEvent event) {
+    private void onDragDetected() {
         Dragboard db = codeArea.startDragAndDrop(TransferMode.COPY_OR_MOVE);
         ClipboardContent content = new ClipboardContent();
         content.putString(codeArea.getSelectedText());
