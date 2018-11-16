@@ -11,6 +11,7 @@ import groovyjarjarantlr.Token;
 import groovyjarjarantlr.TokenStream;
 import groovyjarjarantlr.TokenStreamException;
 import javafx.beans.value.ObservableValue;
+import javafx.event.EventHandler;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.input.*;
@@ -22,10 +23,7 @@ import org.codehaus.groovy.antlr.parser.GroovyLexer;
 import org.codehaus.groovy.antlr.parser.GroovyTokenTypes;
 import org.controlsfx.control.MasterDetailPane;
 import org.fxmisc.flowless.VirtualizedScrollPane;
-import org.fxmisc.richtext.Caret;
-import org.fxmisc.richtext.CharacterHit;
-import org.fxmisc.richtext.CodeArea;
-import org.fxmisc.richtext.LineNumberFactory;
+import org.fxmisc.richtext.*;
 import org.fxmisc.richtext.model.StyleSpans;
 import org.fxmisc.richtext.model.StyleSpansBuilder;
 import org.slf4j.Logger;
@@ -48,6 +46,10 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private final SearchableCodeArea codeArea = new SearchableCodeArea();
 
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
+
+    private boolean dragging = false;
+
+    private EventHandler<? super MouseEvent> baseDetectedDragEvent = codeArea.getOnDragDetected();
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
@@ -96,17 +98,41 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
         });
 
-        codeArea.setOnDragEntered(event -> codeArea.setShowCaret(Caret.CaretVisibility.ON));
-        codeArea.setOnDragExited(event -> codeArea.setShowCaret(Caret.CaretVisibility.AUTO));
+        codeArea.setOnDragEntered(event -> {
+            codeArea.setShowCaret(Caret.CaretVisibility.ON);
+            dragging = true;
+        });
+        codeArea.setOnDragExited(event -> {
+            codeArea.setShowCaret(Caret.CaretVisibility.AUTO);
+            dragging = false;
+        });
+        codeArea.setOnSelectionDrag(p -> onSelectionDrag());
         codeArea.setOnDragOver(this::onDragOver);
         codeArea.setOnDragDropped(this::onDragDropped);
+    }
+
+    private void onSelectionDrag() {
+        codeArea.setOnDragDetected(dragEvent -> {
+            if (!dragging) {
+                Dragboard db = codeArea.startDragAndDrop(TransferMode.COPY_OR_MOVE);
+                ClipboardContent content = new ClipboardContent();
+                content.putString(codeArea.getSelectedText());
+                db.setContent(content);
+                dragEvent.consume();
+                dragging = true;
+            }
+        });
     }
 
     private void onDragOver(DragEvent event) {
         Dragboard db = event.getDragboard();
         if ((db.hasContent(EquipmentInfo.DATA_FORMAT) && db.getContent(EquipmentInfo.DATA_FORMAT) instanceof EquipmentInfo) ||
                 db.hasString()) {
-            event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+            if (event.getGestureSource() == codeArea) {
+                event.acceptTransferModes(TransferMode.MOVE);
+            } else {
+                event.acceptTransferModes(TransferMode.COPY);
+            }
             CharacterHit hit = codeArea.hit(event.getX(), event.getY());
             codeArea.displaceCaret(hit.getInsertionIndex());
         }
@@ -121,9 +147,17 @@ public class GroovyCodeEditor extends MasterDetailPane {
             EquipmentInfo equipmentInfo = (EquipmentInfo) db.getContent(EquipmentInfo.DATA_FORMAT);
             codeArea.insertText(codeArea.getCaretPosition(), equipmentInfo.getIdAndName().getId());
             success = true;
-        } else if (db.hasString()) {
+            dragging = false;
+        } else if (db.hasString() && event.getGestureSource() != codeArea) {
             codeArea.insertText(codeArea.getCaretPosition(), db.getString());
             success = true;
+            dragging = false;
+        } else if (event.getGestureSource() == codeArea) {
+            CharacterHit hit = codeArea.hit(event.getX(), event.getY());
+            codeArea.moveSelectedText(hit.getInsertionIndex());
+            success = true;
+            dragging = false;
+            codeArea.setOnDragDetected(baseDetectedDragEvent);
         }
         event.setDropCompleted(success);
         event.consume();
