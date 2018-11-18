@@ -79,7 +79,7 @@
         <maven.resources.version>3.1.0</maven.resources.version>
         <maven.site.version>3.7.1</maven.site.version>
         <maven.source.version>3.0.1</maven.source.version>
-        <maven.surefire.version>2.22.0</maven.surefire.version>
+        <maven.surefire.version>2.22.1</maven.surefire.version>
         <maven.templating.version>1.0.0</maven.templating.version>
         <maven.versions.version>2.7</maven.versions.version>
 
@@ -93,6 +93,7 @@
         <groovy.version>2.4.12</groovy.version>
         <guava.version>20.0</guava.version>
         <jackson.version>2.8.7</jackson.version>
+        <javafx.version>11.0.1</javafx.version>
         <jimfs.version>1.1</jimfs.version>
         <jodatime.version>2.9.7</jodatime.version>
         <junit.version>4.12</junit.version>
@@ -333,6 +334,14 @@
             </distributionManagement>
         </profile>
     </profiles>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+    </dependencies>
 
     <dependencyManagement>
         <dependencies>
