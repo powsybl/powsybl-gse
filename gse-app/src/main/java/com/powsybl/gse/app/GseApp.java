@@ -42,7 +42,7 @@ public class GseApp extends Application {
     public void start(Stage stage) {
         gsePane = new GsePane(new GseContext(executor), appData, this);
         stage.setTitle(gsePane.getTitle());
-        stage.getIcons().add(gsePane.getIcon());
+        stage.getIcons().addAll(gsePane.getIcons());
         Scene scene = new Scene(gsePane, 1200, 800);
         stage.setScene(scene);
 
@@ -56,6 +56,12 @@ public class GseApp extends Application {
         }
 
         stage.show();
+
+        stage.setOnCloseRequest(event -> {
+            if (!gsePane.isClosable()) {
+                event.consume();
+            }
+        });
     }
 
     @Override

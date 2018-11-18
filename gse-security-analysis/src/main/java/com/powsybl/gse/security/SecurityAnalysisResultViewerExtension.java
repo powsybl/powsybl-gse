@@ -48,4 +48,9 @@ public class SecurityAnalysisResultViewerExtension implements ProjectFileViewerE
     public SecurityAnalysisResultViewer newViewer(SecurityAnalysisRunner runner, Scene scene, GseContext context) {
         return new SecurityAnalysisResultViewer(runner, scene, context);
     }
+
+    @Override
+    public boolean isMenuEnabled(SecurityAnalysisRunner runner) {
+        return runner.hasResult();
+    }
 }

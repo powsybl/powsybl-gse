@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.gse.explorer.icons;
+package com.powsybl.gse.explorer.symbols;
 
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -14,7 +14,7 @@ import javafx.scene.shape.Rectangle;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class SwitchIcon extends Pane {
+public class SwitchSymbol extends Pane {
 
     private static final double BOX_MARGIN = 0.3;
     private static final double MARGIN = 0.1;
@@ -23,7 +23,7 @@ public class SwitchIcon extends Pane {
     private final Line leg2;
     private final Rectangle box;
 
-    public SwitchIcon(Color stroke, double strokeWidth, double size) {
+    public SwitchSymbol(Color stroke, double strokeWidth, double size) {
         setPrefSize(size, size);
 
         leg1 = new Line();

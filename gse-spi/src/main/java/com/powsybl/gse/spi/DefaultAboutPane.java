@@ -52,7 +52,8 @@ public class DefaultAboutPane extends BorderPane {
         setBackground(new Background(new BackgroundFill(Color.WHITE, null, null)));
         setPrefWidth(600);
 
-        PowsyblLogo powsyblLogo = new PowsyblLogo(LOGO_SIZE, LOGO_SIZE);
+        PowsyblLogo powsyblLogo = new PowsyblLogo();
+        powsyblLogo.setPrefSize(LOGO_SIZE, LOGO_SIZE);
 
         HBox logoPane = new HBox(PADDING, powsyblLogo);
         logoPane.getChildren().addAll(getAdditionalLogos());

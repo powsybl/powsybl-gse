@@ -6,101 +6,22 @@
  */
 package com.powsybl.gse.spi;
 
-import javafx.scene.layout.Pane;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
+import javafx.scene.Group;
+import javafx.scene.Node;
+
+import java.util.Collection;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class PowsyblLogo extends Pane {
+public class PowsyblLogo extends AbstractSvgImage {
 
-    private static final Color HEAD_COLOR = Color.valueOf("#F8C960");
-    private static final Color MEMBER_COLOR = Color.valueOf("#D38317");
-    private static final Color EYE_COLOR = Color.valueOf("#F5D9B4");
-    private static final Color NOSE_COLOR = Color.valueOf("#A66930");
-
-    private final Circle head = new Circle();
-    private final Circle leftEar = new Circle();
-    private final Circle rightEar = new Circle();
-    private final Circle leftHand = new Circle();
-    private final Circle rightHand = new Circle();
-    private final Circle rightEye = new Circle();
-    private final Circle leftEye = new Circle();
-    private final Circle noseHand = new Circle();
-
-    public PowsyblLogo(double prefWidth, double prefHeight) {
-        setPrefWidth(prefWidth);
-        setPrefHeight(prefHeight);
-        head.setFill(HEAD_COLOR);
-        leftEar.setFill(MEMBER_COLOR);
-        rightEar.setFill(MEMBER_COLOR);
-        leftHand.setFill(MEMBER_COLOR);
-        rightHand.setFill(MEMBER_COLOR);
-        rightEye.setFill(EYE_COLOR);
-        leftEye.setFill(EYE_COLOR);
-        noseHand.setFill(NOSE_COLOR);
-
-        getChildren().addAll(rightEar, head, leftEar, leftHand, rightHand, leftEye, rightEye, noseHand);
+    public PowsyblLogo() {
+        super(PowsyblLogo.class.getResourceAsStream("/images/logo_lfe_powsybl.svg"), 0, 0, 114, 114);
     }
 
     @Override
-    protected void layoutChildren() {
-        double size = Math.min(getWidth(), getHeight());
-
-        double headX = size / 2;
-        double headY = size / 2;
-        double headRadius = (0.9 * size) / 2;
-        head.setCenterX(headX);
-        head.setCenterY(headY);
-        head.setRadius(headRadius);
-
-        double leftEarX = headX - headRadius * Math.cos(Math.toRadians(49));
-        double leftEarY = headY - headRadius * Math.sin(Math.toRadians(49));
-        double  leftEarRadius = 0.16 * size;
-        leftEar.setCenterX(leftEarX);
-        leftEar.setCenterY(leftEarY);
-        leftEar.setRadius(leftEarRadius);
-
-        double rightEarX = headX + headRadius * Math.cos(Math.toRadians(45));
-        double rightEarY = headY - headRadius * Math.sin(Math.toRadians(45));
-        double rightEarRadius = 0.13 * size;
-        rightEar.setCenterX(rightEarX);
-        rightEar.setCenterY(rightEarY);
-        rightEar.setRadius(rightEarRadius);
-
-        double handRadius = size / 10;
-        double leftHandX = handRadius;
-        double leftHandY = size - handRadius;
-        leftHand.setCenterX(leftHandX);
-        leftHand.setCenterY(leftHandY);
-        leftHand.setRadius(handRadius);
-
-        double rightHandX = size - handRadius;
-        double rightHandY = size - handRadius;
-        rightHand.setCenterX(rightHandX);
-        rightHand.setCenterY(rightHandY);
-        rightHand.setRadius(handRadius);
-
-        double leftEyeRadius = size / 6;
-        double leftEyeX = headX - size / 11;
-        double leftEyeY = headY + size / 16;
-        leftEye.setCenterX(leftEyeX);
-        leftEye.setCenterY(leftEyeY);
-        leftEye.setRadius(leftEyeRadius);
-
-        double rightEyeRadius = size / 7.5;
-        double rightEyeX = headX + size / 4;
-        double rightEyeY = headY + size / 7;
-        rightEye.setCenterX(rightEyeX);
-        rightEye.setCenterY(rightEyeY);
-        rightEye.setRadius(rightEyeRadius);
-
-        double noseRadiusRadius = size / 12;
-        double noseX = headX + size / 20;
-        double noseY = headY + size / 3.2;
-        noseHand.setCenterX(noseX);
-        noseHand.setCenterY(noseY);
-        noseHand.setRadius(noseRadiusRadius);
+    protected Collection<Node> extractNodes(Group svg) {
+        return ((Group) svg.getChildren().get(0)).getChildren();
     }
 }
