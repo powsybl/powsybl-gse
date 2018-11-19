@@ -205,7 +205,7 @@ public class ProjectPane extends Tab {
                     setOnDragDetected(event -> dragDetectedEvent(getItem(), getTreeItem(), event));
                     setOnDragOver(event -> dragOverEvent(event, getItem(), getTreeItem(), this));
                     setOnDragDropped(event -> dragDroppedEvent(getItem(), getTreeItem(), event, node));
-                    setOnDragExited(event -> setTextFill(Color.BLACK));
+                    setOnDragExited(event -> getStyleClass().removeAll("treecell-drag-over"));
                 } else {
                     throw new AssertionError();
                 }
@@ -263,9 +263,9 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private void textFillColor(TreeCell<Object> treeCell) {
+    private void setDragOverStyle(TreeCell<Object> treeCell) {
         if (getCounter() < 1) {
-            treeCell.setTextFill(Color.CHOCOLATE);
+            treeCell.getStyleClass().add("treecell-drag-over");
         }
     }
 
@@ -318,7 +318,7 @@ public class ProjectPane extends Tab {
         if (item instanceof ProjectFolder && dragAndDropMove != null && isMovable(item, treeItem)) {
             int count = 0;
             treeItemChildrenSize(treeItem, count);
-            textFillColor(treeCell);
+            setDragOverStyle(treeCell);
             event.acceptTransferModes(TransferMode.ANY);
             event.consume();
         }
@@ -352,6 +352,7 @@ public class ProjectPane extends Tab {
             event.setDropCompleted(success);
             refresh(dragAndDropMove.getSourceTreeItem().getParent());
             refresh(treeItem);
+            treeView.getSelectionModel().clearSelection();
             event.consume();
         }
     }
