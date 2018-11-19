@@ -445,8 +445,16 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         }
     }
 
-    private void dragOverEvent(DragEvent event, Object item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treetableCell) {
-        if (item instanceof Folder && item != dragAndDropMove.getSource()) {
+    private boolean isChildOf(TreeItem<N> targetTreeItem) {
+        return targetTreeItem == dragAndDropMove.getSourceTreeItem().getParent();
+    }
+
+    public boolean isMovable(N item, TreeItem<N> targetTreeItem) {
+        return item != dragAndDropMove.getSource() && !isChildOf(targetTreeItem);
+    }
+
+    private void dragOverEvent(DragEvent event, N item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treetableCell) {
+        if (item instanceof Folder && dragAndDropMove != null && isMovable(item, treeTableRow.getTreeItem())) {
             int count = 0;
             treeItemChildrenSize(treeTableRow.getTreeItem(), count);
             textFillColor(treetableCell);
