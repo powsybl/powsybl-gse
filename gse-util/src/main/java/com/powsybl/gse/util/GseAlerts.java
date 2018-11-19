@@ -35,6 +35,14 @@ public final class GseAlerts {
         alert.showAndWait();
     }
 
+    public static void showDialogError(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(RESOURCE_BUNDLE.getString("Error"));
+        alert.setResizable(true);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
     public static Optional<ButtonType> showSaveAndQuitDialog(String documentName) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setHeaderText(MessageFormat.format(RESOURCE_BUNDLE.getString("SaveBeforeClosing"), documentName));
