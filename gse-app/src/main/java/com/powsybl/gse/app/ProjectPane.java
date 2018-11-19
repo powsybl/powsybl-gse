@@ -311,11 +311,11 @@ public class ProjectPane extends Tab {
     }
 
     public boolean isMovable(Object item, TreeItem<Object> targetTreeItem) {
-        return item != dragAndDropMove.getSource() && !isSourceAncestorOf(targetTreeItem) && !isChildOf(targetTreeItem);
+        return dragAndDropMove != null && item != dragAndDropMove.getSource() && !isSourceAncestorOf(targetTreeItem) && !isChildOf(targetTreeItem);
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
-        if (item instanceof ProjectFolder && dragAndDropMove != null && isMovable(item, treeItem)) {
+        if (item instanceof ProjectFolder && isMovable(item, treeItem)) {
             int count = 0;
             treeItemChildrenSize(treeItem, count);
             setDragOverStyle(treeCell);
