@@ -450,7 +450,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     public boolean isMovable(N item, TreeItem<N> targetTreeItem) {
-        return item != dragAndDropMove.getSource() && !isChildOf(targetTreeItem);
+        return item != dragAndDropMove.getSource() && dragAndDropMove != null && !isChildOf(targetTreeItem);
     }
 
     private void dragOverEvent(DragEvent event, N item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treetableCell) {
