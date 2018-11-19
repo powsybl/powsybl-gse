@@ -205,7 +205,7 @@ public class ProjectPane extends Tab {
                     setOnDragDetected(event -> dragDetectedEvent(getItem(), getTreeItem(), event));
                     setOnDragOver(event -> dragOverEvent(event, getItem(), getTreeItem(), this));
                     setOnDragDropped(event -> dragDroppedEvent(getItem(), getTreeItem(), event, node));
-                    setOnDragExited(event -> getStyleClass().removeAll("cell-drag-over-class"));
+                    setOnDragExited(event -> getStyleClass().removeAll("treecell-drag-over"));
                 } else {
                     throw new AssertionError();
                 }
@@ -265,7 +265,7 @@ public class ProjectPane extends Tab {
 
     private void setDragOverStyle(TreeCell<Object> treeCell) {
         if (getCounter() < 1) {
-            treeCell.getStyleClass().add("cell-drag-over-class");
+            treeCell.getStyleClass().add("treecell-drag-over");
         }
     }
 
