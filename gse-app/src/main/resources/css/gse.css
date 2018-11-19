@@ -16,6 +16,10 @@
     -fx-font-size: 1.7em;
 }
 
+.treecell-drag-over {
+    -fx-background-color: #87ceeb;
+}
+
 .gse-app-bar-icon:hover {
     -fx-fill: lightgrey;
 }
