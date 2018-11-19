@@ -17,6 +17,7 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
@@ -53,6 +54,7 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
     private final class ContingencyTreeCell extends TreeCell<Object> {
 
         private ContingencyTreeCell() {
+            contingencyTree.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
             setOnDragOver(this::onDragOver);
             setOnDragDropped(this::onDragDropped);
         }
@@ -227,8 +229,7 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
                     contingencyTree.setContextMenu(null);
                 }
             } else {
-                contingencyTree.setContextMenu(null);
-            }
+                contingencyTree.setContextMenu(createMultipleContingencyMenu());            }
         });
 
         contingencyTree.addEventHandler(KeyEvent.KEY_PRESSED, this::onKeyPressed);
@@ -269,6 +270,14 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         return new ContextMenu(renameItem, removeItem);
     }
 
+    private ContextMenu createMultipleContingencyMenu() {
+        ContextMenu contextMenu = new ContextMenu();
+        MenuItem removeItem = new MenuItem(REMOVE);
+        removeItem.setOnAction(event -> showRemoveAlert());
+        contextMenu.getItems().add(removeItem);
+        return contextMenu;
+    }
+
     private void rename() {
         TreeItem<Object> item = contingencyTree.getSelectionModel().getSelectedItem();
         Contingency contingency = (Contingency) item.getValue();
@@ -289,13 +298,19 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
     }
 
     private void showRemoveAlert() {
-        TreeItem<Object> item = contingencyTree.getSelectionModel().getSelectedItem();
+        // TreeItem<Object> item = contingencyTree.getSelectionModel().getSelectedItem();
+        ObservableList<TreeItem<Object>> selectedItems = contingencyTree.getSelectionModel().getSelectedItems();
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle(REMOVE);
-        if (item.getValue() instanceof Contingency) {
-            alert.setHeaderText(REMOVE + " " + ((Contingency) item.getValue()).getId() + " ?");
-        } else if (item.getValue() instanceof ContingencyElement) {
-            alert.setHeaderText(REMOVE + " " + ((ContingencyElement) item.getValue()).getId() + " ?");
+        if (selectedItems.size() == 1) {
+            TreeItem<Object> item = selectedItems.get(0);
+            if (item.getValue() instanceof Contingency) {
+                alert.setHeaderText(REMOVE + " " + ((Contingency) item.getValue()).getId() + " ?");
+            } else if (item.getValue() instanceof ContingencyElement) {
+                alert.setHeaderText(REMOVE + " " + ((ContingencyElement) item.getValue()).getId() + " ?");
+            }
+        } else {
+            alert.setHeaderText(REMOVE+ " " + RESOURCE_BUNDLE.getString("SelectedElements"));
         }
         Optional<ButtonType> result = alert.showAndWait();
         result.ifPresent(type -> {
@@ -308,18 +323,24 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
     }
 
     private void remove() {
-        TreeItem<Object> item = contingencyTree.getSelectionModel().getSelectedItem();
-        if (item.getValue() instanceof Contingency) {
-            item.getParent().getChildren().remove(item);
-        } else {
-            Contingency contingency = (Contingency) item.getParent().getValue();
-            if (contingency.getElements().size() == 1) {
-                // remove the contingency to avoid empty contingencies
-                item.getParent().getParent().getChildren().remove(item.getParent());
+        ObservableList<TreeItem<Object>> selectedItems = contingencyTree.getSelectionModel().getSelectedItems();
+        for (TreeItem<Object> item : selectedItems) {
+            if (item != null) {
+                if (item.getValue() instanceof Contingency) {
+                    item.getParent().getChildren().remove(item);
+                } else {
+                    Contingency contingency = (Contingency) item.getParent().getValue();
+                    if (contingency.getElements().size() == 1) {
+                        // remove the contingency to avoid empty contingencies
+                        item.getParent().getParent().getChildren().remove(item.getParent());
+                    } else {
+                        ContingencyElement element = (ContingencyElement) item.getValue();
+                        contingency.removeElement(element);
+                        item.getParent().getChildren().remove(item);
+                    }
+                }
             } else {
-                ContingencyElement element = (ContingencyElement) item.getValue();
-                contingency.removeElement(element);
-                item.getParent().getChildren().remove(item);
+                System.out.println(" item is null");
             }
         }
         saved.set(false);
