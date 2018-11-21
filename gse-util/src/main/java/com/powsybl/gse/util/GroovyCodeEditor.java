@@ -14,6 +14,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.input.*;
+import javafx.scene.layout.VBox;
 import org.codehaus.groovy.antlr.GroovySourceToken;
 import org.codehaus.groovy.antlr.SourceBuffer;
 import org.codehaus.groovy.antlr.UnicodeEscapingReader;
@@ -47,6 +48,12 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
 
+    private final KeyCombination replaceWordKeyCombination = new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN);
+
+    private ReplaceWordBar replaceWordBar;
+
+    private SearchBar searchBar;
+
     private boolean allowedDrag = false;
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
@@ -73,26 +80,46 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.richChanges()
                 .filter(ch -> !ch.getInserted().equals(ch.getRemoved()))
                 .subscribe(change -> codeArea.setStyleSpans(0, computeHighlighting(codeArea.getText())));
-        SearchBar searchBar = new SearchBar(codeArea);
+        searchBar = new SearchBar(codeArea);
         searchBar.setCloseAction(e -> {
             setShowDetailNode(false);
             codeArea.requestFocus();
         });
+        replaceWordBar = new ReplaceWordBar();
         setMasterNode(new VirtualizedScrollPane(codeArea));
-        setDetailNode(searchBar);
+        VBox vBox1 = new VBox();
+        vBox1.getChildren().addAll(searchBar, replaceWordBar);
+        vBox1.setSpacing(7);
+        setDetailNode(vBox1);
         setDetailSide(Side.TOP);
         setShowDetailNode(false);
 
         setOnKeyPressed((KeyEvent ke) -> {
             if (searchKeyCombination.match(ke)) {
+                setShowDetailNode(false);
+                vBox1.getChildren().remove(replaceWordBar);
+                setDetailNode(vBox1);
                 if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
                     searchBar.setSearchPattern(codeArea.getSelectedText());
                 }
-                if (!isShowDetailNode()) {
-                    setShowDetailNode(true);
+               showDetailNode();
+            } else if (replaceWordKeyCombination.match(ke)) {
+                setShowDetailNode(false);
+                if (!vBox1.getChildren().contains(replaceWordBar)) {
+                    vBox1.getChildren().add(replaceWordBar);
                 }
-                searchBar.requestFocus();
+                setDetailNode(vBox1);
+                replaceWordBar.getReplaceAllButton().disableProperty().bind(searchBar.matcher.nbMatchesProperty().isEqualTo(0));
+                replaceWordBar.getReplaceButton().disableProperty().bind(searchBar.matcher.nbMatchesProperty().isEqualTo(0));
+                replaceWordBar.getReplaceAllButton().setOnAction(event -> replaceAllOccurences(searchBar.getSearchField().getText()));
+                replaceWordBar.getReplaceButton().setOnAction(event -> replaceCurrentOccurence(searchBar.matcher.currentMatchStart(), searchBar.matcher.currentMatchEnd()));
+                if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
+                    searchBar.setSearchPattern(codeArea.getSelectedText());
+                }
+                showDetailNode();
             }
+
+            vBox1.requestFocus();
 
         });
 
@@ -102,6 +129,28 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.setOnDragOver(this::onDragOver);
         codeArea.setOnDragDropped(this::onDragDropped);
         codeArea.setOnSelectionDrag(p -> allowedDrag = true);
+    }
+
+    private void showDetailNode() {
+        if (!isShowDetailNode()) {
+            setShowDetailNode(true);
+        }
+    }
+
+    private void replaceAllOccurences(String word) {
+        int size = word.length();
+        for (int i = 0; i <= codeArea.getText().length() - size; i++) {
+            String str = codeArea.getText().substring(i, i + size);
+            if (str.equals(word)) {
+                codeArea.replaceText(i, i + size, replaceWordBar.getSearchField().getText());
+            }
+        }
+        searchBar.matcher.find(searchBar.getSearchField().getText(), codeArea.getText());
+    }
+
+    private void replaceCurrentOccurence(int startPosition, int endPosition) {
+        codeArea.replaceText(startPosition, endPosition, replaceWordBar.getSearchField().getText());
+        searchBar.matcher.find(searchBar.getSearchField().getText(), codeArea.getText());
     }
 
     private void onDragDetected(MouseEvent event) {
