@@ -64,7 +64,7 @@ public class MapViewPort {
         double tileWidth = tileManager.getServerInfo().getTileWidth();
         double tileHeight = tileManager.getServerInfo().getTileHeight();
         for (int i = 0; i < x.length; i++) {
-            x[i] = width / 2 + (x[i]- centerTilePoint.getX()) * tileWidth;
+            x[i] = width / 2 + (x[i] - centerTilePoint.getX()) * tileWidth;
             y[i] = height / 2 + (y[i] - centerTilePoint.getY()) * tileHeight;
         }
         return new Polyline(x, y);

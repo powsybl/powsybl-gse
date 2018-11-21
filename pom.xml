@@ -96,7 +96,7 @@
         <slf4j.version>1.7.22</slf4j.version>
         <tiwulfx.version>2.0</tiwulfx.version>
 
-        <powsyblcore.version>2.1.0-SNAPSHOT</powsyblcore.version>
+        <powsyblcore.version>2.2.0-SNAPSHOT</powsyblcore.version>
 
     </properties>
 

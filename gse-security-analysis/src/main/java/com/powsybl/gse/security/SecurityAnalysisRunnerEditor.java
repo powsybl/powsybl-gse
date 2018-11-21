@@ -26,7 +26,7 @@ public class SecurityAnalysisRunnerEditor extends AbstractSecurityAnalysisRunner
         nameTextField.setText(node.getName());
         nameTextField.setDisable(true);
         node.getCase().ifPresent(aCase -> caseSelectionPane.nodeProperty().setValue((ProjectFile) aCase));
-        node.getContingencyListProvider().ifPresent(contingencyStore -> contingencyStoreSelectionPane.nodeProperty().setValue((ProjectFile) contingencyStore));
+        node.getContingencyStore().ifPresent(contingencyStore -> contingencyStoreSelectionPane.nodeProperty().setValue((ProjectFile) contingencyStore));
     }
 
     @Override
