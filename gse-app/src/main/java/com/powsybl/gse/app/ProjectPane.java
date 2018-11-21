@@ -683,11 +683,12 @@ public class ProjectPane extends Tab {
         tab.setOnCloseRequest(event -> {
             if (!viewer.isClosable()) {
                 event.consume();
-            } else {
-                viewerList.remove(viewer);
             }
         });
-        tab.setOnClosed(event -> viewer.dispose());
+        tab.setOnClosed(event -> {
+            viewer.dispose();
+            viewerList.remove(viewer);
+        });
         tab.setGraphic(graphic);
         tab.setTooltip(new Tooltip(tabName));
         tab.setUserData(tabKey);
