@@ -13,10 +13,7 @@ import groovyjarjarantlr.TokenStreamException;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCodeCombination;
-import javafx.scene.input.KeyCombination;
-import javafx.scene.input.KeyEvent;
+import javafx.scene.input.*;
 import javafx.scene.text.Text;
 import org.codehaus.groovy.antlr.GroovySourceToken;
 import org.codehaus.groovy.antlr.SourceBuffer;
@@ -26,8 +23,7 @@ import org.codehaus.groovy.antlr.parser.GroovyLexer;
 import org.codehaus.groovy.antlr.parser.GroovyTokenTypes;
 import org.controlsfx.control.MasterDetailPane;
 import org.fxmisc.flowless.VirtualizedScrollPane;
-import org.fxmisc.richtext.CodeArea;
-import org.fxmisc.richtext.LineNumberFactory;
+import org.fxmisc.richtext.*;
 import org.fxmisc.richtext.model.StyleSpans;
 import org.fxmisc.richtext.model.StyleSpansBuilder;
 import org.slf4j.Logger;
@@ -36,7 +32,10 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.UncheckedIOException;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Stack;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -51,6 +50,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
 
     private String mouseClickedBracket;
+
+    private boolean allowedDrag = false;
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
@@ -99,11 +100,18 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
         });
 
+        codeArea.setOnDragEntered(event -> codeArea.setShowCaret(Caret.CaretVisibility.ON));
+        codeArea.setOnDragExited(event -> codeArea.setShowCaret(Caret.CaretVisibility.AUTO));
+        codeArea.setOnDragDetected(this::onDragDetected);
+        codeArea.setOnDragOver(this::onDragOver);
+        codeArea.setOnDragDropped(this::onDragDropped);
+        codeArea.setOnSelectionDrag(p -> allowedDrag = true);
+
         codeArea.setOnMouseClicked(event -> {
             if (event.getPickResult().getIntersectedNode() instanceof Text) {
                 Text intersectedNode = (Text) event.getPickResult().getIntersectedNode();
                 mouseClickedBracket = intersectedNode.getText();
-                if(areBracketsMatched(codeArea.getText())) {
+                if (areBracketsMatched(codeArea.getText())) {
                     findBracketsMatches(codeArea.getText());
                 }
             }
@@ -114,7 +122,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     public boolean areBracketsMatched(String text) {
         Stack<Character> stack = new Stack<>();
-        char current, previous;
+        char current;
+        char previous;
         for (int i = 0; i < text.length(); i++) {
             current = text.charAt(i);
             if (current == '(' || current == '[' || current == '{') {
@@ -125,7 +134,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 } else {
                     previous = stack.peek();
                     if ((current == ')' && previous == '(') || (current == ']' && previous == '[') || (current == '}' && previous == '{')) {
-                            stack.pop();
+                        stack.pop();
                     } else {
                         return false;
                     }
@@ -154,7 +163,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private void highlightLeftBracketsMatches(String text, char c1, char c2) {
         Integer value = codeArea.caretPositionProperty().getValue();
-        int counter =0;
+        int counter = 0;
         for (int i = value - 1; i >= 0; i--) {
             if (text.charAt(i) == c1) {
                 counter++;
@@ -166,16 +175,16 @@ public class GroovyCodeEditor extends MasterDetailPane {
                     counter = 0;
                     continue;
                 } else {
-                    counter --;
+                    counter--;
                 }
             }
         }
     }
 
-    private void highlightRightBracketsMatches(String text, char c1, char c2){
+    private void highlightRightBracketsMatches(String text, char c1, char c2) {
         Integer value = codeArea.caretPositionProperty().getValue();
-        int counter =0;
-        for (int i = value +1 ; i <= text.length(); i++) {
+        int counter = 0;
+        for (int i = value + 1; i <= text.length(); i++) {
             if (text.charAt(i) == c1) {
                 counter++;
             } else if (text.charAt(i) == c2) {
@@ -186,10 +195,54 @@ public class GroovyCodeEditor extends MasterDetailPane {
                     counter = 0;
                     continue;
                 } else {
-                    counter --;
+                    counter--;
                 }
             }
         }
+    }
+
+    private void onDragDetected(MouseEvent event) {
+        if (allowedDrag) {
+            Dragboard db = codeArea.startDragAndDrop(TransferMode.COPY_OR_MOVE);
+            ClipboardContent content = new ClipboardContent();
+            content.putString(codeArea.getSelectedText());
+            db.setContent(content);
+            event.consume();
+            allowedDrag = false;
+        }
+    }
+
+    private void onDragOver(DragEvent event) {
+        Dragboard db = event.getDragboard();
+        if ((db.hasContent(EquipmentInfo.DATA_FORMAT) && db.getContent(EquipmentInfo.DATA_FORMAT) instanceof EquipmentInfo) || db.hasString()) {
+            if (event.getGestureSource() == codeArea) {
+                event.acceptTransferModes(TransferMode.MOVE);
+            } else {
+                event.acceptTransferModes(TransferMode.COPY);
+            }
+            CharacterHit hit = codeArea.hit(event.getX(), event.getY());
+            codeArea.displaceCaret(hit.getInsertionIndex());
+        }
+    }
+
+    private void onDragDropped(DragEvent event) {
+        codeArea.setShowCaret(Caret.CaretVisibility.AUTO);
+        Dragboard db = event.getDragboard();
+        boolean success = false;
+        if (db.hasContent(EquipmentInfo.DATA_FORMAT)) {
+            List<EquipmentInfo> equipmentInfoList = (List<EquipmentInfo>) db.getContent(EquipmentInfo.DATA_FORMAT);
+            codeArea.insertText(codeArea.getCaretPosition(), equipmentInfoList.get(0).getIdAndName().getId());
+            success = true;
+        } else if (db.hasString() && event.getGestureSource() != codeArea) {
+            codeArea.insertText(codeArea.getCaretPosition(), db.getString());
+            success = true;
+        } else if (event.getGestureSource() == codeArea) {
+            CharacterHit hit = codeArea.hit(event.getX(), event.getY());
+            codeArea.moveSelectedText(hit.getInsertionIndex());
+            success = true;
+        }
+        event.setDropCompleted(success);
+        event.consume();
     }
 
     public void setCode(String code) {
@@ -303,7 +356,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
     }
 
     private int length(GroovySourceToken token) {
-        int offset1 = codeArea.getDocument().position(token.getLine() - 1, token.getColumn() - 1).toOffset();
+        int offset1 = codeArea.getDocument().position(token.getLine() -  1, token.getColumn() - 1).toOffset();
         int offset2 = codeArea.getDocument().position(token.getLineLast() - 1, token.getColumnLast() - 1).toOffset();
         return offset2 - offset1;
     }

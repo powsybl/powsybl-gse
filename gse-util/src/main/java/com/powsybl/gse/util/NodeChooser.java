@@ -430,7 +430,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             treeTableCell.setOnDragDetected(event -> dragDetectedEvent(item, treeTableRow.getTreeItem(), event));
             treeTableCell.setOnDragOver(event -> dragOverEvent(event, item, treeTableRow, treeTableCell));
             treeTableCell.setOnDragDropped(event -> dragDroppedEvent(item, treeTableRow.getTreeItem(), event, node));
-            treeTableCell.setOnDragExited(event -> treeTableCell.setTextFill(Color.BLACK));
+            treeTableCell.setOnDragExited(event -> treeTableCell.getStyleClass().removeAll("treecell-drag-over"));
         } else {
             treeTableCell.setText(treeModel.getName(item));
             treeTableCell.setTextFill(Color.BLACK);
@@ -439,17 +439,18 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         }
     }
 
-    private void textFillColor(TreeTableCell<N, N> treetableCell) {
+    private void setDragOverStyle(TreeTableCell<N, N> treeTableCell) {
         if (getCounter() < 1) {
-            treetableCell.setTextFill(Color.CHOCOLATE);
+            treeTableCell.getStyleClass().add("treecell-drag-over");
         }
     }
 
-    private void dragOverEvent(DragEvent event, Object item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treetableCell) {
+
+    private void dragOverEvent(DragEvent event, Object item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treeTableCell) {
         if (item instanceof Folder && item != dragAndDropMove.getSource()) {
             int count = 0;
             treeItemChildrenSize(treeTableRow.getTreeItem(), count);
-            textFillColor(treetableCell);
+            setDragOverStyle(treeTableCell);
             event.acceptTransferModes(TransferMode.ANY);
             event.consume();
         }
@@ -482,6 +483,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             event.setDropCompleted(success);
             refreshTreeItem(dragAndDropMove.getSourceTreeItem().getParent());
             refreshTreeItem(treeItem);
+            tree.getSelectionModel().clearSelection();
             event.consume();
         }
     }
@@ -580,22 +582,19 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private MenuItem createRenameProjectMenuItem() {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size(ICON_SIZE));
+        TreeItem<N> selectedTreeItem = tree.getSelectionModel().getSelectedItem();
         menuItem.setOnAction(event -> {
-            TextInputDialog dialog = new TextInputDialog(tree.getSelectionModel().getSelectedItem().getValue().toString());
-            dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
-            dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
-            dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
-            Optional<String> result = dialog.showAndWait();
-            result.ifPresent(newname -> {
-                TreeItem<N> selectedTreeItem = tree.getSelectionModel().getSelectedItem();
+            Optional<String> result = RenamePane.showAndWaitDialog((Node) selectedTreeItem.getValue());
+            result.ifPresent(newName -> {
                 if (selectedTreeItem.getValue() instanceof Node) {
-                    Node localSelectednode = (Node) selectedTreeItem.getValue();
-                    localSelectednode.rename(newname);
-                    refreshTreeItem(selectedTreeItem.getParent());
+                    Node selectedTreeNode = (Node) selectedTreeItem.getValue();
+                    selectedTreeNode.rename(newName);
+                    refresh(selectedTreeItem.getParent());
                     tree.getSelectionModel().clearSelection();
-                    tree.getSelectionModel().select(selectedTreeItem.getParent());
+                    tree.getSelectionModel().select(selectedTreeItem);
                 }
             });
+
         });
         return menuItem;
     }
