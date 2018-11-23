@@ -102,7 +102,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
                     searchBar.setSearchPattern(codeArea.getSelectedText());
                 }
-               showDetailNode();
+                showDetailNode();
             } else if (replaceWordKeyCombination.match(ke)) {
                 setShowDetailNode(false);
                 if (!vBox1.getChildren().contains(replaceWordBar)) {
