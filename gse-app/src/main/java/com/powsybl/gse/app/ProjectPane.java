@@ -84,15 +84,20 @@ public class ProjectPane extends Tab {
 
     public static class MyTab extends Tab {
 
-        public MyTab(String text, Node content) {
-            super(text, content);
+        private ProjectFileViewer viewer;
+
+        public MyTab(String text, ProjectFileViewer viewer) {
+            super(text, viewer.getContent());
+            this.viewer = viewer;
+        }
+
+        public ProjectFileViewer getViewer() {
+            return viewer;
         }
 
         public void requestClose() {
             TabPaneBehavior behavior = getBehavior();
-            if (behavior.canCloseTab(this)) {
-                behavior.closeTab(this);
-            }
+            behavior.closeTab(this);
         }
 
         private TabPaneBehavior getBehavior() {
@@ -118,6 +123,8 @@ public class ProjectPane extends Tab {
     private final TaskItemList taskItems;
 
     private final TaskMonitorPane taskMonitorPane;
+
+    private static final String STAR_NOTIFICATION = " *";
 
     private static class CreationTaskList {
 
@@ -198,7 +205,7 @@ public class ProjectPane extends Tab {
                     setOnDragDetected(event -> dragDetectedEvent(getItem(), getTreeItem(), event));
                     setOnDragOver(event -> dragOverEvent(event, getItem(), getTreeItem(), this));
                     setOnDragDropped(event -> dragDroppedEvent(getItem(), getTreeItem(), event, node));
-                    setOnDragExited(event -> setTextFill(Color.BLACK));
+                    setOnDragExited(event -> getStyleClass().removeAll("treecell-drag-over"));
                 } else {
                     throw new AssertionError();
                 }
@@ -256,9 +263,9 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private void textFillColor(TreeCell<Object> treeCell) {
+    private void setDragOverStyle(TreeCell<Object> treeCell) {
         if (getCounter() < 1) {
-            treeCell.setTextFill(Color.CHOCOLATE);
+            treeCell.getStyleClass().add("treecell-drag-over");
         }
     }
 
@@ -288,10 +295,10 @@ public class ProjectPane extends Tab {
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
-        if (item instanceof ProjectFolder && item != dragAndDropMove.getSource()) {
+        if (item instanceof ProjectFolder && dragAndDropMove != null && item != dragAndDropMove.getSource()) {
             int count = 0;
             treeItemChildrenSize(treeItem, count);
-            textFillColor(treeCell);
+            setDragOverStyle(treeCell);
             event.acceptTransferModes(TransferMode.ANY);
             event.consume();
         }
@@ -325,6 +332,7 @@ public class ProjectPane extends Tab {
             event.setDropCompleted(success);
             refresh(dragAndDropMove.getSourceTreeItem().getParent());
             refresh(treeItem);
+            treeView.getSelectionModel().clearSelection();
             event.consume();
         }
     }
@@ -354,6 +362,15 @@ public class ProjectPane extends Tab {
             monfichier.moveTo(projectFolder);
             success = true;
         }
+    }
+
+    private static String createProjectTooltip(Project project) {
+        String result = project.getName() + " (" + project.getPath().toString() + ")";
+        if (project.getDescription().isEmpty()) {
+            return result;
+        }
+        return result + "\n" +
+                "description: " + project.getDescription();
     }
 
     private final CreationTaskList tasks = new CreationTaskList();
@@ -408,7 +425,7 @@ public class ProjectPane extends Tab {
         splitPane.setDividerPositions(0.3);
         SplitPane.setResizableWithParent(ctrlPane, Boolean.FALSE);
         setText(project.getName());
-        setTooltip(new Tooltip(project.getName() + ": " + project.getDescription()));
+        setTooltip(new Tooltip(createProjectTooltip(project)));
         setContent(splitPane);
 
         createRootFolderTreeItem(project);
@@ -571,21 +588,16 @@ public class ProjectPane extends Tab {
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
         menuItem.setOnAction(event -> {
-            TextInputDialog dialog = new TextInputDialog(selectedTreeItem.getValue().toString());
-            dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFolder"));
-            dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
-            dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
-            Optional<String> result = dialog.showAndWait();
-            result.ifPresent(newname -> {
+            Optional<String> result = RenamePane.showAndWaitDialog((ProjectNode) selectedTreeItem.getValue());
+            result.ifPresent(newName -> {
                 if (selectedTreeItem.getValue() instanceof ProjectNode) {
                     ProjectNode selectedTreeNode = (ProjectNode) selectedTreeItem.getValue();
-                    selectedTreeNode.rename(newname);
+                    selectedTreeNode.rename(newName);
                     refresh(selectedTreeItem.getParent());
                     treeView.getSelectionModel().clearSelection();
                     treeView.getSelectionModel().select(selectedTreeItem);
                 }
             });
-
         });
         return menuItem;
     }
@@ -652,7 +664,12 @@ public class ProjectPane extends Tab {
         }
         Node graphic = viewerExtension.getMenuGraphic(file);
         ProjectFileViewer viewer = viewerExtension.newViewer(file, getContent().getScene(), context);
-        Tab tab = new MyTab(tabName, viewer.getContent());
+        Tab tab = new MyTab(tabName, viewer);
+        tab.setOnCloseRequest(event -> {
+            if (!viewer.isClosable()) {
+                event.consume();
+            }
+        });
         tab.setOnClosed(event -> viewer.dispose());
         tab.setGraphic(graphic);
         tab.setTooltip(new Tooltip(tabName));
@@ -660,6 +677,17 @@ public class ProjectPane extends Tab {
         DetachableTabPane firstTabPane = detachableTabPanes.get(0);
         firstTabPane.getTabs().add(tab);
         firstTabPane.getSelectionModel().select(tab);
+        if (viewer instanceof Savable) {
+            ((Savable) viewer).savedProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue) {
+                    tab.setText(tabName);
+                    tab.getStyleClass().remove("tab-text-unsaved");
+                } else if (oldValue) {
+                    tab.setText(tabName + STAR_NOTIFICATION);
+                    tab.getStyleClass().add("tab-text-unsaved");
+                }
+            });
+        }
         viewer.view();
     }
 
@@ -839,5 +867,16 @@ public class ProjectPane extends Tab {
     public void dispose() {
         taskItems.dispose();
         closeViews();
+    }
+
+    public boolean canBeClosed() {
+        for (DetachableTabPane tabPane : findDetachableTabPanes()) {
+            for (Tab tab : new ArrayList<>(tabPane.getTabs())) {
+                if (!((MyTab) tab).getViewer().isClosable()) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }
