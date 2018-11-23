@@ -99,6 +99,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 setShowDetailNode(false);
                 vBox1.getChildren().remove(replaceWordBar);
                 setDetailNode(vBox1);
+                resetDividerPosition();
                 if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
                     searchBar.setSearchPattern(codeArea.getSelectedText());
                 }
@@ -109,6 +110,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
                     vBox1.getChildren().add(replaceWordBar);
                 }
                 setDetailNode(vBox1);
+                resetDividerPosition();
                 replaceWordBar.getReplaceAllButton().disableProperty().bind(searchBar.matcher.nbMatchesProperty().isEqualTo(0));
                 replaceWordBar.getReplaceButton().disableProperty().bind(searchBar.matcher.nbMatchesProperty().isEqualTo(0));
                 replaceWordBar.getReplaceAllButton().setOnAction(event -> replaceAllOccurences(searchBar.getSearchField().getText()));
