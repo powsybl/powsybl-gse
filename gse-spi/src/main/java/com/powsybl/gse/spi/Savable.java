@@ -6,10 +6,15 @@
  */
 package com.powsybl.gse.spi;
 
+import javafx.beans.property.SimpleBooleanProperty;
+
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
 public interface Savable {
 
     void save();
+
+    SimpleBooleanProperty savedProperty();
+
 }
