@@ -10,6 +10,7 @@ import com.google.common.base.Stopwatch;
 import groovyjarjarantlr.Token;
 import groovyjarjarantlr.TokenStream;
 import groovyjarjarantlr.TokenStreamException;
+import javafx.beans.binding.BooleanBinding;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
@@ -50,7 +51,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private final KeyCombination replaceWordKeyCombination = new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN);
 
-    private ReplaceWordBar replaceWordBar;
+    private final ReplaceWordBar replaceWordBar;
 
     private SearchBar searchBar;
 
@@ -111,10 +112,10 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 }
                 setDetailNode(vBox1);
                 resetDividerPosition();
-                replaceWordBar.getReplaceAllButton().disableProperty().bind(searchBar.matcher.nbMatchesProperty().isEqualTo(0));
-                replaceWordBar.getReplaceButton().disableProperty().bind(searchBar.matcher.nbMatchesProperty().isEqualTo(0));
-                replaceWordBar.getReplaceAllButton().setOnAction(event -> replaceAllOccurences(searchBar.getSearchField().getText()));
-                replaceWordBar.getReplaceButton().setOnAction(event -> replaceCurrentOccurence(searchBar.matcher.currentMatchStart(), searchBar.matcher.currentMatchEnd()));
+                replaceWordBar.getReplaceAllButton().disableProperty().bind(validateDisableProperty());
+                replaceWordBar.getReplaceButton().disableProperty().bind(validateDisableProperty());
+                replaceWordBar.getReplaceAllButton().setOnAction(event -> replaceAllOccurences());
+                replaceWordBar.getReplaceButton().setOnAction(event -> replaceCurrentOccurence());
                 if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
                     searchBar.setSearchPattern(codeArea.getSelectedText());
                 }
@@ -139,19 +140,20 @@ public class GroovyCodeEditor extends MasterDetailPane {
         }
     }
 
-    private void replaceAllOccurences(String word) {
-        int size = word.length();
-        for (int i = 0; i <= codeArea.getText().length() - size; i++) {
-            String str = codeArea.getText().substring(i, i + size);
-            if (str.equals(word)) {
-                codeArea.replaceText(i, i + size, replaceWordBar.getSearchField().getText());
-            }
-        }
-        searchBar.matcher.find(searchBar.getSearchField().getText(), codeArea.getText());
+    private BooleanBinding validateDisableProperty() {
+        return searchBar.matcher.nbMatchesProperty().isEqualTo(0).or(searchBar.getSearchField().textProperty().isEmpty());
     }
 
-    private void replaceCurrentOccurence(int startPosition, int endPosition) {
-        codeArea.replaceText(startPosition, endPosition, replaceWordBar.getSearchField().getText());
+    private void replaceAllOccurences() {
+        while (searchBar.matcher.nbMatchesProperty().get() != 0) {
+            codeArea.replaceText(searchBar.matcher.currentMatchStart(), searchBar.matcher.currentMatchEnd(), replaceWordBar.getSearchField().getText());
+            searchBar.matcher.find(searchBar.getSearchField().getText(), codeArea.getText());
+
+        }
+    }
+
+    private void replaceCurrentOccurence() {
+        codeArea.replaceText(searchBar.matcher.currentMatchStart(), searchBar.matcher.currentMatchEnd(), replaceWordBar.getSearchField().getText());
         searchBar.matcher.find(searchBar.getSearchField().getText(), codeArea.getText());
     }
 
