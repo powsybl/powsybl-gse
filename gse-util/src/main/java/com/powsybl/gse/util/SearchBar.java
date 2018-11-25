@@ -42,7 +42,7 @@ import java.util.regex.PatternSyntaxException;
 /**
  * @author Nicolas Lhuillier <nicolas.lhuillier at rte-france.com>
  */
-public final class SearchBar extends HBox {
+public class SearchBar extends HBox {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.SearchBar");
 
@@ -59,7 +59,7 @@ public final class SearchBar extends HBox {
 
     private Searchable searchedArea;
 
-    private final SearchMatcher matcher = new SearchMatcher();
+    public final SearchMatcher matcher = new SearchMatcher();
 
     private class SearchTuple {
         final int start;
@@ -76,7 +76,7 @@ public final class SearchBar extends HBox {
         }
     }
 
-    private class SearchMatcher {
+    public class SearchMatcher {
         private IntegerProperty nbMatchesProperty = new SimpleIntegerProperty();
         private IntegerProperty currentMatchProperty = new SimpleIntegerProperty();
         List<SearchTuple> positions = new ArrayList<>();
@@ -217,6 +217,22 @@ public final class SearchBar extends HBox {
                 textArea.select(matcher.currentMatchStart(), matcher.currentMatchEnd());
             }
         });
+    }
+
+    public void setSearchedArea(Searchable searchedArea) {
+        this.searchedArea = Objects.requireNonNull(searchedArea);
+    }
+
+    public CustomTextField getSearchField() {
+        return searchField;
+    }
+
+    public Button getDownButton() {
+        return downButton;
+    }
+
+    public Button getUpButton() {
+        return upButton;
     }
 
     public void requestFocus() {
