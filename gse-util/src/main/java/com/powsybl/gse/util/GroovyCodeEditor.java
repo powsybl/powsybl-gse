@@ -105,6 +105,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
                     searchBar.setSearchPattern(codeArea.getSelectedText());
                 }
                 showDetailNode();
+                vBox1.requestFocus();
             } else if (replaceWordKeyCombination.match(ke)) {
                 setShowDetailNode(false);
                 if (!vBox1.getChildren().contains(replaceWordBar)) {
@@ -120,9 +121,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
                     searchBar.setSearchPattern(codeArea.getSelectedText());
                 }
                 showDetailNode();
+                vBox1.requestFocus();
             }
-
-            vBox1.requestFocus();
 
         });
 
