@@ -141,4 +141,9 @@ public class SecurityAnalysisResultViewer extends BorderPane implements ProjectF
         preContResultPane.savePreferences();
         postContResultPane.savePreferences();
     }
+
+    @Override
+    public boolean isClosable() {
+        return true;
+    }
 }

@@ -16,6 +16,10 @@
     -fx-font-size: 1.7em;
 }
 
+.treecell-drag-over {
+    -fx-background-color: #87ceeb;
+}
+
 .gse-app-bar-icon:hover {
     -fx-fill: lightgrey;
 }
@@ -99,4 +103,8 @@
 
 .transparent-button.hover {
      -fx-background-color: derive(-fx-mark-color, -30%);
+}
+
+.tab-text-unsaved {
+     -fx-text-base-color: #0000cd ;
 }

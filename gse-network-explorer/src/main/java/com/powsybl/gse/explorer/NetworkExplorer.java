@@ -187,17 +187,8 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private void onDragDetected(MouseEvent event) {
         Dragboard db = substationDetailedView.startDragAndDrop(TransferMode.ANY);
         ClipboardContent content = new ClipboardContent();
-        if (substationDetailedView.getSelectionModel().getSelectedItems().size() == 1) {
-            EquipmentInfo selectedEquipmentInfo = substationDetailedView.getSelectionModel().getSelectedItem().getValue();
-            content.put(EquipmentInfo.DATA_FORMAT, selectedEquipmentInfo);
-        } else {
-            List<EquipmentInfo> listInfo = new ArrayList<>();
-            for (TreeItem<EquipmentInfo> selectedItem : substationDetailedView.getSelectionModel().getSelectedItems()) {
-                listInfo.add(selectedItem.getValue());
-            }
-            content.put(EquipmentInfo.DATA_FORMAT_LIST, listInfo);
-        }
-
+        List<EquipmentInfo> listInfo = substationDetailedView.getSelectionModel().getSelectedItems().stream().map(TreeItem :: getValue).collect(Collectors.toList());
+        content.put(EquipmentInfo.DATA_FORMAT, listInfo);
 
         db.setContent(content);
 
@@ -375,6 +366,11 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     @Override
     public void dispose() {
         projectCase.removeListener(this);
+    }
+
+    @Override
+    public boolean isClosable() {
+        return true;
     }
 
 }
