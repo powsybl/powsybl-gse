@@ -42,7 +42,7 @@ import java.util.regex.PatternSyntaxException;
 /**
  * @author Nicolas Lhuillier <nicolas.lhuillier at rte-france.com>
  */
-public class SearchBar extends HBox {
+public final class SearchBar extends HBox {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.SearchBar");
 
@@ -59,7 +59,7 @@ public class SearchBar extends HBox {
 
     private Searchable searchedArea;
 
-    public final SearchMatcher matcher = new SearchMatcher();
+    private final SearchMatcher matcher = new SearchMatcher();
 
     private class SearchTuple {
         final int start;
@@ -76,7 +76,7 @@ public class SearchBar extends HBox {
         }
     }
 
-    public class SearchMatcher {
+    private class SearchMatcher {
         private IntegerProperty nbMatchesProperty = new SimpleIntegerProperty();
         private IntegerProperty currentMatchProperty = new SimpleIntegerProperty();
         List<SearchTuple> positions = new ArrayList<>();
@@ -233,6 +233,34 @@ public class SearchBar extends HBox {
 
     public Button getUpButton() {
         return upButton;
+    }
+
+    public SearchMatcher getMatcher() {
+        return matcher;
+    }
+
+    public int getMatcherCurrentMatchStart() {
+        return matcher.currentMatchStart();
+    }
+
+    public int getMatcherCurrentMatchEnd() {
+        return matcher.currentMatchEnd();
+    }
+
+    public IntegerProperty getMatcherNbMatchesProperty() {
+        return matcher.nbMatchesProperty;
+    }
+
+    public IntegerProperty getMatcherCurrentMatchProperty() {
+        return matcher.currentMatchProperty;
+    }
+
+    public BooleanBinding isLastMatcherMatch() {
+        return matcher.isLastMatch();
+    }
+
+    public void matcherFind(String searchPattern, String searchedTxt) {
+        matcher.find(searchPattern, searchedTxt);
     }
 
     public void requestFocus() {

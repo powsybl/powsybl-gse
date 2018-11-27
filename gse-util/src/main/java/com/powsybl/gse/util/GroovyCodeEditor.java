@@ -116,7 +116,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 replaceWordBar.getReplaceAllButton().disableProperty().bind(validateDisableProperty());
                 replaceWordBar.getReplaceButton().disableProperty().bind(validateDisableProperty());
                 replaceWordBar.getReplaceAllButton().setOnAction(event -> replaceAllOccurences(searchBar.getSearchField().getText(), codeArea.getText()));
-                replaceWordBar.getReplaceButton().setOnAction(event -> replaceCurrentOccurence(searchBar.matcher.currentMatchStart(), searchBar.matcher.currentMatchEnd()));
+                replaceWordBar.getReplaceButton().setOnAction(event -> replaceCurrentOccurence(searchBar.getMatcherCurrentMatchStart(), searchBar.getMatcherCurrentMatchEnd()));
                 if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
                     searchBar.setSearchPattern(codeArea.getSelectedText());
                 }
@@ -141,7 +141,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
     }
 
     private BooleanBinding validateDisableProperty() {
-        return searchBar.matcher.nbMatchesProperty().isEqualTo(0).or(searchBar.getSearchField().textProperty().isEmpty());
+        return searchBar.getMatcherNbMatchesProperty().isEqualTo(0).or(searchBar.getSearchField().textProperty().isEmpty());
     }
 
     private void replaceAllOccurences(String word, String text) {
@@ -154,16 +154,16 @@ public class GroovyCodeEditor extends MasterDetailPane {
             }
             codeText = codeArea.getText();
         }
-        searchBar.matcher.find(searchBar.getSearchField().getText(), codeArea.getText());
+        searchBar.matcherFind(searchBar.getSearchField().getText(), codeArea.getText());
     }
 
     private void replaceCurrentOccurence(int startPosition, int endPosition) {
-        int i = searchBar.matcher.currentMatchProperty().get();
+        int i = searchBar.getMatcherCurrentMatchProperty().get();
         codeArea.replaceText(startPosition, endPosition, replaceWordBar.getSearchField().getText());
-        searchBar.matcher.find(searchBar.getSearchField().getText(), codeArea.getText());
+        searchBar.matcherFind(searchBar.getSearchField().getText(), codeArea.getText());
         if (replaceWordBar.getSearchField().getText().contains(searchBar.getSearchField().getText())) {
-            while (searchBar.matcher.currentMatchProperty().get() <= i) {
-                if (searchBar.matcher.isLastMatch().get()) {
+            while (searchBar.getMatcherCurrentMatchProperty().get() <= i) {
+                if (searchBar.isLastMatcherMatch().get()) {
                     break;
                 } else {
                     searchBar.getDownButton().fire();
