@@ -86,6 +86,7 @@ public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExten
                 ColumnConstraints column0 = new ColumnConstraints();
                 ColumnConstraints column1 = new ColumnConstraints();
                 column1.setHgrow(Priority.ALWAYS);
+                fileTextField.setText(projectCase.getName() + ".xiidm");
                 main.getColumnConstraints().addAll(column0, column1);
                 main.add(new Label(RESOURCE_BUNDLE.getString("DestinationFile") + ":"), 0, 0);
                 main.add(fileTextField, 1, 0);
