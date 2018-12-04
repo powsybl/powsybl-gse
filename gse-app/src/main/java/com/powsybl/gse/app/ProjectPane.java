@@ -56,6 +56,10 @@ public class ProjectPane extends Tab {
 
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
 
+    private final KeyCombination saveKeyCombination = new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
+
+    private List<ProjectFileViewer> viewerList = new ArrayList<>();
+
     private static class TabKey {
 
         private final String nodeId;
@@ -429,6 +433,16 @@ public class ProjectPane extends Tab {
         setContent(splitPane);
 
         createRootFolderTreeItem(project);
+
+        getContent().setOnKeyPressed((KeyEvent ke) -> {
+            if (saveKeyCombination.match(ke)) {
+                for (ProjectFileViewer fileViewer : viewerList) {
+                    if (fileViewer instanceof Savable && !((Savable) fileViewer).savedProperty().get()) {
+                        ((Savable) fileViewer).save();
+                    }
+                }
+            }
+        });
     }
 
     public Project getProject() {
@@ -695,12 +709,16 @@ public class ProjectPane extends Tab {
         Node graphic = viewerExtension.getMenuGraphic(file);
         ProjectFileViewer viewer = viewerExtension.newViewer(file, getContent().getScene(), context);
         Tab tab = new MyTab(tabName, viewer);
+        viewerList.add(viewer);
         tab.setOnCloseRequest(event -> {
             if (!viewer.isClosable()) {
                 event.consume();
             }
         });
-        tab.setOnClosed(event -> viewer.dispose());
+        tab.setOnClosed(event -> {
+            viewer.dispose();
+            viewerList.remove(viewer);
+        });
         tab.setGraphic(graphic);
         tab.setTooltip(new Tooltip(tabName));
         tab.setUserData(tabKey);
