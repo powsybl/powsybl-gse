@@ -10,7 +10,6 @@ import com.google.common.base.Stopwatch;
 import groovyjarjarantlr.Token;
 import groovyjarjarantlr.TokenStream;
 import groovyjarjarantlr.TokenStreamException;
-import javafx.beans.binding.BooleanBinding;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
@@ -51,8 +50,6 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private final KeyCombination replaceWordKeyCombination = new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN);
 
-    private final ReplaceWordBar replaceWordBar;
-
     private final SearchBar searchBar;
 
     private boolean allowedDrag = false;
@@ -86,10 +83,9 @@ public class GroovyCodeEditor extends MasterDetailPane {
             setShowDetailNode(false);
             codeArea.requestFocus();
         });
-        replaceWordBar = new ReplaceWordBar();
         setMasterNode(new VirtualizedScrollPane(codeArea));
         VBox vBox = new VBox();
-        vBox.getChildren().addAll(searchBar, replaceWordBar);
+        vBox.getChildren().addAll(searchBar);
         vBox.setSpacing(7);
         setDetailNode(vBox);
         setDetailSide(Side.TOP);
@@ -98,7 +94,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         setOnKeyPressed((KeyEvent ke) -> {
             if (searchKeyCombination.match(ke)) {
                 setShowDetailNode(false);
-                vBox.getChildren().remove(replaceWordBar);
+                vBox.getChildren().remove(searchBar.replaceWordBar);
                 setDetailNode(vBox);
                 resetDividerPosition();
                 if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
@@ -108,15 +104,13 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 vBox.requestFocus();
             } else if (replaceWordKeyCombination.match(ke)) {
                 setShowDetailNode(false);
-                if (!vBox.getChildren().contains(replaceWordBar)) {
-                    vBox.getChildren().add(replaceWordBar);
+                if (!vBox.getChildren().contains(searchBar.replaceWordBar)) {
+                    vBox.getChildren().add(searchBar.replaceWordBar);
                 }
                 setDetailNode(vBox);
                 resetDividerPosition();
-                replaceWordBar.getReplaceAllButton().disableProperty().bind(validateDisableProperty());
-                replaceWordBar.getReplaceButton().disableProperty().bind(validateDisableProperty());
-                replaceWordBar.getReplaceAllButton().setOnAction(event -> replaceAllOccurences(searchBar.getSearchField().getText(), codeArea.getText()));
-                replaceWordBar.getReplaceButton().setOnAction(event -> replaceCurrentOccurence(searchBar.getMatcherCurrentMatchStart(), searchBar.getMatcherCurrentMatchEnd()));
+                searchBar.getReplaceAllButton().setOnAction(event -> replaceAllOccurences(searchBar.getSearchedText(), codeArea.getText()));
+                searchBar.getReplaceButton().setOnAction(event -> replaceCurrentOccurence(searchBar.getMatcherCurrentMatchStart(), searchBar.getMatcherCurrentMatchEnd()));
                 if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
                     searchBar.setSearchPattern(codeArea.getSelectedText());
                 }
@@ -140,33 +134,29 @@ public class GroovyCodeEditor extends MasterDetailPane {
         }
     }
 
-    private BooleanBinding validateDisableProperty() {
-        return searchBar.getMatcherNbMatchesProperty().isEqualTo(0).or(searchBar.getSearchField().textProperty().isEmpty());
-    }
-
     private void replaceAllOccurences(String word, String text) {
         String codeText = text;
         int size = word.length();
         for (int i = 0; i <= codeText.length() - size; i++) {
             String str = codeText.substring(i, i + size);
             if (str.equals(word)) {
-                codeArea.replaceText(i, i + size, replaceWordBar.getSearchField().getText());
+                codeArea.replaceText(i, i + size, searchBar.getReplaceText());
             }
             codeText = codeArea.getText();
         }
-        searchBar.matcherFind(searchBar.getSearchField().getText(), codeArea.getText());
+        searchBar.matcherFind(searchBar.getSearchedText(), codeArea.getText());
     }
 
     private void replaceCurrentOccurence(int startPosition, int endPosition) {
         int i = searchBar.getMatcherCurrentMatchProperty().get();
-        codeArea.replaceText(startPosition, endPosition, replaceWordBar.getSearchField().getText());
-        searchBar.matcherFind(searchBar.getSearchField().getText(), codeArea.getText());
-        if (replaceWordBar.getSearchField().getText().contains(searchBar.getSearchField().getText())) {
+        codeArea.replaceText(startPosition, endPosition, searchBar.getReplaceText());
+        searchBar.matcherFind(searchBar.getSearchedText(), codeArea.getText());
+        if (searchBar.getReplaceText().contains(searchBar.getSearchedText())) {
             while (searchBar.getMatcherCurrentMatchProperty().get() <= i) {
                 if (searchBar.isLastMatcherMatch().get()) {
                     break;
                 } else {
-                    searchBar.getDownButton().fire();
+                    searchBar.downButtonFire();
                 }
             }
         }

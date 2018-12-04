@@ -59,6 +59,8 @@ public final class SearchBar extends HBox {
 
     private Searchable searchedArea;
 
+    public final ReplaceWordBar replaceWordBar = new ReplaceWordBar();
+
     private final SearchMatcher matcher = new SearchMatcher();
 
     private class SearchTuple {
@@ -146,6 +148,39 @@ public final class SearchBar extends HBox {
 
     }
 
+    private class ReplaceWordBar extends HBox {
+
+        private final Button replaceButton;
+        private final Button replaceAllButton;
+        private final CustomTextField searchField = (CustomTextField) TextFields.createClearableTextField();
+
+        ReplaceWordBar() {
+            super(6);
+            Text searchGlyph = Glyph.createAwesomeFont('\uf002').size("1.4em");
+            searchField.setLeft(searchGlyph);
+            searchField.setPrefWidth(300);
+            searchField.getStyleClass().add("search-field");
+            replaceButton = new Button(RESOURCE_BUNDLE.getString("Replace"));
+            replaceAllButton = new Button(RESOURCE_BUNDLE.getString("ReplaceAll"));
+            setMargin(searchField, new Insets(0, 0, 0, 5));
+            getChildren().addAll(searchField, replaceButton, replaceAllButton);
+
+        }
+
+        Button getReplaceButton() {
+            return replaceButton;
+        }
+
+        Button getReplaceAllButton() {
+            return replaceAllButton;
+        }
+
+        CustomTextField getSearchField() {
+            return searchField;
+        }
+    }
+
+
     public SearchBar(Searchable textArea) {
         super(0);
 
@@ -217,26 +252,25 @@ public final class SearchBar extends HBox {
                 textArea.select(matcher.currentMatchStart(), matcher.currentMatchEnd());
             }
         });
+
+        getReplaceAllButton().disableProperty().bind(validateDisableProperty());
+        getReplaceButton().disableProperty().bind(validateDisableProperty());
     }
 
-    public void setSearchedArea(Searchable searchedArea) {
-        this.searchedArea = Objects.requireNonNull(searchedArea);
+    private BooleanBinding validateDisableProperty() {
+        return getMatcherNbMatchesProperty().isEqualTo(0).or(searchField.textProperty().isEmpty());
     }
 
-    public CustomTextField getSearchField() {
-        return searchField;
+    public String getSearchedText() {
+        return searchField.getText();
     }
 
-    public Button getDownButton() {
-        return downButton;
+    public void downButtonFire() {
+        downButton.fire();
     }
 
-    public Button getUpButton() {
-        return upButton;
-    }
-
-    public SearchMatcher getMatcher() {
-        return matcher;
+    public void upButtonFire() {
+        upButton.fire();
     }
 
     public int getMatcherCurrentMatchStart() {
@@ -261,6 +295,18 @@ public final class SearchBar extends HBox {
 
     public void matcherFind(String searchPattern, String searchedTxt) {
         matcher.find(searchPattern, searchedTxt);
+    }
+
+    public Button getReplaceButton() {
+        return replaceWordBar.getReplaceButton();
+    }
+
+    public Button getReplaceAllButton() {
+        return replaceWordBar.getReplaceAllButton();
+    }
+
+    public String getReplaceText() {
+        return replaceWordBar.getSearchField().getText();
     }
 
     public void requestFocus() {
