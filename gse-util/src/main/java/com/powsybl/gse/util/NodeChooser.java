@@ -430,7 +430,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             treeTableCell.setOnDragDetected(event -> dragDetectedEvent(item, treeTableRow.getTreeItem(), event));
             treeTableCell.setOnDragOver(event -> dragOverEvent(event, item, treeTableRow, treeTableCell));
             treeTableCell.setOnDragDropped(event -> dragDroppedEvent(item, treeTableRow.getTreeItem(), event, node));
-            treeTableCell.setOnDragExited(event -> treeTableCell.setTextFill(Color.BLACK));
+            treeTableCell.setOnDragExited(event -> treeTableCell.getStyleClass().removeAll("treecell-drag-over"));
         } else {
             treeTableCell.setText(treeModel.getName(item));
             treeTableCell.setTextFill(Color.BLACK);
@@ -439,17 +439,18 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         }
     }
 
-    private void textFillColor(TreeTableCell<N, N> treetableCell) {
+    private void setDragOverStyle(TreeTableCell<N, N> treeTableCell) {
         if (getCounter() < 1) {
-            treetableCell.setTextFill(Color.CHOCOLATE);
+            treeTableCell.getStyleClass().add("treecell-drag-over");
         }
     }
 
-    private void dragOverEvent(DragEvent event, Object item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treetableCell) {
+
+    private void dragOverEvent(DragEvent event, Object item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treeTableCell) {
         if (item instanceof Folder && item != dragAndDropMove.getSource()) {
             int count = 0;
             treeItemChildrenSize(treeTableRow.getTreeItem(), count);
-            textFillColor(treetableCell);
+            setDragOverStyle(treeTableCell);
             event.acceptTransferModes(TransferMode.ANY);
             event.consume();
         }
@@ -482,6 +483,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             event.setDropCompleted(success);
             refreshTreeItem(dragAndDropMove.getSourceTreeItem().getParent());
             refreshTreeItem(treeItem);
+            tree.getSelectionModel().clearSelection();
             event.consume();
         }
     }
