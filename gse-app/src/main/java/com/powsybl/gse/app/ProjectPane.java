@@ -329,11 +329,11 @@ public class ProjectPane extends Tab {
             treeItemChildrenSize(treeItem, count);
             if (value instanceof ProjectFolder) {
                 ProjectFolder projectFolder = (ProjectFolder) projectNode;
-                accepTransferDrag(projectFolder, success);
+                acceptTransferDrag(projectFolder, success);
                 refresh(treeItem);
             } else if (value instanceof ProjectFile) {
                 ProjectFile projectFile = (ProjectFile) projectNode;
-                projectFile.getParent().ifPresent(projectFolder -> accepTransferDrag(projectFile.getParent().get(), success));
+                projectFile.getParent().ifPresent(projectFolder -> acceptTransferDrag(projectFile.getParent().get(), success));
                 refresh(treeItem.getParent());
             }
             refresh(dragAndDropMove.getSourceTreeItem().getParent());
@@ -360,7 +360,7 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private void accepTransferDrag(ProjectFolder projectFolder, boolean s) {
+    private void acceptTransferDrag(ProjectFolder projectFolder, boolean s) {
         success = s;
         if (getCounter() >= 1) {
             GseAlerts.showDraggingError();
