@@ -46,6 +46,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private DragAndDropMove dragAndDropMove;
     private int counter;
     private boolean success;
+    private  Set<String> openedProjects = new HashSet<>();
 
     public interface TreeModel<N, F, D> {
         Collection<N> getChildren(D folder);
@@ -232,12 +233,13 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private final GseContext context;
 
     public NodeChooser(Window window, TreeModel<N, F, D> treeModel, AppData appData, GseContext context,
-                       BiFunction<N, TreeModel<N, F, D>, Boolean> filter) {
+                       BiFunction<N, TreeModel<N, F, D>, Boolean> filter, Set<String> ... openedProjectsList) {
         this.window = Objects.requireNonNull(window);
         this.treeModel = Objects.requireNonNull(treeModel);
         this.appData = Objects.requireNonNull(appData);
         this.context = Objects.requireNonNull(context);
         this.filter = Objects.requireNonNull(filter);
+        openedProjects = openedProjectsList[0];
         preferences = Preferences.userNodeForPackage(getClass());
         tree.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         tree.setShowRoot(false);
@@ -603,9 +605,15 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size(ICON_SIZE));
         if (selectedTreeItems.size() == 1) {
             TreeItem<N> selectedTreeItem = selectedTreeItems.get(0);
-            if (selectedTreeItem.getValue() instanceof Folder) {
-                Folder folder = (Folder) selectedTreeItem.getValue();
+            N selectedTreeItemValue = selectedTreeItem.getValue();
+            if (selectedTreeItemValue instanceof Folder) {
+                Folder folder = (Folder) selectedTreeItemValue;
                 if (!folder.getChildren().isEmpty()) {
+                    menuItem.setDisable(true);
+                }
+            } else if (selectedTreeItemValue instanceof Project) {
+                Project project = (Project) selectedTreeItemValue;
+                if (openedProjects.contains(project.getId())) {
                     menuItem.setDisable(true);
                 }
             }
@@ -625,12 +633,9 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private void setOnOkButton(List<? extends TreeItem<N>> selectedTreeItems) {
         List<TreeItem<N>> parentTreeItems = new ArrayList<>();
         for (TreeItem<N> selectedTreeItem : selectedTreeItems) {
-            if (selectedTreeItem.getValue() instanceof Project) {
-                Project selectedProject = (Project) selectedTreeItem.getValue();
-                selectedProject.delete();
-            } else if (selectedTreeItem.getValue() instanceof Folder) {
-                Folder folderSelected = (Folder) selectedTreeItem.getValue();
-                folderSelected.delete();
+            if (selectedTreeItem.getValue() instanceof Node) {
+                Node nodeSelected = (Node) selectedTreeItem.getValue();
+                nodeSelected.delete();
             }
             parentTreeItems.add(selectedTreeItem.getParent());
         }
@@ -740,6 +745,10 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters));
     }
 
+    public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Class<T> filter, Set<String> openedProjectsList, Class<?>... otherFilters) {
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters), openedProjectsList);
+    }
+
     public static <T extends ProjectNode> Optional<T> showAndWaitDialog(Project project, Window window, GseContext context, BiFunction<ProjectNode, TreeModel<ProjectNode, ProjectFile, ProjectFolder>, Boolean> filter) {
         return showAndWaitDialog(new TreeModelProjectImpl(project), window, project.getFileSystem().getData(), context, filter);
     }
@@ -751,12 +760,12 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     public static <N, F extends N, D extends N, T extends N> Optional<T> showAndWaitDialog(
             TreeModel<N, F, D> treeModel, Window window, AppData appData, GseContext context,
-            BiFunction<N, TreeModel<N, F, D>, Boolean> filter) {
+            BiFunction<N, TreeModel<N, F, D>, Boolean> filter, Set<String> ... openedProjectsList) {
         Dialog<T> dialog = new Dialog<>();
         try {
             dialog.setTitle(RESOURCE_BUNDLE.getString("OpenFile"));
             dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-            NodeChooser<N, F, D, T> nodeChooser = new NodeChooser<>(window, treeModel, appData, context, filter);
+            NodeChooser<N, F, D, T> nodeChooser = new NodeChooser<>(window, treeModel, appData, context, filter, openedProjectsList);
             Button button = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
             button.disableProperty().bind(nodeChooser.selectedNodeProperty().isNull());
             nodeChooser.doubleClick().addListener((observable, oldValue, newValue) -> {
