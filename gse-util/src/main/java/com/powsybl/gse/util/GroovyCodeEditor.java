@@ -15,7 +15,6 @@ import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.input.*;
 import javafx.beans.value.ChangeListener;
-import javafx.scene.text.Text;
 import org.codehaus.groovy.antlr.GroovySourceToken;
 import org.codehaus.groovy.antlr.SourceBuffer;
 import org.codehaus.groovy.antlr.UnicodeEscapingReader;
@@ -55,7 +54,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private List<Integer> positionsList;
 
-    private int searchingForBracketMatches =0;
+    private Boolean searchingForBracketMatches = false;
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
@@ -122,7 +121,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     }
 
-    public boolean areBracketsMatched(String text) {
+   /* public boolean areBracketsMatched(String text) {
         ArrayDeque<Character> stack = new ArrayDeque<>();
         char current;
         char previous;
@@ -144,18 +143,17 @@ public class GroovyCodeEditor extends MasterDetailPane {
             }
         }
         return stack.isEmpty();
-    }
+    }*/
 
     private void findBracketsMatches(String text) {
-        //  computeHighlighting(codeArea.getText()).stream().map(s -> s.getStyle());
         //  if(mouseClickedBracket != null ) {
         if (mouseClickedBracket.equals(Character.toString(')'))) {
             highlightLeftBracketsMatches(text, ')', '(');
         } else if (mouseClickedBracket.equals(Character.toString('}'))) {
-                highlightLeftBracketsMatches(text, '}', '{');
-            } else if (mouseClickedBracket.equals(Character.toString(']'))) {
-                highlightLeftBracketsMatches(text, ']', '[');
-            } /*else if (mouseClickedBracket.equals(Character.toString('('))) {
+            highlightLeftBracketsMatches(text, '}', '{');
+        } else if (mouseClickedBracket.equals(Character.toString(']'))) {
+            highlightLeftBracketsMatches(text, ']', '[');
+        } /*else if (mouseClickedBracket.equals(Character.toString('('))) {
                 highlightRightBracketsMatches(text, '(', ')');
             } else if (mouseClickedBracket.equals(Character.toString('{'))) {
                 highlightRightBracketsMatches(text, '{', '}');
@@ -168,21 +166,15 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private void highlightLeftBracketsMatches(String text, char c1, char c2) {
         Integer value = codeArea.caretPositionProperty().getValue();
-        searchingForBracketMatches ++;
+        searchingForBracketMatches = true;
         int counter = 0;
         for (int i = value - 2; i >= 0; i--) {
             if (text.charAt(i) == c1) {
                 counter++;
             } else if (text.charAt(i) == c2 && positionsList.contains(i)) {
-                if (counter == 0 ) {
+                if (counter == 0) {
                     //codeArea.select(i,i+1);
-                    final int j=i;
-                 //   codeArea.getStyleOfChar(i).add("-fx-fill: blue;");
-                   /* codeArea.richChanges()
-                            .filter(ch -> !ch.getInserted().equals(ch.getRemoved()))
-                            .subscribe(change -> codeArea.setStyleSpans(0, computeHighlighting(codeArea.getText(j,j+1))));*/
-                   // computeHighlighting(codeArea.getText(j,j+1));
-                    codeArea.setStyle(i,i+1, Collections.singletonList(""));
+                    codeArea.setStyle(i, i + 1, Collections.singletonList(""));
 
                     break;
                 } else if (counter == 1) {
@@ -201,7 +193,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
             if (text.charAt(i) == c1) {
                 counter++;
             } else if (text.charAt(i) == c2 && positionsList.contains(i)) {
-                if (counter == 0 ) {
+                if (counter == 0) {
                     break;
                 } else if (counter == 1) {
                     counter = 0;
@@ -381,7 +373,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
     }
 
     private int length(GroovySourceToken token) {
-        int offset1 = codeArea.getDocument().position(token.getLine() - 1, token.getColumn() - 1).toOffset();
+        int offset1 = codeArea.getDocument().position(token.getLine() -  1, token.getColumn() - 1).toOffset();
         int offset2 = codeArea.getDocument().position(token.getLineLast() - 1, token.getColumnLast() - 1).toOffset();
         return offset2 - offset1;
     }
@@ -389,7 +381,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private StyleSpans<Collection<String>> computeHighlighting(String text) {
         Stopwatch stopwatch = Stopwatch.createStarted();
         positionsList = new ArrayList<>();
-        String styleClass ="";
+        String styleClass = "";
 
         boolean added = false;
         StyleSpansBuilder<Collection<String>> spansBuilder = new StyleSpansBuilder<>();
@@ -401,8 +393,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 TokenStream tokenStream = lexer.plumb();
                 Token token = tokenStream.nextToken();
                 while (token.getType() != Token.EOF_TYPE) {
-                    if(searchingForBracketMatches <=1) {
-                         styleClass = styleClass(token.getType());
+                    if (!searchingForBracketMatches) {
+                        styleClass = styleClass(token.getType());
                     } else {
                         styleClass = bracketMatchesstyleClass(token.getType());
                     }
