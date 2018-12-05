@@ -156,7 +156,7 @@ public class GsePane extends StackPane {
         });
 
         appBar.getOpenButton().setOnAction(event -> {
-            List<String> openedProjects = new ArrayList<>();
+            Set<String> openedProjects = new HashSet<>();
             for (Tab tab : tabPane.getTabs()) {
                 openedProjects.add(((ProjectPane) tab).getProject().getId());
             }

@@ -47,7 +47,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private int counter;
     private boolean success;
 
-    private static List<String> openedProjects = new ArrayList<>();
+    private static Set<String> openedProjects = new HashSet<>();
 
     public interface TreeModel<N, F, D> {
         Collection<N> getChildren(D folder);
@@ -631,7 +631,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
 
-    public List<String> getOpenedProjects() {
+    public Set<String> getOpenedProjects() {
         return openedProjects;
     }
 
@@ -751,7 +751,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters));
     }
 
-    public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Class<T> filter, List<String> openedProjectsList, Class<?>... otherFilters) {
+    public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Class<T> filter, Set<String> openedProjectsList, Class<?>... otherFilters) {
         openedProjects = openedProjectsList;
         return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters));
     }
