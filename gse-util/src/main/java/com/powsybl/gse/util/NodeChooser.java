@@ -47,7 +47,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private int counter;
     private boolean success;
 
-    private static Set<String> openedProjects = new HashSet<>();
+    private  Set<String> openedProjects = new HashSet<>();
 
     public interface TreeModel<N, F, D> {
         Collection<N> getChildren(D folder);
@@ -234,12 +234,13 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private final GseContext context;
 
     public NodeChooser(Window window, TreeModel<N, F, D> treeModel, AppData appData, GseContext context,
-                       BiFunction<N, TreeModel<N, F, D>, Boolean> filter) {
+                       BiFunction<N, TreeModel<N, F, D>, Boolean> filter, Set<String> ... openedProjectsList) {
         this.window = Objects.requireNonNull(window);
         this.treeModel = Objects.requireNonNull(treeModel);
         this.appData = Objects.requireNonNull(appData);
         this.context = Objects.requireNonNull(context);
         this.filter = Objects.requireNonNull(filter);
+        openedProjects = openedProjectsList[0];
         preferences = Preferences.userNodeForPackage(getClass());
         tree.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         tree.setShowRoot(false);
@@ -752,8 +753,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Class<T> filter, Set<String> openedProjectsList, Class<?>... otherFilters) {
-        openedProjects = openedProjectsList;
-        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters));
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters), openedProjectsList);
     }
 
     public static <T extends ProjectNode> Optional<T> showAndWaitDialog(Project project, Window window, GseContext context, BiFunction<ProjectNode, TreeModel<ProjectNode, ProjectFile, ProjectFolder>, Boolean> filter) {
@@ -767,12 +767,12 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     public static <N, F extends N, D extends N, T extends N> Optional<T> showAndWaitDialog(
             TreeModel<N, F, D> treeModel, Window window, AppData appData, GseContext context,
-            BiFunction<N, TreeModel<N, F, D>, Boolean> filter) {
+            BiFunction<N, TreeModel<N, F, D>, Boolean> filter, Set<String> ... openedProjectsList) {
         Dialog<T> dialog = new Dialog<>();
         try {
             dialog.setTitle(RESOURCE_BUNDLE.getString("OpenFile"));
             dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-            NodeChooser<N, F, D, T> nodeChooser = new NodeChooser<>(window, treeModel, appData, context, filter);
+            NodeChooser<N, F, D, T> nodeChooser = new NodeChooser<>(window, treeModel, appData, context, filter, openedProjectsList);
             Button button = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
             button.disableProperty().bind(nodeChooser.selectedNodeProperty().isNull());
             nodeChooser.doubleClick().addListener((observable, oldValue, newValue) -> {
