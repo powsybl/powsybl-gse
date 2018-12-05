@@ -80,7 +80,7 @@ public final class GseAlerts {
                 node = (Node) selectedTreeItems.get(0).getValue();
                 headerText = String.format(fileWillBeDeleted, node.getName());
             } else {
-                headerText = String.format(fileWillBeDeleted, "the selected");
+                headerText = String.format(fileWillBeDeleted, RESOURCE_BUNDLE.getString("Selected"));
             }
         } else if (selectedTreeItems.size() > 1) {
             String names = selectedTreeItems.stream()
