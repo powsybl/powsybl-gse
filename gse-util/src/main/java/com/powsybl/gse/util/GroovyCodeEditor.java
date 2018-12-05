@@ -22,9 +22,7 @@ import org.codehaus.groovy.antlr.parser.GroovyLexer;
 import org.codehaus.groovy.antlr.parser.GroovyTokenTypes;
 import org.controlsfx.control.MasterDetailPane;
 import org.fxmisc.flowless.VirtualizedScrollPane;
-import org.fxmisc.richtext.Caret;
-import org.fxmisc.richtext.CodeArea;
-import org.fxmisc.richtext.LineNumberFactory;
+import org.fxmisc.richtext.*;
 import org.fxmisc.richtext.model.StyleSpans;
 import org.fxmisc.richtext.model.StyleSpansBuilder;
 import org.slf4j.Logger;
@@ -35,6 +33,7 @@ import java.io.StringReader;
 import java.io.UncheckedIOException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -47,6 +46,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private final SearchableCodeArea codeArea = new SearchableCodeArea();
 
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
+
+    private boolean allowedDrag = false;
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
@@ -97,17 +98,34 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
         codeArea.setOnDragEntered(event -> codeArea.setShowCaret(Caret.CaretVisibility.ON));
         codeArea.setOnDragExited(event -> codeArea.setShowCaret(Caret.CaretVisibility.AUTO));
+        codeArea.setOnDragDetected(this::onDragDetected);
         codeArea.setOnDragOver(this::onDragOver);
         codeArea.setOnDragDropped(this::onDragDropped);
+        codeArea.setOnSelectionDrag(p -> allowedDrag = true);
+    }
+
+    private void onDragDetected(MouseEvent event) {
+        if (allowedDrag) {
+            Dragboard db = codeArea.startDragAndDrop(TransferMode.COPY_OR_MOVE);
+            ClipboardContent content = new ClipboardContent();
+            content.putString(codeArea.getSelectedText());
+            db.setContent(content);
+            event.consume();
+            allowedDrag = false;
+        }
     }
 
     private void onDragOver(DragEvent event) {
         Dragboard db = event.getDragboard();
-        if ((db.hasContent(EquipmentInfo.DATA_FORMAT) && db.getContent(EquipmentInfo.DATA_FORMAT) instanceof EquipmentInfo) ||
-                db.hasString()) {
-            event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+        if ((db.hasContent(EquipmentInfo.DATA_FORMAT) && db.getContent(EquipmentInfo.DATA_FORMAT) instanceof EquipmentInfo) || db.hasString()) {
+            if (event.getGestureSource() == codeArea) {
+                event.acceptTransferModes(TransferMode.MOVE);
+            } else {
+                event.acceptTransferModes(TransferMode.COPY);
+            }
+            CharacterHit hit = codeArea.hit(event.getX(), event.getY());
+            codeArea.displaceCaret(hit.getInsertionIndex());
         }
-        event.consume();
     }
 
     private void onDragDropped(DragEvent event) {
@@ -115,11 +133,15 @@ public class GroovyCodeEditor extends MasterDetailPane {
         Dragboard db = event.getDragboard();
         boolean success = false;
         if (db.hasContent(EquipmentInfo.DATA_FORMAT)) {
-            EquipmentInfo equipmentInfo = (EquipmentInfo) db.getContent(EquipmentInfo.DATA_FORMAT);
-            codeArea.insertText(codeArea.getCaretPosition(), equipmentInfo.getIdAndName().getId());
+            List<EquipmentInfo> equipmentInfoList = (List<EquipmentInfo>) db.getContent(EquipmentInfo.DATA_FORMAT);
+            codeArea.insertText(codeArea.getCaretPosition(), equipmentInfoList.get(0).getIdAndName().getId());
             success = true;
-        } else if (db.hasString()) {
+        } else if (db.hasString() && event.getGestureSource() != codeArea) {
             codeArea.insertText(codeArea.getCaretPosition(), db.getString());
+            success = true;
+        } else if (event.getGestureSource() == codeArea) {
+            CharacterHit hit = codeArea.hit(event.getX(), event.getY());
+            codeArea.moveSelectedText(hit.getInsertionIndex());
             success = true;
         }
         event.setDropCompleted(success);
