@@ -30,6 +30,6 @@
 }
 
 .bracketMatches {
-    -fx-fill: darkgreen;
     -fx-font-weight: bold;
+    -fx-effect: dropshadow( one-pass-box , #00bfff , 8 , 0.4 , 0 , 0 );
 }
