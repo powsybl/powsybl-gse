@@ -47,6 +47,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private int counter;
     private boolean success;
     private  Set<String> openedProjects = new HashSet<>();
+    private SimpleBooleanProperty deleteMenuItemDisableProperty = new SimpleBooleanProperty(false);
 
     public interface TreeModel<N, F, D> {
         Collection<N> getChildren(D folder);
@@ -320,7 +321,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         javafx.scene.Node deleteFolderGlyph = Glyph.createAwesomeFont('\uf1f8').size(ICON_SIZE);
         deleteFolderButton = new Button("", deleteFolderGlyph);
         deleteFolderButton.setPadding(new Insets(3, 5, 3, 5));
-        deleteFolderButton.disableProperty().bind(selectedNode.isNull());
+        deleteFolderButton.disableProperty().bind(selectedNode.isNull().or(deleteMenuItemDisableProperty));
         ObservableList<TreeItem<N>> selectedItems = tree.getSelectionModel().getSelectedItems();
         deleteFolderButton.setOnAction(event -> createDeleteAlert(selectedItems));
         setHgap(5);
@@ -399,8 +400,10 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private void onMouseClickedEvent(MouseEvent event) {
         TreeItem<N> item = tree.getSelectionModel().getSelectedItem();
         N node = item != null ? item.getValue() : null;
+        String nodeId = (node instanceof Project) ? ((Project) node).getId() : null;
         selectedNode.setValue(node != null && filter.test(node, treeModel) ? (T) node : null);
         selectedFolder.setValue(node != null && treeModel.isFolder(node) && treeModel.isWritable((D) node) ? (D) node : null);
+        deleteMenuItemDisableProperty.setValue(openedProjects.contains(nodeId));
         doubleClick.setValue(event.getClickCount() == 2);
     }
 
