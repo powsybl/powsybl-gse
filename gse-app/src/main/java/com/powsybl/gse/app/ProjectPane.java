@@ -13,13 +13,12 @@ import com.powsybl.afs.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.*;
 import com.powsybl.gse.util.*;
-import com.sun.javafx.scene.control.behavior.TabPaneBehavior;
-import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -57,8 +56,6 @@ public class ProjectPane extends Tab {
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
 
     private final KeyCombination saveKeyCombination = new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
-
-    private List<ProjectFileViewer> viewerList = new ArrayList<>();
 
     private static class TabKey {
 
@@ -100,15 +97,12 @@ public class ProjectPane extends Tab {
         }
 
         public void requestClose() {
-            TabPaneBehavior behavior = getBehavior();
-            behavior.closeTab(this);
-        }
-
-        private TabPaneBehavior getBehavior() {
-            return ((TabPaneSkin) getTabPane().getSkin()).getBehavior();
+            getTabPane().getTabs().remove(this);
+            if (getOnClosed() != null) {
+                Event.fireEvent(this, new Event(Tab.CLOSED_EVENT));
+            }
         }
     }
-
 
     private int counter;
 
@@ -456,11 +450,14 @@ public class ProjectPane extends Tab {
 
         getContent().setOnKeyPressed((KeyEvent ke) -> {
             if (saveKeyCombination.match(ke)) {
-                for (ProjectFileViewer fileViewer : viewerList) {
-                    if (fileViewer instanceof Savable && !((Savable) fileViewer).savedProperty().get()) {
-                        ((Savable) fileViewer).save();
-                    }
-                }
+                findDetachableTabPanes().stream()
+                        .flatMap(tabPane -> tabPane.getTabs().stream())
+                        .map(tab -> ((MyTab) tab).getViewer())
+                        .forEach(fileViewer -> {
+                                     if (fileViewer instanceof Savable && !((Savable) fileViewer).savedProperty().get()) {
+                                         ((Savable) fileViewer).save();
+                                     }
+                                 });
             }
         });
     }
@@ -699,7 +696,6 @@ public class ProjectPane extends Tab {
         Node graphic = viewerExtension.getMenuGraphic(file);
         ProjectFileViewer viewer = viewerExtension.newViewer(file, getContent().getScene(), context);
         Tab tab = new MyTab(tabName, viewer);
-        viewerList.add(viewer);
         tab.setOnCloseRequest(event -> {
             if (!viewer.isClosable()) {
                 event.consume();
@@ -707,7 +703,6 @@ public class ProjectPane extends Tab {
         });
         tab.setOnClosed(event -> {
             viewer.dispose();
-            viewerList.remove(viewer);
         });
         tab.setGraphic(graphic);
         tab.setTooltip(new Tooltip(tabName));
