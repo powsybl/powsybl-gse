@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
 
@@ -226,20 +226,22 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private final ObjectProperty<D> selectedFolder = new SimpleObjectProperty<>();
     private final SimpleBooleanProperty doubleClick = new SimpleBooleanProperty(false);
     private final Window window;
-    private final BiFunction<N, TreeModel<N, F, D>, Boolean> filter;
+    private final BiPredicate<N, TreeModel<N, F, D>> filter;
     private final AppData appData;
     private final Preferences preferences;
     private final TreeModel<N, F, D> treeModel;
     private final GseContext context;
 
     public NodeChooser(Window window, TreeModel<N, F, D> treeModel, AppData appData, GseContext context,
-                       BiFunction<N, TreeModel<N, F, D>, Boolean> filter, Set<String> ... openedProjectsList) {
+                       BiPredicate<N, TreeModel<N, F, D>> filter, Set<String> ... openedProjectsList) {
         this.window = Objects.requireNonNull(window);
         this.treeModel = Objects.requireNonNull(treeModel);
         this.appData = Objects.requireNonNull(appData);
         this.context = Objects.requireNonNull(context);
         this.filter = Objects.requireNonNull(filter);
-        openedProjects = openedProjectsList[0];
+        if (openedProjectsList.length != 0) {
+            openedProjects = openedProjectsList[0];
+        }
         preferences = Preferences.userNodeForPackage(getClass());
         tree.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         tree.setShowRoot(false);
@@ -380,7 +382,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                         childItems.add(createCollapsedFolderItem((D) child));
                     } else {
                         F file = (F) child;
-                        if (filter.apply(file, treeModel)) {
+                        if (filter.test(file, treeModel)) {
                             childItems.add(new TreeItem<>(child));
                         }
                     }
@@ -397,7 +399,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private void onMouseClickedEvent(MouseEvent event) {
         TreeItem<N> item = tree.getSelectionModel().getSelectedItem();
         N node = item != null ? item.getValue() : null;
-        selectedNode.setValue(node != null && filter.apply(node, treeModel) ? (T) node : null);
+        selectedNode.setValue(node != null && filter.test(node, treeModel) ? (T) node : null);
         selectedFolder.setValue(node != null && treeModel.isFolder(node) && treeModel.isWritable((D) node) ? (D) node : null);
         doubleClick.setValue(event.getClickCount() == 2);
     }
@@ -725,7 +727,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context,
-                                                                 BiFunction<Node, TreeModel<Node, File, Folder>, Boolean> filter) {
+                                                                 BiPredicate<Node, TreeModel<Node, File, Folder>> filter) {
         return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, filter);
     }
 
@@ -749,7 +751,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters), openedProjectsList);
     }
 
-    public static <T extends ProjectNode> Optional<T> showAndWaitDialog(Project project, Window window, GseContext context, BiFunction<ProjectNode, TreeModel<ProjectNode, ProjectFile, ProjectFolder>, Boolean> filter) {
+    public static <T extends ProjectNode> Optional<T> showAndWaitDialog(Project project, Window window, GseContext context, BiPredicate<ProjectNode, TreeModel<ProjectNode, ProjectFile, ProjectFolder>> filter) {
         return showAndWaitDialog(new TreeModelProjectImpl(project), window, project.getFileSystem().getData(), context, filter);
     }
 
@@ -760,7 +762,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     public static <N, F extends N, D extends N, T extends N> Optional<T> showAndWaitDialog(
             TreeModel<N, F, D> treeModel, Window window, AppData appData, GseContext context,
-            BiFunction<N, TreeModel<N, F, D>, Boolean> filter, Set<String> ... openedProjectsList) {
+            BiPredicate<N, TreeModel<N, F, D>> filter, Set<String> ... openedProjectsList) {
         Dialog<T> dialog = new Dialog<>();
         try {
             dialog.setTitle(RESOURCE_BUNDLE.getString("OpenFile"));
