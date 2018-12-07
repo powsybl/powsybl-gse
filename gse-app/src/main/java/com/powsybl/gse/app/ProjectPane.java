@@ -313,7 +313,7 @@ public class ProjectPane extends Tab {
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
-        if (item instanceof ProjectFolder && isMovable(item, treeItem)) {
+        if (item instanceof ProjectNode && isMovable(item, treeItem)) {
             int count = 0;
             treeItemChildrenSize(treeItem, count);
             setDragOverStyle(treeCell);
@@ -341,15 +341,21 @@ public class ProjectPane extends Tab {
     }
 
     private void dragDroppedEvent(Object value, TreeItem<Object> treeItem, DragEvent event, ProjectNode projectNode) {
-        if (value instanceof ProjectFolder && value != dragAndDropMove.getSource()) {
-            ProjectFolder projectFolder = (ProjectFolder) projectNode;
+        if (value != dragAndDropMove.getSource()) {
             int count = 0;
             success = false;
             treeItemChildrenSize(treeItem, count);
-            accepTransferDrag(projectFolder, success);
+            if (value instanceof ProjectFolder) {
+                ProjectFolder projectFolder = (ProjectFolder) projectNode;
+                acceptTransferDrag(projectFolder, success);
+                refresh(treeItem);
+            } else if (value instanceof ProjectFile) {
+                ProjectFile projectFile = (ProjectFile) projectNode;
+                projectFile.getParent().ifPresent(projectFolder -> acceptTransferDrag(projectFile.getParent().get(), success));
+                refresh(treeItem.getParent());
+            }
             event.setDropCompleted(success);
             refresh(dragAndDropMove.getSourceTreeItem().getParent());
-            refresh(treeItem);
             treeView.getSelectionModel().clearSelection();
             event.consume();
         }
@@ -371,7 +377,7 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private void accepTransferDrag(ProjectFolder projectFolder, boolean s) {
+    private void acceptTransferDrag(ProjectFolder projectFolder, boolean s) {
         success = s;
         if (getCounter() >= 1) {
             GseAlerts.showDraggingError();
