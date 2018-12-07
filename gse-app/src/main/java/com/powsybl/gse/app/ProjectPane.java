@@ -701,9 +701,7 @@ public class ProjectPane extends Tab {
                 event.consume();
             }
         });
-        tab.setOnClosed(event -> {
-            viewer.dispose();
-        });
+        tab.setOnClosed(event -> viewer.dispose());
         tab.setGraphic(graphic);
         tab.setTooltip(new Tooltip(tabName));
         tab.setUserData(tabKey);
