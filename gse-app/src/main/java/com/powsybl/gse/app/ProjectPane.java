@@ -298,8 +298,28 @@ public class ProjectPane extends Tab {
         }
     }
 
+    private boolean isSourceAncestorOf(TreeItem<Object> targetTreeItem) {
+        TreeItem treeItemParent = targetTreeItem.getParent();
+        while (treeItemParent != null) {
+            if (dragAndDropMove.getSourceTreeItem() == treeItemParent) {
+                return true;
+            } else {
+                treeItemParent = treeItemParent.getParent();
+            }
+        }
+        return false;
+    }
+
+    private boolean isChildOf(TreeItem<Object> targetTreeItem) {
+        return targetTreeItem == dragAndDropMove.getSourceTreeItem().getParent();
+    }
+
+    public boolean isMovable(Object item, TreeItem<Object> targetTreeItem) {
+        return dragAndDropMove != null && item != dragAndDropMove.getSource() && !isSourceAncestorOf(targetTreeItem) && !isChildOf(targetTreeItem);
+    }
+
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
-        if (item instanceof ProjectFolder && dragAndDropMove != null && item != dragAndDropMove.getSource()) {
+        if (item instanceof ProjectFolder && isMovable(item, treeItem)) {
             int count = 0;
             treeItemChildrenSize(treeItem, count);
             setDragOverStyle(treeCell);
