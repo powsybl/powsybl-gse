@@ -454,10 +454,10 @@ public class ProjectPane extends Tab {
                         .flatMap(tabPane -> tabPane.getTabs().stream())
                         .map(tab -> ((MyTab) tab).getViewer())
                         .forEach(fileViewer -> {
-                                     if (fileViewer instanceof Savable && !((Savable) fileViewer).savedProperty().get()) {
-                                         ((Savable) fileViewer).save();
-                                     }
-                                 });
+                            if (fileViewer instanceof Savable && !((Savable) fileViewer).savedProperty().get()) {
+                                ((Savable) fileViewer).save();
+                            }
+                        });
             }
         });
     }
