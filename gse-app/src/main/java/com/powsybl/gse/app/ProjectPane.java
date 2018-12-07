@@ -54,6 +54,10 @@ public class ProjectPane extends Tab {
 
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
 
+    private final KeyCombination saveKeyCombination = new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
+
+    private List<ProjectFileViewer> viewerList = new ArrayList<>();
+
     private static class TabKey {
 
         private final String nodeId;
@@ -206,7 +210,7 @@ public class ProjectPane extends Tab {
                     setOnDragDetected(event -> dragDetectedEvent(getItem(), getTreeItem(), event));
                     setOnDragOver(event -> dragOverEvent(event, getItem(), getTreeItem(), this));
                     setOnDragDropped(event -> dragDroppedEvent(getItem(), getTreeItem(), event, node));
-                    setOnDragExited(event -> setTextFill(Color.BLACK));
+                    setOnDragExited(event -> getStyleClass().removeAll("treecell-drag-over"));
                 } else {
                     throw new AssertionError();
                 }
@@ -264,9 +268,9 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private void textFillColor(TreeCell<Object> treeCell) {
+    private void setDragOverStyle(TreeCell<Object> treeCell) {
         if (getCounter() < 1) {
-            treeCell.setTextFill(Color.CHOCOLATE);
+            treeCell.getStyleClass().add("treecell-drag-over");
         }
     }
 
@@ -295,11 +299,31 @@ public class ProjectPane extends Tab {
         }
     }
 
+    private boolean isSourceAncestorOf(TreeItem<Object> targetTreeItem) {
+        TreeItem treeItemParent = targetTreeItem.getParent();
+        while (treeItemParent != null) {
+            if (dragAndDropMove.getSourceTreeItem() == treeItemParent) {
+                return true;
+            } else {
+                treeItemParent = treeItemParent.getParent();
+            }
+        }
+        return false;
+    }
+
+    private boolean isChildOf(TreeItem<Object> targetTreeItem) {
+        return targetTreeItem == dragAndDropMove.getSourceTreeItem().getParent();
+    }
+
+    public boolean isMovable(Object item, TreeItem<Object> targetTreeItem) {
+        return dragAndDropMove != null && item != dragAndDropMove.getSource() && !isSourceAncestorOf(targetTreeItem) && !isChildOf(targetTreeItem);
+    }
+
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
-        if (item instanceof ProjectFolder && dragAndDropMove != null && item != dragAndDropMove.getSource()) {
+        if (item instanceof ProjectFolder && isMovable(item, treeItem)) {
             int count = 0;
             treeItemChildrenSize(treeItem, count);
-            textFillColor(treeCell);
+            setDragOverStyle(treeCell);
             event.acceptTransferModes(TransferMode.ANY);
             event.consume();
         }
@@ -333,6 +357,7 @@ public class ProjectPane extends Tab {
             event.setDropCompleted(success);
             refresh(dragAndDropMove.getSourceTreeItem().getParent());
             refresh(treeItem);
+            treeView.getSelectionModel().clearSelection();
             event.consume();
         }
     }
@@ -429,6 +454,16 @@ public class ProjectPane extends Tab {
         setContent(splitPane);
 
         createRootFolderTreeItem(project);
+
+        getContent().setOnKeyPressed((KeyEvent ke) -> {
+            if (saveKeyCombination.match(ke)) {
+                for (ProjectFileViewer fileViewer : viewerList) {
+                    if (fileViewer instanceof Savable && !((Savable) fileViewer).savedProperty().get()) {
+                        ((Savable) fileViewer).save();
+                    }
+                }
+            }
+        });
     }
 
     public Project getProject() {
@@ -665,12 +700,16 @@ public class ProjectPane extends Tab {
         Node graphic = viewerExtension.getMenuGraphic(file);
         ProjectFileViewer viewer = viewerExtension.newViewer(file, getContent().getScene(), context);
         Tab tab = new MyTab(tabName, viewer);
+        viewerList.add(viewer);
         tab.setOnCloseRequest(event -> {
             if (!viewer.isClosable()) {
                 event.consume();
             }
         });
-        tab.setOnClosed(event -> viewer.dispose());
+        tab.setOnClosed(event -> {
+            viewer.dispose();
+            viewerList.remove(viewer);
+        });
         tab.setGraphic(graphic);
         tab.setTooltip(new Tooltip(tabName));
         tab.setUserData(tabKey);
