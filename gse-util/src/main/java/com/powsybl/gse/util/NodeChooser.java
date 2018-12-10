@@ -49,6 +49,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private  Set<String> openedProjects = new HashSet<>();
     private SimpleBooleanProperty deleteMenuItemDisableProperty = new SimpleBooleanProperty(false);
 
+
     public interface TreeModel<N, F, D> {
         Collection<N> getChildren(D folder);
 
@@ -396,7 +397,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
 
-
     private void onMouseClickedEvent(MouseEvent event) {
         TreeItem<N> item = tree.getSelectionModel().getSelectedItem();
         N node = item != null ? item.getValue() : null;
@@ -544,6 +544,12 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             N value = selectedTreeItem.getValue();
             if (value instanceof Project) {
                 tree.setContextMenu(createProjectContextMenu(selectedTreeItem));
+                tree.setOnKeyPressed((KeyEvent ke) -> {
+                    if (ke.getCode() == KeyCode.F2) {
+                        renameNode(selectedTreeItem);
+                    }
+                });
+
             } else if (value instanceof Folder) {
                 tree.setContextMenu(createFolderContextMenu(selectedTreeItem));
             } else {
@@ -597,31 +603,32 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private MenuItem createRenameProjectMenuItem() {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size(ICON_SIZE));
         TreeItem<N> selectedTreeItem = tree.getSelectionModel().getSelectedItem();
-        menuItem.setOnAction(event -> {
-            Optional<String> result = RenamePane.showAndWaitDialog((Node) selectedTreeItem.getValue());
-            result.ifPresent(newName -> {
-                if (selectedTreeItem.getValue() instanceof Node) {
-                    Node selectedTreeNode = (Node) selectedTreeItem.getValue();
-                    selectedTreeNode.rename(newName);
-                    refresh(selectedTreeItem.getParent());
-                    tree.getSelectionModel().clearSelection();
-                    tree.getSelectionModel().select(selectedTreeItem);
-                }
-            });
-
-        });
+        menuItem.setOnAction(event -> renameNode(selectedTreeItem));
         return menuItem;
     }
 
+    private void renameNode(TreeItem selectedTreeItem) {
+        Optional<String> result = RenamePane.showAndWaitDialog((Node) selectedTreeItem.getValue());
+        result.ifPresent(newName -> {
+            if (selectedTreeItem.getValue() instanceof Node) {
+                Node selectedTreeNode = (Node) selectedTreeItem.getValue();
+                selectedTreeNode.rename(newName);
+                refresh(selectedTreeItem.getParent());
+                tree.getSelectionModel().clearSelection();
+                tree.getSelectionModel().select(selectedTreeItem);
+            }
+        });
+    }
+
     private MenuItem createDeleteNodeMenuItem(List<? extends TreeItem<N>> selectedTreeItems) {
-        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size(ICON_SIZE));
+        MenuItem deleteMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size(ICON_SIZE));
         if (selectedTreeItems.size() == 1) {
             TreeItem<N> selectedTreeItem = selectedTreeItems.get(0);
             N selectedTreeItemValue = selectedTreeItem.getValue();
             if (selectedTreeItemValue instanceof Folder) {
                 Folder folder = (Folder) selectedTreeItemValue;
                 if (!folder.getChildren().isEmpty()) {
-                    menuItem.setDisable(true);
+                    deleteMenuItem.setDisable(true);
                 }
             } else if (selectedTreeItemValue instanceof Project) {
                 Project project = (Project) selectedTreeItemValue;
@@ -630,8 +637,10 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 }
             }
         }
-        menuItem.setOnAction(event -> createDeleteAlert(selectedTreeItems));
-        return menuItem;
+        deleteMenuItem.setOnAction(event -> createDeleteAlert(selectedTreeItems));
+        deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
+        return deleteMenuItem;
+
     }
 
     public void createDeleteAlert(List<? extends TreeItem<N>> selectedTreeItems) {
