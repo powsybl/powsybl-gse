@@ -46,7 +46,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private DragAndDropMove dragAndDropMove;
     private int counter;
     private boolean success;
-    private  Set<String> openedProjects = new HashSet<>();
+    private Set<String> openedProjects = new HashSet<>();
     private SimpleBooleanProperty deleteMenuItemDisableProperty = new SimpleBooleanProperty(false);
 
 
@@ -235,7 +235,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private final GseContext context;
 
     public NodeChooser(Window window, TreeModel<N, F, D> treeModel, AppData appData, GseContext context,
-                       BiPredicate<N, TreeModel<N, F, D>> filter, Set<String> ... openedProjectsList) {
+                       BiPredicate<N, TreeModel<N, F, D>> filter, Set<String>... openedProjectsList) {
         this.window = Objects.requireNonNull(window);
         this.treeModel = Objects.requireNonNull(treeModel);
         this.appData = Objects.requireNonNull(appData);
@@ -400,10 +400,8 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private void onMouseClickedEvent(MouseEvent event) {
         TreeItem<N> item = tree.getSelectionModel().getSelectedItem();
         N node = item != null ? item.getValue() : null;
-        String nodeId = (node instanceof Project) ? ((Project) node).getId() : null;
         selectedNode.setValue(node != null && filter.test(node, treeModel) ? (T) node : null);
         selectedFolder.setValue(node != null && treeModel.isFolder(node) && treeModel.isWritable((D) node) ? (D) node : null);
-        deleteMenuItemDisableProperty.setValue(openedProjects.contains(nodeId));
         doubleClick.setValue(event.getClickCount() == 2);
     }
 
@@ -555,8 +553,12 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             } else {
                 tree.setContextMenu(null);
             }
+            N node = selectedTreeItem.getValue();
+            String nodeId = (node instanceof Project) ? ((Project) node).getId() : null;
+            deleteMenuItemDisableProperty.setValue(openedProjects.contains(nodeId));
+
         } else {
-            tree.setContextMenu(createMultipleContextMenu(c.getList()));
+            multipleSelectionChangeListener(c);
         }
     }
 
@@ -633,14 +635,39 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             } else if (selectedTreeItemValue instanceof Project) {
                 Project project = (Project) selectedTreeItemValue;
                 if (openedProjects.contains(project.getId())) {
-                    menuItem.setDisable(true);
+                    deleteMenuItem.setDisable(true);
                 }
             }
+        } else {
+            selectionContainsOpenedProjects(selectedTreeItems, deleteMenuItem);
         }
         deleteMenuItem.setOnAction(event -> createDeleteAlert(selectedTreeItems));
         deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
         return deleteMenuItem;
 
+    }
+
+    private void selectionContainsOpenedProjects(List<? extends TreeItem<N>> selectedTreeItems, MenuItem menuItem) {
+        for (TreeItem<N> item : selectedTreeItems) {
+            if (item.getValue() instanceof Project && openedProjects.contains(((Project) item.getValue()).getId())) {
+                menuItem.setDisable(true);
+                break;
+            }
+        }
+    }
+
+    private void multipleSelectionChangeListener(ListChangeListener.Change<? extends TreeItem<N>> c) {
+        for (TreeItem<N> selectedItem : c.getList()) {
+            if (selectedItem.getValue() instanceof Project) {
+                String id = ((Project) selectedItem.getValue()).getId();
+                boolean atleastOneOpened = openedProjects.stream().anyMatch(projectId -> projectId.equals(id));
+                deleteMenuItemDisableProperty.setValue(atleastOneOpened);
+                if (atleastOneOpened) {
+                    break;
+                }
+            }
+        }
+        tree.setContextMenu(createMultipleContextMenu(c.getList()));
     }
 
     public void createDeleteAlert(List<? extends TreeItem<N>> selectedTreeItems) {
@@ -781,7 +808,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     public static <N, F extends N, D extends N, T extends N> Optional<T> showAndWaitDialog(
             TreeModel<N, F, D> treeModel, Window window, AppData appData, GseContext context,
-            BiPredicate<N, TreeModel<N, F, D>> filter, Set<String> ... openedProjectsList) {
+            BiPredicate<N, TreeModel<N, F, D>> filter, Set<String>... openedProjectsList) {
         Dialog<T> dialog = new Dialog<>();
         try {
             dialog.setTitle(RESOURCE_BUNDLE.getString("OpenFile"));
