@@ -13,13 +13,12 @@ import com.powsybl.afs.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.*;
 import com.powsybl.gse.util.*;
-import com.sun.javafx.scene.control.behavior.TabPaneBehavior;
-import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -55,6 +54,8 @@ public class ProjectPane extends Tab {
     private static final ServiceLoaderCache<ProjectFileViewerExtension> VIEWER_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileViewerExtension.class);
 
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
+
+    private final KeyCombination saveKeyCombination = new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
 
     private static class TabKey {
 
@@ -96,15 +97,12 @@ public class ProjectPane extends Tab {
         }
 
         public void requestClose() {
-            TabPaneBehavior behavior = getBehavior();
-            behavior.closeTab(this);
-        }
-
-        private TabPaneBehavior getBehavior() {
-            return ((TabPaneSkin) getTabPane().getSkin()).getBehavior();
+            getTabPane().getTabs().remove(this);
+            if (getOnClosed() != null) {
+                Event.fireEvent(this, new Event(Tab.CLOSED_EVENT));
+            }
         }
     }
-
 
     private int counter;
 
@@ -299,8 +297,28 @@ public class ProjectPane extends Tab {
         }
     }
 
+    private boolean isSourceAncestorOf(TreeItem<Object> targetTreeItem) {
+        TreeItem treeItemParent = targetTreeItem.getParent();
+        while (treeItemParent != null) {
+            if (dragAndDropMove.getSourceTreeItem() == treeItemParent) {
+                return true;
+            } else {
+                treeItemParent = treeItemParent.getParent();
+            }
+        }
+        return false;
+    }
+
+    private boolean isChildOf(TreeItem<Object> targetTreeItem) {
+        return targetTreeItem == dragAndDropMove.getSourceTreeItem().getParent();
+    }
+
+    public boolean isMovable(Object item, TreeItem<Object> targetTreeItem) {
+        return dragAndDropMove != null && item != dragAndDropMove.getSource() && !isSourceAncestorOf(targetTreeItem) && !isChildOf(targetTreeItem);
+    }
+
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
-        if (item instanceof ProjectFolder && dragAndDropMove != null && item != dragAndDropMove.getSource()) {
+        if (item instanceof ProjectFolder && isMovable(item, treeItem)) {
             int count = 0;
             treeItemChildrenSize(treeItem, count);
             setDragOverStyle(treeCell);
@@ -434,6 +452,19 @@ public class ProjectPane extends Tab {
         setContent(splitPane);
 
         createRootFolderTreeItem(project);
+
+        getContent().setOnKeyPressed((KeyEvent ke) -> {
+            if (saveKeyCombination.match(ke)) {
+                findDetachableTabPanes().stream()
+                        .flatMap(tabPane -> tabPane.getTabs().stream())
+                        .map(tab -> ((MyTab) tab).getViewer())
+                        .forEach(fileViewer -> {
+                            if (fileViewer instanceof Savable && !((Savable) fileViewer).savedProperty().get()) {
+                                ((Savable) fileViewer).save();
+                            }
+                        });
+            }
+        });
     }
 
     public Project getProject() {
