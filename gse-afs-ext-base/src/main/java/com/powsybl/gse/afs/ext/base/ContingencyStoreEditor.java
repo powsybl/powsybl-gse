@@ -229,7 +229,8 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
                     contingencyTree.setContextMenu(null);
                 }
             } else {
-                contingencyTree.setContextMenu(createMultipleContingencyMenu());            }
+                contingencyTree.setContextMenu(createMultipleContingencyMenu());
+            }
         });
 
         contingencyTree.addEventHandler(KeyEvent.KEY_PRESSED, this::onKeyPressed);
@@ -298,7 +299,6 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
     }
 
     private void showRemoveAlert() {
-        // TreeItem<Object> item = contingencyTree.getSelectionModel().getSelectedItem();
         ObservableList<TreeItem<Object>> selectedItems = contingencyTree.getSelectionModel().getSelectedItems();
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle(REMOVE);
@@ -310,7 +310,7 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
                 alert.setHeaderText(REMOVE + " " + ((ContingencyElement) item.getValue()).getId() + " ?");
             }
         } else {
-            alert.setHeaderText(REMOVE+ " " + RESOURCE_BUNDLE.getString("SelectedElements"));
+            alert.setHeaderText(REMOVE + " " + RESOURCE_BUNDLE.getString("SelectedElements"));
         }
         Optional<ButtonType> result = alert.showAndWait();
         result.ifPresent(type -> {
@@ -339,8 +339,6 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
                         item.getParent().getChildren().remove(item);
                     }
                 }
-            } else {
-                System.out.println(" item is null");
             }
         }
         saved.set(false);
