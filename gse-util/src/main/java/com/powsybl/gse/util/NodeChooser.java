@@ -403,7 +403,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         String nodeId = (node instanceof Project) ? ((Project) node).getId() : null;
         selectedNode.setValue(node != null && filter.test(node, treeModel) ? (T) node : null);
         selectedFolder.setValue(node != null && treeModel.isFolder(node) && treeModel.isWritable((D) node) ? (D) node : null);
-        deleteMenuItemDisableProperty.setValue(openedProjects.contains(nodeId));
+        //deleteMenuItemDisableProperty.setValue(openedProjects.contains(nodeId));
         doubleClick.setValue(event.getClickCount() == 2);
     }
 
@@ -540,6 +540,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         if (c.getList().isEmpty()) {
             tree.setContextMenu(null);
         } else if (c.getList().size() == 1) {
+            System.out.println("list one");
             TreeItem<N> selectedTreeItem = c.getList().get(0);
             N value = selectedTreeItem.getValue();
             if (value instanceof Project) {
@@ -555,7 +556,21 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             } else {
                 tree.setContextMenu(null);
             }
+            N node = selectedTreeItem.getValue();
+            String nodeId = (node instanceof Project) ? ((Project) node).getId() : null;
+            deleteMenuItemDisableProperty.setValue(openedProjects.contains(nodeId));
+
         } else {
+            for(TreeItem<N> selectedItem : c.getList()) {
+                if(selectedItem.getValue() instanceof Project) {
+                    String id = ((Project) selectedItem.getValue()).getId();
+                    boolean atleastOneOpened = openedProjects.stream().anyMatch(projectId -> projectId.equals(id));
+                    deleteMenuItemDisableProperty.setValue(atleastOneOpened);
+                    if(atleastOneOpened) {
+                        break;
+                    }
+                }
+            }
             tree.setContextMenu(createMultipleContextMenu(c.getList()));
         }
     }
@@ -633,7 +648,16 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             } else if (selectedTreeItemValue instanceof Project) {
                 Project project = (Project) selectedTreeItemValue;
                 if (openedProjects.contains(project.getId())) {
-                    menuItem.setDisable(true);
+                    deleteMenuItem.setDisable(true);
+                }
+            }
+        } else {
+            for(TreeItem<N> item : selectedTreeItems) {
+                if(item.getValue() instanceof Project) {
+                    if (openedProjects.contains(((Project) item.getValue()).getId())) {
+                        deleteMenuItem.setDisable(true);
+                        break;
+                    }
                 }
             }
         }
