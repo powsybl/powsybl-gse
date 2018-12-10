@@ -14,7 +14,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.scene.control.*;
-import org.controlsfx.control.HiddenSidesPane;
+import javafx.scene.layout.BorderPane;
 
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -83,13 +83,13 @@ class PreContingencyResultPane extends AbstractContingencyResultPane implements 
         TableUtils.installCopyPasteHandler(tableView, true);
 
         filterPane = new LimitViolationsFilterPane(this);
-        HiddenSidesPane hiddenSidesPane = new HiddenSidesPane();
-        hiddenSidesPane.setContent(tableView);
-        hiddenSidesPane.setRight(new ScrollPane(filterPane));
 
-        setCenter(hiddenSidesPane);
+        BorderPane borderPane = new BorderPane();
+        borderPane.setCenter(tableView);
 
-        ToggleButton filterButton = createFilterButton(hiddenSidesPane);
+        setCenter(borderPane);
+
+        ToggleButton filterButton = createFilterButton(borderPane, filterPane);
         setRight(filterButton);
     }
 
