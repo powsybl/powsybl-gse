@@ -13,13 +13,12 @@ import com.powsybl.afs.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.*;
 import com.powsybl.gse.util.*;
-import com.sun.javafx.scene.control.behavior.TabPaneBehavior;
-import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -57,8 +56,6 @@ public class ProjectPane extends Tab {
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
 
     private final KeyCombination saveKeyCombination = new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
-
-    private List<ProjectFileViewer> viewerList = new ArrayList<>();
 
     private static class TabKey {
 
@@ -100,15 +97,12 @@ public class ProjectPane extends Tab {
         }
 
         public void requestClose() {
-            TabPaneBehavior behavior = getBehavior();
-            behavior.closeTab(this);
-        }
-
-        private TabPaneBehavior getBehavior() {
-            return ((TabPaneSkin) getTabPane().getSkin()).getBehavior();
+            getTabPane().getTabs().remove(this);
+            if (getOnClosed() != null) {
+                Event.fireEvent(this, new Event(Tab.CLOSED_EVENT));
+            }
         }
     }
-
 
     private int counter;
 
@@ -177,6 +171,11 @@ public class ProjectPane extends Tab {
         } else if (c.getList().size() == 1) {
             TreeItem<Object> selectedTreeItem = c.getList().get(0);
             Object value = selectedTreeItem.getValue();
+            treeView.setOnKeyPressed((KeyEvent ke) -> {
+                if (ke.getCode() == KeyCode.F2) {
+                    renameProjectNode(selectedTreeItem);
+                }
+            });
             if (value instanceof ProjectFolder) {
                 treeView.setContextMenu(createFolderContextMenu(selectedTreeItem));
             } else if (value instanceof ProjectFile) {
@@ -319,7 +318,7 @@ public class ProjectPane extends Tab {
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
-        if (item instanceof ProjectFolder && isMovable(item, treeItem)) {
+        if (item instanceof ProjectNode && isMovable(item, treeItem)) {
             int count = 0;
             treeItemChildrenSize(treeItem, count);
             setDragOverStyle(treeCell);
@@ -347,15 +346,21 @@ public class ProjectPane extends Tab {
     }
 
     private void dragDroppedEvent(Object value, TreeItem<Object> treeItem, DragEvent event, ProjectNode projectNode) {
-        if (value instanceof ProjectFolder && value != dragAndDropMove.getSource()) {
-            ProjectFolder projectFolder = (ProjectFolder) projectNode;
+        if (value != dragAndDropMove.getSource()) {
             int count = 0;
             success = false;
             treeItemChildrenSize(treeItem, count);
-            accepTransferDrag(projectFolder, success);
+            if (value instanceof ProjectFolder) {
+                ProjectFolder projectFolder = (ProjectFolder) projectNode;
+                acceptTransferDrag(projectFolder, success);
+                refresh(treeItem);
+            } else if (value instanceof ProjectFile) {
+                ProjectFile projectFile = (ProjectFile) projectNode;
+                projectFile.getParent().ifPresent(projectFolder -> acceptTransferDrag(projectFile.getParent().get(), success));
+                refresh(treeItem.getParent());
+            }
             event.setDropCompleted(success);
             refresh(dragAndDropMove.getSourceTreeItem().getParent());
-            refresh(treeItem);
             treeView.getSelectionModel().clearSelection();
             event.consume();
         }
@@ -377,7 +382,7 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private void accepTransferDrag(ProjectFolder projectFolder, boolean s) {
+    private void acceptTransferDrag(ProjectFolder projectFolder, boolean s) {
         success = s;
         if (getCounter() >= 1) {
             GseAlerts.showDraggingError();
@@ -456,11 +461,14 @@ public class ProjectPane extends Tab {
 
         getContent().setOnKeyPressed((KeyEvent ke) -> {
             if (saveKeyCombination.match(ke)) {
-                for (ProjectFileViewer fileViewer : viewerList) {
-                    if (fileViewer instanceof Savable && !((Savable) fileViewer).savedProperty().get()) {
-                        ((Savable) fileViewer).save();
-                    }
-                }
+                findDetachableTabPanes().stream()
+                        .flatMap(tabPane -> tabPane.getTabs().stream())
+                        .map(tab -> ((MyTab) tab).getViewer())
+                        .forEach(fileViewer -> {
+                            if (fileViewer instanceof Savable && !((Savable) fileViewer).savedProperty().get()) {
+                                ((Savable) fileViewer).save();
+                            }
+                        });
             }
         });
     }
@@ -595,11 +603,15 @@ public class ProjectPane extends Tab {
     // contextual menu
 
     private MenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
-        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.1em"));
-        menuItem.setOnAction(event -> {
-            Alert alert = GseAlerts.deleteNodesAlert(selectedTreeItems);
-            Optional<ButtonType> result = alert.showAndWait();
-            if (result.get() == ButtonType.OK) {
+        MenuItem deleteMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.1em"));
+        deleteMenuItem.setOnAction(event -> deleteNodesAlert(selectedTreeItems));
+        deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
+        return deleteMenuItem;
+    }
+
+    private void deleteNodesAlert(List<? extends TreeItem<Object>> selectedTreeItems) {
+        GseAlerts.deleteNodesAlert(selectedTreeItems).showAndWait().ifPresent(buttonType -> {
+            if (buttonType == ButtonType.OK) {
                 List<TreeItem<Object>> parentTreeItems = new ArrayList<>();
                 for (TreeItem<Object> selectedTreeItem : selectedTreeItems) {
                     ProjectNode node = (ProjectNode) selectedTreeItem.getValue();
@@ -616,24 +628,25 @@ public class ProjectPane extends Tab {
                 }
             }
         });
-        return menuItem;
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
-        menuItem.setOnAction(event -> {
-            Optional<String> result = RenamePane.showAndWaitDialog((ProjectNode) selectedTreeItem.getValue());
-            result.ifPresent(newName -> {
-                if (selectedTreeItem.getValue() instanceof ProjectNode) {
-                    ProjectNode selectedTreeNode = (ProjectNode) selectedTreeItem.getValue();
-                    selectedTreeNode.rename(newName);
-                    refresh(selectedTreeItem.getParent());
-                    treeView.getSelectionModel().clearSelection();
-                    treeView.getSelectionModel().select(selectedTreeItem);
-                }
-            });
-        });
+        menuItem.setOnAction(event -> renameProjectNode(selectedTreeItem));
         return menuItem;
+    }
+
+    private void renameProjectNode(TreeItem selectedTreeItem) {
+        Optional<String> result = RenamePane.showAndWaitDialog((ProjectNode) selectedTreeItem.getValue());
+        result.ifPresent(newName -> {
+            if (selectedTreeItem.getValue() instanceof ProjectNode) {
+                ProjectNode selectedTreeNode = (ProjectNode) selectedTreeItem.getValue();
+                selectedTreeNode.rename(newName);
+                refresh(selectedTreeItem.getParent());
+                treeView.getSelectionModel().clearSelection();
+                treeView.getSelectionModel().select(selectedTreeItem);
+            }
+        });
     }
 
     /**
@@ -699,16 +712,12 @@ public class ProjectPane extends Tab {
         Node graphic = viewerExtension.getMenuGraphic(file);
         ProjectFileViewer viewer = viewerExtension.newViewer(file, getContent().getScene(), context);
         Tab tab = new MyTab(tabName, viewer);
-        viewerList.add(viewer);
         tab.setOnCloseRequest(event -> {
             if (!viewer.isClosable()) {
                 event.consume();
             }
         });
-        tab.setOnClosed(event -> {
-            viewer.dispose();
-            viewerList.remove(viewer);
-        });
+        tab.setOnClosed(event -> viewer.dispose());
         tab.setGraphic(graphic);
         tab.setTooltip(new Tooltip(tabName));
         tab.setUserData(tabKey);
