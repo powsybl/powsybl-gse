@@ -272,11 +272,9 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
     }
 
     private ContextMenu createMultipleContingencyMenu() {
-        ContextMenu contextMenu = new ContextMenu();
         MenuItem removeItem = new MenuItem(REMOVE);
         removeItem.setOnAction(event -> showRemoveAlert());
-        contextMenu.getItems().add(removeItem);
-        return contextMenu;
+        return new ContextMenu(removeItem);
     }
 
     private void rename() {
@@ -324,7 +322,8 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
 
     private void remove() {
         ObservableList<TreeItem<Object>> selectedItems = contingencyTree.getSelectionModel().getSelectedItems();
-        for (TreeItem<Object> item : selectedItems) {
+        List<TreeItem<Object>> items = new ArrayList<>(selectedItems);
+        for (TreeItem<Object> item : items) {
             if (item != null) {
                 if (item.getValue() instanceof Contingency) {
                     item.getParent().getChildren().remove(item);
