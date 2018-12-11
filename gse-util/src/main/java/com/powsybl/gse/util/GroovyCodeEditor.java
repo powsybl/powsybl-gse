@@ -135,13 +135,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
             event.consume();
         });
 
-        codeArea.selectedTextProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue.isEmpty()) {
-                copyMenu.setDisable(true);
-            } else {
-                copyMenu.setDisable(false);
-            }
-        });
+        codeArea.selectedTextProperty().addListener((observable, oldValue, newValue) -> copyMenu.setDisable(newValue.isEmpty()));
         pasteMenu.setOnAction(event -> {
             final Clipboard clipboard = Clipboard.getSystemClipboard();
             if (clipboard.hasString()) {
