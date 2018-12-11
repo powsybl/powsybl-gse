@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
  */
 public final class GseAlerts {
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.GseAlerts");
+    private static final String GSE_ERROR = RESOURCE_BUNDLE.getString("Error");
 
     private GseAlerts() {
     }
@@ -30,14 +31,14 @@ public final class GseAlerts {
     public static void showDraggingError() {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
-        alert.setHeaderText(RESOURCE_BUNDLE.getString("Error"));
+        alert.setHeaderText(GSE_ERROR);
         alert.setContentText(RESOURCE_BUNDLE.getString("FileExists"));
         alert.showAndWait();
     }
 
     public static void showDialogError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(RESOURCE_BUNDLE.getString("Error"));
+        alert.setTitle(GSE_ERROR);
         alert.setResizable(true);
         alert.setContentText(message);
         alert.showAndWait();
@@ -79,7 +80,7 @@ public final class GseAlerts {
                 node = (Node) selectedTreeItems.get(0).getValue();
                 headerText = String.format(fileWillBeDeleted, node.getName());
             } else {
-                headerText = String.format(fileWillBeDeleted, "the selected file");
+                headerText = String.format(fileWillBeDeleted, RESOURCE_BUNDLE.getString("Selected"));
             }
         } else if (selectedTreeItems.size() > 1) {
             String names = selectedTreeItems.stream()
