@@ -13,6 +13,8 @@ import groovyjarjarantlr.TokenStreamException;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
 import javafx.scene.input.*;
 import org.codehaus.groovy.antlr.GroovySourceToken;
 import org.codehaus.groovy.antlr.SourceBuffer;
@@ -34,6 +36,7 @@ import java.io.UncheckedIOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.ResourceBundle;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -48,6 +51,9 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
 
     private boolean allowedDrag = false;
+
+    private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.GroovyCodeEditor");
+
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
@@ -102,6 +108,49 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.setOnDragOver(this::onDragOver);
         codeArea.setOnDragDropped(this::onDragDropped);
         codeArea.setOnSelectionDrag(p -> allowedDrag = true);
+        codeArea.setContextMenu(codeAreaContextMenu());
+    }
+
+    private ContextMenu codeAreaContextMenu() {
+        MenuItem copyMenu = new MenuItem(RESOURCE_BUNDLE.getString("Copy"));
+        copyMenu.setDisable(true);
+        MenuItem cutMenu = new MenuItem(RESOURCE_BUNDLE.getString("Cut"));
+        MenuItem pasteMenu = new MenuItem(RESOURCE_BUNDLE.getString("Paste"));
+
+        copyMenu.setOnAction(event -> {
+            final Clipboard clipboard = Clipboard.getSystemClipboard();
+            final ClipboardContent content = new ClipboardContent();
+            content.putString(codeArea.getSelectedText());
+            clipboard.setContent(content);
+            event.consume();
+        });
+        cutMenu.setOnAction(event -> {
+            final Clipboard clipboard = Clipboard.getSystemClipboard();
+            final ClipboardContent content = new ClipboardContent();
+            content.putString(codeArea.getSelectedText());
+            clipboard.setContent(content);
+            int length = codeArea.getSelectedText().length();
+            int caretPosition = codeArea.getCaretPosition();
+            codeArea.replaceText(caretPosition - length, caretPosition, "");
+            event.consume();
+        });
+
+        codeArea.selectedTextProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue.isEmpty()) {
+                copyMenu.setDisable(true);
+            } else {
+                copyMenu.setDisable(false);
+            }
+        });
+        pasteMenu.setOnAction(event -> {
+            final Clipboard clipboard = Clipboard.getSystemClipboard();
+            if (clipboard.hasString()) {
+                codeArea.insertText(codeArea.getCaretPosition(), clipboard.getString());
+            }
+            event.consume();
+        });
+
+        return new ContextMenu(copyMenu, cutMenu, pasteMenu);
     }
 
     private void onDragDetected(MouseEvent event) {
