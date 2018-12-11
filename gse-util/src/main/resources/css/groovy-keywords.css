@@ -29,7 +29,11 @@
     -fx-background-color: #f2f9fc;
 }
 
+<<<<<<< HEAD
 .bracket-matches {
+=======
+.bracketMatches {
+>>>>>>> 73309a3038ffef845f507429879c938fb725fb8d
     -fx-font-weight: bold;
     -fx-effect: dropshadow( one-pass-box , #00bfff , 8 , 0.4 , 0 , 0 );
 }
