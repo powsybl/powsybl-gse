@@ -221,7 +221,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private final BreadCrumbBar<N> path = new BreadCrumbBar<>();
     private final Button createFolderButton;
-    private final Button deleteFolderButton;
+    private final Button deleteNodeButton;
     private final TreeItem<N> rootItem = new TreeItem<>();
     private TreeTableView<N> tree = new TreeTableView<>(rootItem);
     private final ObjectProperty<T> selectedNode = new SimpleObjectProperty<>();
@@ -320,11 +320,11 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 })
         );
         javafx.scene.Node deleteFolderGlyph = Glyph.createAwesomeFont('\uf1f8').size(ICON_SIZE);
-        deleteFolderButton = new Button("", deleteFolderGlyph);
-        deleteFolderButton.setPadding(new Insets(3, 5, 3, 5));
-        deleteFolderButton.disableProperty().bind(selectedNode.isNull().or(deleteMenuItemDisableProperty));
+        deleteNodeButton = new Button("", deleteFolderGlyph);
+        deleteNodeButton.setPadding(new Insets(3, 5, 3, 5));
+        deleteNodeButton.disableProperty().bind(selectedNode.isNull().or(deleteMenuItemDisableProperty));
         ObservableList<TreeItem<N>> selectedItems = tree.getSelectionModel().getSelectedItems();
-        deleteFolderButton.setOnAction(event -> createDeleteAlert(selectedItems));
+        deleteNodeButton.setOnAction(event -> createDeleteAlert(selectedItems));
         setHgap(5);
         setVgap(5);
         ColumnConstraints column0 = new ColumnConstraints();
@@ -335,7 +335,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         row1.setVgrow(Priority.ALWAYS);
         getRowConstraints().addAll(row0, row1);
         add(new ScrollPane(path), 0, 0);
-        add(new HBox(5, createFolderButton, deleteFolderButton), 1, 0);
+        add(new HBox(5, createFolderButton, deleteNodeButton), 1, 0);
         add(scrollPane, 0, 1, 2, 1);
         context.getExecutor().submit(() -> {
             try {
