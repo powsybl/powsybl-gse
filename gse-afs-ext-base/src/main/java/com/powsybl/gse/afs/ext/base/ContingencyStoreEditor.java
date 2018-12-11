@@ -324,19 +324,17 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         ObservableList<TreeItem<Object>> selectedItems = contingencyTree.getSelectionModel().getSelectedItems();
         List<TreeItem<Object>> items = new ArrayList<>(selectedItems);
         for (TreeItem<Object> item : items) {
-            if (item != null) {
-                if (item.getValue() instanceof Contingency) {
-                    item.getParent().getChildren().remove(item);
+            if (item.getValue() instanceof Contingency) {
+                item.getParent().getChildren().remove(item);
+            } else {
+                Contingency contingency = (Contingency) item.getParent().getValue();
+                if (contingency.getElements().size() == 1) {
+                    // remove the contingency to avoid empty contingencies
+                    item.getParent().getParent().getChildren().remove(item.getParent());
                 } else {
-                    Contingency contingency = (Contingency) item.getParent().getValue();
-                    if (contingency.getElements().size() == 1) {
-                        // remove the contingency to avoid empty contingencies
-                        item.getParent().getParent().getChildren().remove(item.getParent());
-                    } else {
-                        ContingencyElement element = (ContingencyElement) item.getValue();
-                        contingency.removeElement(element);
-                        item.getParent().getChildren().remove(item);
-                    }
+                    ContingencyElement element = (ContingencyElement) item.getValue();
+                    contingency.removeElement(element);
+                    item.getParent().getChildren().remove(item);
                 }
             }
         }
