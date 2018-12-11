@@ -274,7 +274,8 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         Contingency contingency = (Contingency) item.getValue();
         TextInputDialog dialog = new TextInputDialog(contingency.getId());
         dialog.setTitle(RESOURCE_BUNDLE.getString("RenameContingency"));
-        dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
+        dialog.setHeaderText(null);
+        dialog.setGraphic(null);
         dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
         TextField inputField = dialog.getEditor();
         BooleanBinding isInvalid = Bindings.createBooleanBinding(() -> inputField.getText().equals(contingency.getId()) || inputField.getText().isEmpty(),
