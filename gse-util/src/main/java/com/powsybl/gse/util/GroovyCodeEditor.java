@@ -388,7 +388,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private StyleSpans<Collection<String>> computeHighlighting(String text) {
         String textUsed = text;
-
+        positionsList.clear();
         if (searchingForBracketMatches) {
             textUsed = codeArea.getText(matchedPosition, matchedPosition + 1);
         }
