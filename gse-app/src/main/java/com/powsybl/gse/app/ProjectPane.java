@@ -908,6 +908,12 @@ public class ProjectPane extends Tab {
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
                 .collect(Collectors.toList()));
+        System.out.println("");
+        System.out.println("style : "+contextMenu.getStyle());
+        System.out.println("styleClass : "+contextMenu.getStyleClass());
+        System.out.println("styleSheet : "+contextMenu.getScene().getStylesheets());
+        System.out.println("styleeableParent : "+contextMenu.getStyleableParent());
+        System.out.println("styleeableParent style : "+contextMenu.getStyleableParent().getStyle());
         return contextMenu;
     }
 

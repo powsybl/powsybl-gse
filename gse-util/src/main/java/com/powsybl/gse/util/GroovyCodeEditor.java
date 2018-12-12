@@ -118,12 +118,24 @@ public class GroovyCodeEditor extends MasterDetailPane {
         MenuItem cutMenu = new MenuItem(RESOURCE_BUNDLE.getString("Cut"), Glyph.createAwesomeFont('\uf0c4').size(iconSize));
         cutMenu.setDisable(true);
         MenuItem pasteMenu = new MenuItem(RESOURCE_BUNDLE.getString("Paste"), Glyph.createAwesomeFont('\uf0ea').size(iconSize));
-
+        ContextMenu contextMenu = new ContextMenu(copyMenu, cutMenu, pasteMenu);
+        System.out.println("");
+        System.out.println("style : "+contextMenu.getStyle());
+        System.out.println("styleClass : "+contextMenu.getStyleClass());
+        System.out.println("styleSheet : "+contextMenu.getScene().getStylesheets());
+        System.out.println("styleeableParent : "+contextMenu.getStyleableParent());
+        System.out.println("styleeableParent style : "+contextMenu.getStyleableParent().getStyle());
         copyMenu.setOnAction(event -> {
             final Clipboard clipboard = Clipboard.getSystemClipboard();
             final ClipboardContent content = new ClipboardContent();
             content.putString(codeArea.getSelectedText());
             clipboard.setContent(content);
+            System.out.println("");
+            System.out.println("style : "+contextMenu.getStyle());
+            System.out.println("styleClass : "+contextMenu.getStyleClass());
+            System.out.println("styleSheet : "+contextMenu.getScene().getStylesheets());
+            System.out.println("styleeableParent : "+contextMenu.getStyleableParent());
+            System.out.println("styleeableParent style : "+contextMenu.getStyleableParent().getStyle());
             event.consume();
         });
         cutMenu.setOnAction(event -> {
@@ -148,7 +160,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
             }
             event.consume();
         });
-        return new ContextMenu(copyMenu, cutMenu, pasteMenu);
+        contextMenu.getStyleClass().setAll("gse-context-menu");
+        return contextMenu;
     }
 
     private void onDragDetected(MouseEvent event) {
