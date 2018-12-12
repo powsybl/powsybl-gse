@@ -39,8 +39,8 @@ public class GseApp extends Application {
     private AppData appData;
 
     //Paramètres
-    private final int MIN_HEIGHT_MAIN_STAGE = 700;
-    private final int MIN_WIDTH_MAIN_STAGE = 700;
+    private static final int MIN_HEIGHT_MAIN_STAGE = 700;
+    private static final int MIN_WIDTH_MAIN_STAGE = 700;
 
 
     @Override
