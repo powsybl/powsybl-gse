@@ -131,7 +131,7 @@ public class NewProjectPane extends GridPane {
             newProjectPane.setPrefSize(400, 200);
             dialog.getDialogPane().lookupButton(ButtonType.OK).disableProperty().bind(newProjectPane.validatedProperty().not());
             dialog.getDialogPane().setContent(newProjectPane);
-            dialog.setResizable(true);
+            dialog.setResizable(false);
             dialog.initOwner(window);
             dialog.setResultConverter(buttonType -> buttonType == ButtonType.OK ? newProjectPane.createProject() : null);
             return dialog.showAndWait();

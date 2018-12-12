@@ -49,7 +49,7 @@ public class GsePane extends StackPane {
     private final BrandingConfig brandingConfig = BrandingConfig.find();
 
     private final BorderPane mainPane;
-    private final TabPane tabPane = new TabPane();
+    private final TabPane tabPane;
     private final Preferences preferences;
     private final Application javaxApplication;
 
@@ -59,6 +59,7 @@ public class GsePane extends StackPane {
         this.javaxApplication = Objects.requireNonNull(app);
         mainPane = new BorderPane();
         mainPane.setTop(createAppBar());
+        tabPane = new TabPane();
         tabPane.getStyleClass().add("gse-tab-pane");
         mainPane.setCenter(tabPane);
         getChildren().addAll(mainPane);

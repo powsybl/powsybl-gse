@@ -38,10 +38,17 @@ public class GseApp extends Application {
 
     private AppData appData;
 
+    //Paramètres
+    private final int MIN_HEIGHT_MAIN_STAGE = 700;
+    private final int MIN_WIDTH_MAIN_STAGE = 700;
+
+
     @Override
     public void start(Stage stage) {
         gsePane = new GsePane(new GseContext(executor), appData, this);
         stage.setTitle(gsePane.getTitle());
+        stage.setMinHeight(MIN_HEIGHT_MAIN_STAGE);
+        stage.setMinWidth(MIN_WIDTH_MAIN_STAGE);
         stage.getIcons().addAll(gsePane.getIcons());
         Scene scene = new Scene(gsePane, 1200, 800);
         stage.setScene(scene);
