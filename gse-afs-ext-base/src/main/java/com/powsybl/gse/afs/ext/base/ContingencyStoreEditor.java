@@ -308,7 +308,7 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
                 alert.setHeaderText(REMOVE + " " + ((ContingencyElement) item.getValue()).getId() + " ?");
             }
         } else {
-            alert.setHeaderText(REMOVE + " " + RESOURCE_BUNDLE.getString("SelectedElements"));
+            alert.setHeaderText(REMOVE + " " + RESOURCE_BUNDLE.getString("SelectedElements") + " ?");
         }
         Optional<ButtonType> result = alert.showAndWait();
         result.ifPresent(type -> {
