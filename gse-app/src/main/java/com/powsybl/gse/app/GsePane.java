@@ -156,7 +156,11 @@ public class GsePane extends StackPane {
         });
 
         appBar.getOpenButton().setOnAction(event -> {
-            Optional<Project> project = NodeChooser.showAndWaitDialog(getScene().getWindow(), data, context, Project.class);
+            Set<String> openedProjects = new HashSet<>();
+            for (Tab tab : tabPane.getTabs()) {
+                openedProjects.add(((ProjectPane) tab).getProject().getId());
+            }
+            Optional<Project> project = NodeChooser.showAndWaitDialog(getScene().getWindow(), data, context, Project.class, openedProjects);
             project.ifPresent(this::openProject);
         });
 
