@@ -112,10 +112,12 @@ public class GroovyCodeEditor extends MasterDetailPane {
     }
 
     private ContextMenu codeAreaContextMenu() {
-        MenuItem copyMenu = new MenuItem(RESOURCE_BUNDLE.getString("Copy"));
+        final String iconSize = "1.1em";
+        MenuItem copyMenu = new MenuItem(RESOURCE_BUNDLE.getString("Copy"), Glyph.createAwesomeFont('\uf0c5').size(iconSize));
         copyMenu.setDisable(true);
-        MenuItem cutMenu = new MenuItem(RESOURCE_BUNDLE.getString("Cut"));
-        MenuItem pasteMenu = new MenuItem(RESOURCE_BUNDLE.getString("Paste"));
+        MenuItem cutMenu = new MenuItem(RESOURCE_BUNDLE.getString("Cut"), Glyph.createAwesomeFont('\uf0c4').size(iconSize));
+        cutMenu.setDisable(true);
+        MenuItem pasteMenu = new MenuItem(RESOURCE_BUNDLE.getString("Paste"), Glyph.createAwesomeFont('\uf0ea').size(iconSize));
 
         copyMenu.setOnAction(event -> {
             final Clipboard clipboard = Clipboard.getSystemClipboard();
@@ -135,7 +137,10 @@ public class GroovyCodeEditor extends MasterDetailPane {
             event.consume();
         });
 
-        codeArea.selectedTextProperty().addListener((observable, oldValue, newValue) -> copyMenu.setDisable(newValue.isEmpty()));
+        codeArea.selectedTextProperty().addListener((observable, oldValue, newValue) -> {
+            copyMenu.setDisable(newValue.isEmpty());
+            cutMenu.setDisable(newValue.isEmpty());
+        });
         pasteMenu.setOnAction(event -> {
             final Clipboard clipboard = Clipboard.getSystemClipboard();
             if (clipboard.hasString()) {
@@ -143,7 +148,6 @@ public class GroovyCodeEditor extends MasterDetailPane {
             }
             event.consume();
         });
-
         return new ContextMenu(copyMenu, cutMenu, pasteMenu);
     }
 
@@ -302,7 +306,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
     }
 
     private int length(GroovySourceToken token) {
-        int offset1 = codeArea.getDocument().position(token.getLine() -  1, token.getColumn() - 1).toOffset();
+        int offset1 = codeArea.getDocument().position(token.getLine() - 1, token.getColumn() - 1).toOffset();
         int offset2 = codeArea.getDocument().position(token.getLineLast() - 1, token.getColumnLast() - 1).toOffset();
         return offset2 - offset1;
     }
