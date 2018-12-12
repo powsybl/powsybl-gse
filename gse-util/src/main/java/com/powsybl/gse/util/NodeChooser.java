@@ -828,7 +828,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 return null;
             });
             dialog.getDialogPane().setContent(nodeChooser);
-            dialog.setResizable(true);
+            dialog.setResizable(false);
             dialog.initOwner(window);
             Optional<T> node = dialog.showAndWait();
             nodeChooser.savePreferences();
