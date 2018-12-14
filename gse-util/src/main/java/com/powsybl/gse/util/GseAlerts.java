@@ -38,7 +38,7 @@ public final class GseAlerts {
     public static void showDialogError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle(RESOURCE_BUNDLE.getString("Error"));
-        alert.setResizable(true);
+        alert.setResizable(false);
         alert.setContentText(message);
         alert.showAndWait();
     }

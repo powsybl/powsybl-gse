@@ -104,7 +104,7 @@ public final class NewFolderPane<F> extends GridPane {
             newProjectPane.setPrefSize(350, 100);
             dialog.getDialogPane().lookupButton(ButtonType.OK).disableProperty().bind(newProjectPane.validatedProperty().not());
             dialog.getDialogPane().setContent(newProjectPane);
-            dialog.setResizable(true);
+            dialog.setResizable(false);
             dialog.initOwner(window);
             dialog.setResultConverter(buttonType -> buttonType == ButtonType.OK ? newProjectPane.createFolder() : null);
             return dialog.showAndWait();
