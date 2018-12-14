@@ -38,8 +38,10 @@ public final class GseAlerts {
 
     public static void showDialogError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
+
         alert.setTitle(GSE_ERROR);
         alert.setResizable(true);
+
         alert.setContentText(message);
         alert.showAndWait();
     }

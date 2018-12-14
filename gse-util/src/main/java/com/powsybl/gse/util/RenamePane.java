@@ -90,7 +90,7 @@ public final class RenamePane extends GridPane {
             renamePane.setPrefSize(350, 100);
             dialog.getDialogPane().lookupButton(ButtonType.OK).disableProperty().bind(renamePane.validatedProperty().not());
             dialog.getDialogPane().setContent(renamePane);
-            dialog.setResizable(true);
+            dialog.setResizable(false);
             dialog.setResultConverter(buttonType -> buttonType == ButtonType.OK ? renamePane.getNameTextField().getText() : null);
 
             return dialog.showAndWait();

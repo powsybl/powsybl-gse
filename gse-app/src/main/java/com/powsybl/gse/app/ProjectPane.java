@@ -881,7 +881,7 @@ public class ProjectPane extends Tab {
         Button button = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
         button.disableProperty().bind(okProperty.not());
         dialog.getDialogPane().setContent(content);
-        dialog.setResizable(true);
+        dialog.setResizable(false);
         dialog.initOwner(getContent().getScene().getWindow());
         dialog.setResultConverter(buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE);
         return dialog;
