@@ -28,3 +28,7 @@
 .paragraph-box:has-caret {
     -fx-background-color: #f2f9fc;
 }
+
+.bracket-matches {
+    -fx-effect: dropshadow( one-pass-box , #99CCFF , 12 , 3.8 , 0 , 0 );
+}
