@@ -17,6 +17,7 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
@@ -53,6 +54,7 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
     private final class ContingencyTreeCell extends TreeCell<Object> {
 
         private ContingencyTreeCell() {
+            contingencyTree.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
             setOnDragOver(this::onDragOver);
             setOnDragDropped(this::onDragDropped);
         }
@@ -227,7 +229,7 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
                     contingencyTree.setContextMenu(null);
                 }
             } else {
-                contingencyTree.setContextMenu(null);
+                contingencyTree.setContextMenu(createMultipleContingencyMenu());
             }
         });
 
@@ -269,12 +271,19 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
         return new ContextMenu(renameItem, removeItem);
     }
 
+    private ContextMenu createMultipleContingencyMenu() {
+        MenuItem removeItem = new MenuItem(REMOVE);
+        removeItem.setOnAction(event -> showRemoveAlert());
+        return new ContextMenu(removeItem);
+    }
+
     private void rename() {
         TreeItem<Object> item = contingencyTree.getSelectionModel().getSelectedItem();
         Contingency contingency = (Contingency) item.getValue();
         TextInputDialog dialog = new TextInputDialog(contingency.getId());
         dialog.setTitle(RESOURCE_BUNDLE.getString("RenameContingency"));
-        dialog.setHeaderText(RESOURCE_BUNDLE.getString("NewName"));
+        dialog.setHeaderText(null);
+        dialog.setGraphic(null);
         dialog.setContentText(RESOURCE_BUNDLE.getString("Name"));
         TextField inputField = dialog.getEditor();
         BooleanBinding isInvalid = Bindings.createBooleanBinding(() -> inputField.getText().equals(contingency.getId()) || inputField.getText().isEmpty(),
@@ -289,13 +298,18 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
     }
 
     private void showRemoveAlert() {
-        TreeItem<Object> item = contingencyTree.getSelectionModel().getSelectedItem();
+        ObservableList<TreeItem<Object>> selectedItems = contingencyTree.getSelectionModel().getSelectedItems();
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle(REMOVE);
-        if (item.getValue() instanceof Contingency) {
-            alert.setHeaderText(REMOVE + " " + ((Contingency) item.getValue()).getId() + " ?");
-        } else if (item.getValue() instanceof ContingencyElement) {
-            alert.setHeaderText(REMOVE + " " + ((ContingencyElement) item.getValue()).getId() + " ?");
+        if (selectedItems.size() == 1) {
+            TreeItem<Object> item = selectedItems.get(0);
+            if (item.getValue() instanceof Contingency) {
+                alert.setHeaderText(REMOVE + " " + ((Contingency) item.getValue()).getId() + " ?");
+            } else if (item.getValue() instanceof ContingencyElement) {
+                alert.setHeaderText(REMOVE + " " + ((ContingencyElement) item.getValue()).getId() + " ?");
+            }
+        } else {
+            alert.setHeaderText(REMOVE + " " + RESOURCE_BUNDLE.getString("SelectedElements") + " ?");
         }
         Optional<ButtonType> result = alert.showAndWait();
         result.ifPresent(type -> {
@@ -308,18 +322,21 @@ public class ContingencyStoreEditor extends BorderPane implements ProjectFileVie
     }
 
     private void remove() {
-        TreeItem<Object> item = contingencyTree.getSelectionModel().getSelectedItem();
-        if (item.getValue() instanceof Contingency) {
-            item.getParent().getChildren().remove(item);
-        } else {
-            Contingency contingency = (Contingency) item.getParent().getValue();
-            if (contingency.getElements().size() == 1) {
-                // remove the contingency to avoid empty contingencies
-                item.getParent().getParent().getChildren().remove(item.getParent());
-            } else {
-                ContingencyElement element = (ContingencyElement) item.getValue();
-                contingency.removeElement(element);
+        ObservableList<TreeItem<Object>> selectedItems = contingencyTree.getSelectionModel().getSelectedItems();
+        List<TreeItem<Object>> items = new ArrayList<>(selectedItems);
+        for (TreeItem<Object> item : items) {
+            if (item.getValue() instanceof Contingency) {
                 item.getParent().getChildren().remove(item);
+            } else {
+                Contingency contingency = (Contingency) item.getParent().getValue();
+                if (contingency.getElements().size() == 1) {
+                    // remove the contingency to avoid empty contingencies
+                    item.getParent().getParent().getChildren().remove(item.getParent());
+                } else {
+                    ContingencyElement element = (ContingencyElement) item.getValue();
+                    contingency.removeElement(element);
+                    item.getParent().getChildren().remove(item);
+                }
             }
         }
         saved.set(false);
