@@ -476,7 +476,7 @@ public class ProjectPane extends Tab {
             } else if (searchFileKeyCombination.match(ke)) {
                 projectFileSet.clear();
                 Set<MenuItem> items = getProjectFileList((ProjectFolder) treeView.getRoot().getValue()).stream()
-                        .map(file -> new MenuItem(file.getName()))
+                        .map(file -> new MenuItem(file.getName() + "  (" + "root/" +file.getPath() + ")" , NodeGraphics.getGraphic(file)))
                         .collect(Collectors.toSet());
                 ContextMenu contextMenu = new ContextMenu();
                 contextMenu.getItems().addAll(items);
