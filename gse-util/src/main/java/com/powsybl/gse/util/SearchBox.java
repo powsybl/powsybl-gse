@@ -15,7 +15,9 @@ import javafx.scene.text.Text;
 import org.controlsfx.control.textfield.CustomTextField;
 import org.controlsfx.control.textfield.TextFields;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -28,24 +30,31 @@ public class SearchBox extends VBox {
 
     private CustomTextField searchField = (CustomTextField) TextFields.createClearableTextField();
 
-    private ContextMenu contextMenu;
+    private ContextMenu contextMenu = new ContextMenu();
 
-    public SearchBox(ContextMenu contextMenu) {
+    public SearchBox(ContextMenu contextMenuArg) {
         super(8);
         Text searchGlyph = Glyph.createAwesomeFont('\uf002').size("1.4em");
         setPrefSize(460, 30);
         searchField.setLeft(searchGlyph);
         searchField.setPrefWidth(450);
         getChildren().addAll(label, searchField);
-        this.contextMenu = contextMenu;
+        this.contextMenu = contextMenuArg;
         Set<MenuItem> menuItems = new HashSet<>(contextMenu.getItems());
         searchField.textProperty().addListener((observable, oldvalue, newvalue) -> {
             if (!newvalue.isEmpty()) {
                 Set<MenuItem> collect = menuItems.stream()
                         .filter(menuItem -> menuItem.getText().contains(newvalue))
                         .collect(Collectors.toSet());
-                contextMenu.getItems().clear();
-                contextMenu.getItems().addAll(collect);
+                List<MenuItem> menuItemList = new ArrayList<>(collect);
+                if (menuItemList.size() >= 12) {
+                    List<MenuItem> menuItemSubList = menuItemList.subList(0, 12);
+                    contextMenu.getItems().clear();
+                    contextMenu.getItems().addAll(menuItemSubList);
+                } else {
+                    contextMenu.getItems().clear();
+                    contextMenu.getItems().addAll(menuItemList);
+                }
                 contextMenu.show(searchField, Side.BOTTOM, 0, 0);
             } else {
                 contextMenu.hide();

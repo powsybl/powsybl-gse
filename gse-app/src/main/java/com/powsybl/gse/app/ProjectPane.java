@@ -59,7 +59,10 @@ public class ProjectPane extends Tab {
 
     private final KeyCombination searchFileKeyCombination = new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
 
-    private Set<ProjectFile> projectFileSet = new HashSet<>();
+    private Set<ProjectNode> projectNodeSet = new HashSet<>();
+
+    private Set<MenuItem> menuItemsSet = new HashSet<>();
+
 
     private static class TabKey {
 
@@ -474,10 +477,9 @@ public class ProjectPane extends Tab {
                             }
                         });
             } else if (searchFileKeyCombination.match(ke)) {
-                projectFileSet.clear();
-                Set<MenuItem> items = getProjectFileList((ProjectFolder) treeView.getRoot().getValue()).stream()
-                        .map(file -> new MenuItem(file.getName() + "  (" + "root/" +file.getPath() + ")" , NodeGraphics.getGraphic(file)))
-                        .collect(Collectors.toSet());
+                projectNodeSet.clear();
+                menuItemsSet.clear();
+                Set<MenuItem> items = getMenuItems((ProjectFolder) treeView.getRoot().getValue());
                 ContextMenu contextMenu = new ContextMenu();
                 contextMenu.getItems().addAll(items);
                 SearchBox searchBox = new SearchBox(contextMenu);
@@ -495,17 +497,29 @@ public class ProjectPane extends Tab {
         return project;
     }
 
-    private Set<ProjectFile> getProjectFileList(ProjectFolder projectFolder) {
+    private Set<MenuItem> getMenuItems(ProjectFolder projectFolder) {
         List<ProjectNode> children = projectFolder.getChildren();
         for (ProjectNode node : children) {
-            if(node instanceof ProjectFile) {
-                projectFileSet.add((ProjectFile)node);
+            if (node instanceof ProjectFile) {
+                MenuItem fileMenuItem = new MenuItem(node.getName() + "  (" + "root/" + node.getPath() + ")", NodeGraphics.getGraphic(node));
+                fileMenuItem.setOnAction(event -> {
+                    List<ProjectFileViewerExtension> viewerExtensions = findViewerExtensions((ProjectFile) node);
+                    if (!viewerExtensions.isEmpty()) {
+                        ProjectFileViewerExtension viewerExtension = viewerExtensions.get(0);
+                        String tabName = node.getName();
+                        viewFile((ProjectFile) node, viewerExtension, tabName);
+                    }
+                });
+                menuItemsSet.add(fileMenuItem);
             } else {
-                getProjectFileList((ProjectFolder) node);
+                MenuItem folderMenuItem = new MenuItem(node.getName() + "  (" + "root/" + node.getPath() + ")", NodeGraphics.getGraphic(node));
+                menuItemsSet.add(folderMenuItem);
+                getMenuItems((ProjectFolder) node);
             }
         }
-        return projectFileSet;
+        return menuItemsSet;
     }
+
 
     private static void getTabName(TreeItem<Object> treeItem, StringBuilder builder) {
         if (treeItem != null) {
