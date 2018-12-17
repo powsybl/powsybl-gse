@@ -57,6 +57,10 @@ public class ProjectPane extends Tab {
 
     private final KeyCombination saveKeyCombination = new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
 
+    private final KeyCombination searchFileKeyCombination = new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
+
+    private Set<ProjectFile> projectFileSet = new HashSet<>();
+
     private static class TabKey {
 
         private final String nodeId;
@@ -469,12 +473,38 @@ public class ProjectPane extends Tab {
                                 ((Savable) fileViewer).save();
                             }
                         });
+            } else if (searchFileKeyCombination.match(ke)) {
+                projectFileSet.clear();
+                Set<MenuItem> items = getProjectFileList((ProjectFolder) treeView.getRoot().getValue()).stream()
+                        .map(file -> new MenuItem(file.getName()))
+                        .collect(Collectors.toSet());
+                ContextMenu contextMenu = new ContextMenu();
+                contextMenu.getItems().addAll(items);
+                SearchBox searchBox = new SearchBox(contextMenu);
+                Dialog<String> dialog = new Dialog<>();
+                dialog.getDialogPane().setContent(searchBox);
+                dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+                dialog.getDialogPane().lookupButton(ButtonType.OK).setVisible(false);
+                dialog.getDialogPane().lookupButton(ButtonType.CANCEL).setVisible(false);
+                dialog.show();
             }
         });
     }
 
     public Project getProject() {
         return project;
+    }
+
+    private Set<ProjectFile> getProjectFileList(ProjectFolder projectFolder) {
+        List<ProjectNode> children = projectFolder.getChildren();
+        for (ProjectNode node : children) {
+            if(node instanceof ProjectFile) {
+                projectFileSet.add((ProjectFile)node);
+            } else {
+                getProjectFileList((ProjectFolder) node);
+            }
+        }
+        return projectFileSet;
     }
 
     private static void getTabName(TreeItem<Object> treeItem, StringBuilder builder) {
