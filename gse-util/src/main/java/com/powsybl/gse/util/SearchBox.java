@@ -39,7 +39,7 @@ public class SearchBox extends VBox {
         setPrefSize(460, 30);
         searchField.setLeft(searchGlyph);
         searchField.setPrefWidth(450);
-        label.setFont(Font.font("verdana", FontWeight.BLACK,13));;
+        label.setFont(Font.font("verdana", FontWeight.BLACK,13));
         getChildren().addAll(label, searchField);
         this.contextMenu = contextMenuArg;
         Set<MenuItem> menuItems = new HashSet<>(contextMenu.getItems());
@@ -47,16 +47,10 @@ public class SearchBox extends VBox {
             if (!newvalue.isEmpty()) {
                 Set<MenuItem> collect = menuItems.stream()
                         .filter(menuItem -> menuItem.getText().contains(newvalue))
+                        .limit(12)
                         .collect(Collectors.toSet());
-                List<MenuItem> menuItemList = new ArrayList<>(collect);
-                if (menuItemList.size() >= 12) {
-                    List<MenuItem> menuItemSubList = menuItemList.subList(0, 12);
-                    contextMenu.getItems().clear();
-                    contextMenu.getItems().addAll(menuItemSubList);
-                } else {
-                    contextMenu.getItems().clear();
-                    contextMenu.getItems().addAll(menuItemList);
-                }
+                contextMenu.getItems().clear();
+                contextMenu.getItems().addAll(collect);
                 contextMenu.show(searchField, Side.BOTTOM, 0, 0);
             } else {
                 contextMenu.hide();

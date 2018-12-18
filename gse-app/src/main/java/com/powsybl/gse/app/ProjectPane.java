@@ -17,6 +17,7 @@ import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.geometry.Orientation;
@@ -62,6 +63,8 @@ public class ProjectPane extends Tab {
     private Set<ProjectNode> projectNodeSet = new HashSet<>();
 
     private Set<MenuItem> menuItemsSet = new HashSet<>();
+
+    private Dialog<String> dialog;
 
 
     private static class TabKey {
@@ -483,7 +486,7 @@ public class ProjectPane extends Tab {
                 ContextMenu contextMenu = new ContextMenu();
                 contextMenu.getItems().addAll(items);
                 SearchBox searchBox = new SearchBox(contextMenu);
-                Dialog<String> dialog = new Dialog<>();
+                dialog = new Dialog<>();
                 dialog.getDialogPane().setContent(searchBox);
                 dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
                 dialog.getDialogPane().lookupButton(ButtonType.OK).setVisible(false);
@@ -506,8 +509,12 @@ public class ProjectPane extends Tab {
                     List<ProjectFileViewerExtension> viewerExtensions = findViewerExtensions((ProjectFile) node);
                     if (!viewerExtensions.isEmpty()) {
                         ProjectFileViewerExtension viewerExtension = viewerExtensions.get(0);
-                        String tabName = node.getName();
+                        TreeItem<Object> treeItemFromProjectNode = getTreeItemFromProjectNode(node);
+                        String tabName = node.getPath().toString();
                         viewFile((ProjectFile) node, viewerExtension, tabName);
+                        dialog.close();
+                        treeView.getSelectionModel().clearSelection();
+                        treeView.getSelectionModel().select(treeItemFromProjectNode);
                     }
                 });
                 menuItemsSet.add(fileMenuItem);
@@ -519,6 +526,19 @@ public class ProjectPane extends Tab {
         }
         return menuItemsSet;
     }
+
+    private TreeItem<Object> getTreeItemFromProjectNode(ProjectNode node) {
+        ObservableList<TreeItem<Object>> children = treeView.getRoot().getChildren();
+        TreeItem<Object> treeItem = new TreeItem<>();
+        for (TreeItem<Object> item : children) {
+                if (((ProjectNode) item.getValue()).getId().equals(node.getId())) {
+                    treeItem = item;
+                    break;
+                }
+        }
+        return treeItem;
+    }
+
 
 
     private static void getTabName(TreeItem<Object> treeItem, StringBuilder builder) {
