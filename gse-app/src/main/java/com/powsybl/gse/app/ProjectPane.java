@@ -313,8 +313,19 @@ public class ProjectPane extends Tab {
         return targetTreeItem == dragAndDropMove.getSourceTreeItem().getParent();
     }
 
-    public boolean isMovable(Object item, TreeItem<Object> targetTreeItem) {
-        return dragAndDropMove != null && item != dragAndDropMove.getSource() && !isSourceAncestorOf(targetTreeItem) && !isChildOf(targetTreeItem);
+    private boolean isMovable(Object item, TreeItem<Object> targetTreeItem) {
+        return dragAndDropMove != null && item != dragAndDropMove.getSource() && !isSourceAncestorOf(targetTreeItem) && !isChildOf(targetTreeItem) && !areSourceAndTargetProjectFileSiblings(item);
+    }
+
+    private boolean areSourceAndTargetProjectFileSiblings(Object targetItem) {
+        Object sourceItem = dragAndDropMove.getSource();
+        Optional<ProjectFolder> sourceParent = ((ProjectNode) sourceItem).getParent();
+        Optional<ProjectFolder> targetParent = ((ProjectNode) targetItem).getParent();
+        if (sourceParent.isPresent() && targetParent.isPresent()) {
+            return sourceItem instanceof ProjectFile && targetItem instanceof ProjectFile && sourceParent.get().getId().equals(targetParent.get().getId());
+        } else {
+            return false;
+        }
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
