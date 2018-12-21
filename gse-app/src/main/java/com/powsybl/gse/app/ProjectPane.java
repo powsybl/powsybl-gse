@@ -331,7 +331,11 @@ public class ProjectPane extends Tab {
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
         if (item instanceof ProjectNode && isMovable(item, treeItem)) {
             int count = 0;
-            treeItemChildrenSize(treeItem, count);
+            if (item instanceof ProjectFolder) {
+                treeItemChildrenSize(treeItem, count);
+            } else {
+                treeItemChildrenSize(treeItem.getParent(), count);
+            }
             setDragOverStyle(treeCell);
             event.acceptTransferModes(TransferMode.ANY);
             event.consume();
@@ -360,7 +364,11 @@ public class ProjectPane extends Tab {
         if (value != dragAndDropMove.getSource()) {
             int count = 0;
             success = false;
-            treeItemChildrenSize(treeItem, count);
+            if (value instanceof ProjectFolder) {
+                treeItemChildrenSize(treeItem, count);
+            } else {
+                treeItemChildrenSize(treeItem.getParent(), count);
+            }
             if (value instanceof ProjectFolder) {
                 ProjectFolder projectFolder = (ProjectFolder) projectNode;
                 acceptTransferDrag(projectFolder, success);
@@ -385,7 +393,7 @@ public class ProjectPane extends Tab {
                 for (ProjectNode node : treeItemFolder.getChildren()) {
                     if (node == null) {
                         break;
-                    } else if (node.getName().equals(dragAndDropMove.getSource().toString())) {
+                    } else if (node.getName().equals(((ProjectNode) dragAndDropMove.getSource()).getName())) {
                         counter++;
                     }
                 }
