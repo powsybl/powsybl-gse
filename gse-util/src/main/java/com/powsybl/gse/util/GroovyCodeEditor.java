@@ -47,6 +47,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
 
+    private static final String KEY_WORD = "keyWord";
+
     private boolean allowedDrag = false;
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
@@ -163,6 +165,25 @@ public class GroovyCodeEditor extends MasterDetailPane {
         return codeArea.textProperty();
     }
 
+    private static String imagridStyleClass(String text) {
+        if(text.startsWith("mapTo")) {
+            return KEY_WORD;
+        }
+        switch (text) {
+            case "filter":
+            case "distributionKey":
+            case "variable":
+            case "timeSeriesName":
+            case "timeSeries":
+            case "ts":
+                return KEY_WORD;
+
+            default:
+                return null;
+        }
+    }
+
+
     private static String styleClass(int tokenType) {
         switch (tokenType) {
             case GroovyTokenTypes.LCURLY:
@@ -251,7 +272,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
             case GroovyTokenTypes.UNUSED_DO:
             case GroovyTokenTypes.UNUSED_GOTO:
             case GroovyTokenTypes.TYPE:
-                return "keyword";
+                return KEY_WORD;
 
             default:
                 return null;
@@ -278,9 +299,12 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 Token token = tokenStream.nextToken();
                 while (token.getType() != Token.EOF_TYPE) {
                     String styleClass = styleClass(token.getType());
+                    String imagridStyleClass = imagridStyleClass(token.getText());
                     int length = length((GroovySourceToken) token);
                     if (styleClass != null) {
                         spansBuilder.add(Collections.singleton(styleClass), length);
+                    } else if (imagridStyleClass != null) {
+                        spansBuilder.add(Collections.singleton(imagridStyleClass), length);
                     } else {
                         spansBuilder.add(Collections.emptyList(), length);
                     }
