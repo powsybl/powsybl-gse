@@ -13,6 +13,8 @@ import groovyjarjarantlr.TokenStreamException;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
 import javafx.scene.input.*;
 import org.codehaus.groovy.antlr.GroovySourceToken;
 import org.codehaus.groovy.antlr.SourceBuffer;
@@ -31,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -48,6 +51,10 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
 
     private boolean allowedDrag = false;
+
+    private ContextMenu contextMenu = new ContextMenu();
+
+    private List<String> stringList = new ArrayList<>();
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
@@ -102,6 +109,52 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.setOnDragOver(this::onDragOver);
         codeArea.setOnDragDropped(this::onDragDropped);
         codeArea.setOnSelectionDrag(p -> allowedDrag = true);
+
+
+        Collections.addAll(stringList, "as", "assert", "boolean", "break", "byte", "case", "catch", "char",
+                "class", "continue", "def", "default", "distributionKey", "double", "else", "enum", "extends", "false",
+                "filter", "finally", "float", "for", "if", "implements", "import", "in", "instanceof", "int", "interface",
+                "long", "native", "new", "null", "package", "private", "protected", "public", "return", "short", "static",
+                "super", "switch", "synchronized", "ts", "timeSeries", "timeSeriesName", "this", "threadsafe", "throw",
+                "throws", "transient", "true", "try", "variable", "void", "volatile", "while"
+        );
+
+        codeProperty().addListener((observable, oldValue, newValue) -> {
+            contextMenu.getItems().clear();
+            try {
+                fillContextMenu(newValue);
+                contextMenu.getItems().stream()
+                        .limit(10)
+                        .forEach(menuItem1 -> menuItem1.setOnAction(event -> {
+                            String[] splitArray = newValue.split(" ");
+                            String lastToken = splitArray[splitArray.length - 1];
+                            codeArea.replaceText(codeArea.getCaretPosition() - lastToken.length(), codeArea.getCaretPosition(), menuItem1.getText());
+                        }));
+                showContextMenu();
+            } catch (Exception ignored) {
+                //catch exception code area is empty
+            }
+
+        });
+    }
+
+    private void fillContextMenu(String value){
+        String[] split = value.split(" ");
+        String token = split[split.length - 1];
+        for (String str : stringList) {
+            if (!token.isEmpty() && str.contains(token)) {
+                contextMenu.getItems().add(new MenuItem(str));
+            }
+        }
+    }
+
+    private void showContextMenu() {
+        int caretPosition = codeArea.getCaretPosition();
+        if (!codeArea.getText(caretPosition - 1, caretPosition).equals(" ")) {
+            contextMenu.show(getScene().getWindow());
+        } else {
+            contextMenu.hide();
+        }
     }
 
     private void onDragDetected(MouseEvent event) {
