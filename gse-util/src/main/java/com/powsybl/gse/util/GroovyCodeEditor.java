@@ -38,6 +38,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -123,14 +124,17 @@ public class GroovyCodeEditor extends MasterDetailPane {
             contextMenu.getItems().clear();
             try {
                 fillContextMenu(newValue);
-                contextMenu.getItems().stream()
-                        .limit(10)
+                List<MenuItem> menuItems = new ArrayList<>(contextMenu.getItems());
+                List<MenuItem> collect = menuItems.stream()
+                        .limit(13)
+                        .collect(Collectors.toList());
+                collect.stream()
                         .forEach(menuItem1 -> menuItem1.setOnAction(event -> {
                             String[] splitArray = newValue.split(" ");
                             String lastToken = splitArray[splitArray.length - 1];
                             codeArea.replaceText(codeArea.getCaretPosition() - lastToken.length(), codeArea.getCaretPosition(), menuItem1.getText());
                         }));
-                showContextMenu();
+                showContextMenu(collect);
             } catch (Exception ignored) {
                 //catch exception code area is empty
             }
@@ -148,7 +152,9 @@ public class GroovyCodeEditor extends MasterDetailPane {
         }
     }
 
-    private void showContextMenu() {
+    private void showContextMenu(List<MenuItem> collect) {
+        contextMenu.getItems().clear();
+        contextMenu.getItems().addAll(collect);
         int caretPosition = codeArea.getCaretPosition();
         if (!codeArea.getText(caretPosition - 1, caretPosition).equals(" ")) {
             contextMenu.show(getScene().getWindow());
