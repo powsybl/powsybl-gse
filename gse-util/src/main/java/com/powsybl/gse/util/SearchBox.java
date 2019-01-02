@@ -7,7 +7,8 @@
 package com.powsybl.gse.util;
 
 import javafx.geometry.Side;
-import javafx.scene.control.ContextMenu;
+import javafx.scene.control.*;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.layout.VBox;
@@ -31,7 +32,9 @@ public class SearchBox extends VBox {
 
     private CustomTextField searchField = (CustomTextField) TextFields.createClearableTextField();
 
-    private ContextMenu contextMenu = new ContextMenu();
+    private ContextMenu contextMenu;
+
+    private final Dialog<String> dialog = new Dialog<>();
 
     public SearchBox(ContextMenu contextMenuArg) {
         super(8);
@@ -39,9 +42,13 @@ public class SearchBox extends VBox {
         setPrefSize(460, 30);
         searchField.setLeft(searchGlyph);
         searchField.setPrefWidth(450);
-        label.setFont(Font.font("verdana", FontWeight.BLACK,13));
+        label.setFont(Font.font("verdana", FontWeight.BLACK, 13));
         getChildren().addAll(label, searchField);
         this.contextMenu = contextMenuArg;
+        dialog.getDialogPane().setContent(this);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dialog.getDialogPane().lookupButton(ButtonType.OK).setVisible(false);
+        dialog.getDialogPane().lookupButton(ButtonType.CANCEL).setVisible(false);
         Set<MenuItem> menuItems = new HashSet<>(contextMenu.getItems());
         searchField.textProperty().addListener((observable, oldvalue, newvalue) -> {
             if (!newvalue.isEmpty()) {
@@ -52,10 +59,21 @@ public class SearchBox extends VBox {
                 contextMenu.getItems().clear();
                 contextMenu.getItems().addAll(collect);
                 contextMenu.show(searchField, Side.BOTTOM, 0, 0);
+                if (!contextMenu.getItems().isEmpty()) {
+                    contextMenu.getSkin().getNode().lookup(".menu-item").requestFocus();
+                }
             } else {
                 contextMenu.hide();
             }
         });
+    }
+
+    public void showDialog() {
+        dialog.show();
+    }
+
+    public void closeDialog() {
+        dialog.close();
     }
 
 }

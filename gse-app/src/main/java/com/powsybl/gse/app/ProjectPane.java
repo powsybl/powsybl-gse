@@ -60,11 +60,9 @@ public class ProjectPane extends Tab {
 
     private final KeyCombination searchFileKeyCombination = new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
 
-    private Set<ProjectNode> projectNodeSet = new HashSet<>();
-
     private Set<MenuItem> menuItemsSet = new HashSet<>();
 
-    private Dialog<String> dialog;
+    private SearchBox searchBox;
 
 
     private static class TabKey {
@@ -480,18 +478,12 @@ public class ProjectPane extends Tab {
                             }
                         });
             } else if (searchFileKeyCombination.match(ke)) {
-                projectNodeSet.clear();
                 menuItemsSet.clear();
                 Set<MenuItem> items = getMenuItems((ProjectFolder) treeView.getRoot().getValue());
                 ContextMenu contextMenu = new ContextMenu();
                 contextMenu.getItems().addAll(items);
-                SearchBox searchBox = new SearchBox(contextMenu);
-                dialog = new Dialog<>();
-                dialog.getDialogPane().setContent(searchBox);
-                dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-                dialog.getDialogPane().lookupButton(ButtonType.OK).setVisible(false);
-                dialog.getDialogPane().lookupButton(ButtonType.CANCEL).setVisible(false);
-                dialog.show();
+                searchBox = new SearchBox(contextMenu);
+                searchBox.showDialog();
             }
         });
     }
@@ -512,7 +504,7 @@ public class ProjectPane extends Tab {
                         TreeItem<Object> treeItemFromProjectNode = getTreeItemFromProjectNode(node);
                         String tabName = node.getPath().toString();
                         viewFile((ProjectFile) node, viewerExtension, tabName);
-                        dialog.close();
+                        searchBox.closeDialog();
                         treeView.getSelectionModel().clearSelection();
                         treeView.getSelectionModel().select(treeItemFromProjectNode);
                     }
@@ -531,14 +523,13 @@ public class ProjectPane extends Tab {
         ObservableList<TreeItem<Object>> children = treeView.getRoot().getChildren();
         TreeItem<Object> treeItem = new TreeItem<>();
         for (TreeItem<Object> item : children) {
-                if (((ProjectNode) item.getValue()).getId().equals(node.getId())) {
-                    treeItem = item;
-                    break;
-                }
+            if (((ProjectNode) item.getValue()).getId().equals(node.getId())) {
+                treeItem = item;
+                break;
+            }
         }
         return treeItem;
     }
-
 
 
     private static void getTabName(TreeItem<Object> treeItem, StringBuilder builder) {
