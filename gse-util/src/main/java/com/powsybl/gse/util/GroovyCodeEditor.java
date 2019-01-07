@@ -51,7 +51,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private boolean allowedDrag = false;
 
-    private AutoCompletion autoCompletion = new AutoCompletion();
+    private final AutoCompletion autoCompletion = new AutoCompletion();
 
     private static class AutoCompletion {
 
@@ -60,14 +60,18 @@ public class GroovyCodeEditor extends MasterDetailPane {
         private final List<String> completionList = Arrays.asList("as", "assert", "boolean", "break", "byte", "case", "catch", "char",
                 "class", "continue", "def", "default", "distributionKey", "double", "else", "enum", "extends", "false",
                 "filter", "finally", "float", "for", "if", "implements", "import", "in", "instanceof", "int", "interface",
-                "long", "native", "new", "null", "package", "private", "protected", "public", "return", "short", "static",
-                "super", "switch", "synchronized", "ts", "timeSeries", "timeSeriesName", "this", "threadsafe", "throw",
-                "throws", "transient", "true", "try", "variable", "void", "volatile", "while"
+                "long", "mapToLoads", "mapToGenerators", " mapToHvdcLines", "native", "new", "null", "package", "private", "protected",
+                "public", "return", "short", "static", "super", "switch", "synchronized", "ts", "timeSeries", "timeSeriesName", "this",
+                "threadsafe", "throw", "throws", "transient", "true", "try", "variable", "void", "volatile", "while"
         );
 
         private void fillContextMenu(String value) {
-            String[] split = value.split(" ");
-            String token = split[split.length - 1];
+            String token = value;
+            if (token.contains("(") || token.contains("{") || token.contains("[")) {
+                final int tokenLength = token.length();
+                final int lastBracketPosition = findLastBracketPosition(token);
+                token = token.substring(lastBracketPosition + 1, tokenLength);
+            }
             for (String str : completionList) {
                 if (!token.isEmpty() && str.startsWith(token)) {
                     contextMenu.getItems().add(new MenuItem(str));
@@ -76,6 +80,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         }
 
         private void showContextMenu(SearchableCodeArea textArea, List<MenuItem> collect, Window window) {
+            contextMenu.hide();
             contextMenu.getItems().clear();
             contextMenu.getItems().addAll(collect);
             int caretPosition = textArea.getCaretPosition();
@@ -85,6 +90,11 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 contextMenu.hide();
             }
             if (!contextMenu.getItems().isEmpty()) {
+                contextMenu.getSkin().getNode().lookup(".menu-item").setOnKeyPressed(event -> {
+                    if (event.getCode() == KeyCode.SPACE) {
+                        event.consume();
+                    }
+                });
                 contextMenu.getSkin().getNode().lookup(".menu-item").requestFocus();
             }
         }
@@ -145,26 +155,38 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.setOnDragDropped(this::onDragDropped);
         codeArea.setOnSelectionDrag(p -> allowedDrag = true);
 
-        codeProperty().addListener((observable, oldValue, newValue) -> {
+        codeArea.caretPositionProperty().addListener((observable, oldValue, newValue) -> {
             autoCompletion.contextMenu.getItems().clear();
             try {
-                autoCompletion.fillContextMenu(newValue);
+                autoCompletion.fillContextMenu(getLastWord());
                 List<MenuItem> menuItems = new ArrayList<>(autoCompletion.contextMenu.getItems());
                 List<MenuItem> collect = menuItems.stream()
                         .limit(13)
                         .collect(Collectors.toList());
-                collect.stream()
-                        .forEach(menuItem1 -> menuItem1.setOnAction(event -> {
-                            String[] splitArray = newValue.split(" ");
-                            String lastToken = splitArray[splitArray.length - 1];
-                            codeArea.replaceText(codeArea.getCaretPosition() - lastToken.length(), codeArea.getCaretPosition(), menuItem1.getText());
-                        }));
+                collect.forEach(menuItem1 -> menuItem1.setOnAction(event -> completeText(getLastWord(), menuItem1)));
                 autoCompletion.showContextMenu(codeArea, collect, getScene().getWindow());
             } catch (Exception ignored) {
                 //catch exception when code area is empty
             }
-
         });
+    }
+
+    private String getLastWord() {
+        int caretPosition = codeArea.getCaretPosition();
+        int i = caretPosition;
+        while (!codeArea.getText(i - 1, i).equals(" ")) {
+            i--;
+        }
+        return codeArea.getText(i, caretPosition);
+    }
+
+    private void completeText(String token, MenuItem menuItem) {
+        if (token.contains("(") || token.contains("{") || token.contains("[")) {
+            final int lastBracketPosition = findLastBracketPosition(token);
+            codeArea.replaceText(codeArea.getCaretPosition() - token.length() + lastBracketPosition + 1, codeArea.getCaretPosition(), menuItem.getText());
+        } else {
+            codeArea.replaceText(codeArea.getCaretPosition() - token.length(), codeArea.getCaretPosition(), menuItem.getText());
+        }
     }
 
 
@@ -225,6 +247,18 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     public ObservableValue<String> codeProperty() {
         return codeArea.textProperty();
+    }
+
+    private static int findLastBracketPosition(String str) {
+        int max = 0;
+        if (str.contains("(") || str.contains("{") || str.contains("[")) {
+            final int lastIndexOfparen = str.contains("(") ? str.lastIndexOf('(') : 0;
+            final int lastIndexOfBrack = str.contains("[") ? str.lastIndexOf('[') : 0;
+            final int lastIndexOfCurly = str.contains("{") ? str.lastIndexOf('{') : 0;
+            max = Math.max(lastIndexOfparen, lastIndexOfBrack);
+            max = Math.max(max, lastIndexOfCurly);
+        }
+        return max;
     }
 
     private static String styleClass(int tokenType) {
