@@ -35,7 +35,7 @@ public class BaseExtNodeGraphicProvider implements NodeGraphicProvider {
 
     private Node createCaseGlyph(Importer importer) {
         String format = importer.getFormat();
-        if (format.equals("CIM1")) {
+        if (format.equals("CIM1") || format.equals("CGMES")) {
             return new Glyph("powsybl-gse-font", '\ue900')
                     .size("1.4em")
                     .color("#4A4A89");
