@@ -3,8 +3,12 @@ language: java
 dist: trusty
 sudo: required
 
+os:
+    - linux
+    - osx
+
 jdk:
-- oraclejdk11
+- openjdk11
 
 addons:
     sonarcloud:
@@ -14,7 +18,7 @@ addons:
 
 install:
 # Build powsybl-core
-- git clone https://github.com/powsybl/powsybl-core powsybl/powsybl-core
+- git clone -b java11 https://github.com/powsybl/powsybl-core powsybl/powsybl-core
 - pushd powsybl/powsybl-core && mvn --batch-mode -DskipTests install && popd
 
 script:
