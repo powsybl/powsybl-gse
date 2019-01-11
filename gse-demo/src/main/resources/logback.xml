@@ -12,7 +12,7 @@
         </encoder>
     </appender>
 
-    <logger name="com.powsybl" level="DEBUG" />
+    <logger name="com.powsybl" level="INFO" />
 
     <root level="WARN">
         <appender-ref ref="STDOUT" />
