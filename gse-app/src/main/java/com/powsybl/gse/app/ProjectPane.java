@@ -313,14 +313,29 @@ public class ProjectPane extends Tab {
         return targetTreeItem == dragAndDropMove.getSourceTreeItem().getParent();
     }
 
-    public boolean isMovable(Object item, TreeItem<Object> targetTreeItem) {
-        return dragAndDropMove != null && item != dragAndDropMove.getSource() && !isSourceAncestorOf(targetTreeItem) && !isChildOf(targetTreeItem);
+    private boolean isMovable(Object item, TreeItem<Object> targetTreeItem) {
+        return dragAndDropMove != null && item != dragAndDropMove.getSource() && !isSourceAncestorOf(targetTreeItem) && !isChildOf(targetTreeItem) && !areSourceAndTargetProjectFileSiblings(item);
+    }
+
+    private boolean areSourceAndTargetProjectFileSiblings(Object targetItem) {
+        Object sourceItem = dragAndDropMove.getSource();
+        Optional<ProjectFolder> sourceParent = ((ProjectNode) sourceItem).getParent();
+        Optional<ProjectFolder> targetParent = ((ProjectNode) targetItem).getParent();
+        if (sourceParent.isPresent() && targetParent.isPresent()) {
+            return sourceItem instanceof ProjectFile && targetItem instanceof ProjectFile && sourceParent.get().getId().equals(targetParent.get().getId());
+        } else {
+            return false;
+        }
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
         if (item instanceof ProjectNode && isMovable(item, treeItem)) {
             int count = 0;
-            treeItemChildrenSize(treeItem, count);
+            if (item instanceof ProjectFolder) {
+                treeItemChildrenSize(treeItem, count);
+            } else {
+                treeItemChildrenSize(treeItem.getParent(), count);
+            }
             setDragOverStyle(treeCell);
             event.acceptTransferModes(TransferMode.ANY);
             event.consume();
@@ -349,7 +364,11 @@ public class ProjectPane extends Tab {
         if (value != dragAndDropMove.getSource()) {
             int count = 0;
             success = false;
-            treeItemChildrenSize(treeItem, count);
+            if (value instanceof ProjectFolder) {
+                treeItemChildrenSize(treeItem, count);
+            } else {
+                treeItemChildrenSize(treeItem.getParent(), count);
+            }
             if (value instanceof ProjectFolder) {
                 ProjectFolder projectFolder = (ProjectFolder) projectNode;
                 acceptTransferDrag(projectFolder, success);
@@ -374,7 +393,7 @@ public class ProjectPane extends Tab {
                 for (ProjectNode node : treeItemFolder.getChildren()) {
                     if (node == null) {
                         break;
-                    } else if (node.getName().equals(dragAndDropMove.getSource().toString())) {
+                    } else if (node.getName().equals(((ProjectNode) dragAndDropMove.getSource()).getName())) {
                         counter++;
                     }
                 }
@@ -837,7 +856,7 @@ public class ProjectPane extends Tab {
         ProjectFileCreator creator = creatorExtension.newCreator(folder, getContent().getScene(), context);
         Dialog<Boolean> dialog = createProjectItemDialog(creator.getTitle(), creator.okProperty(), creator.getContent());
         try {
-            if (dialog.showAndWait().get()) {
+            dialog.showAndWait().filter(result -> result).ifPresent(result -> {
                 ProjectCreationTask task = creator.createTask();
 
                 tasks.add(folder, task.getNamePreview());
@@ -851,7 +870,7 @@ public class ProjectPane extends Tab {
                         Platform.runLater(() -> refresh(selectedTreeItem));
                     }
                 });
-            }
+            });
         } finally {
             dialog.close();
             creator.dispose();
@@ -865,9 +884,9 @@ public class ProjectPane extends Tab {
         editor.edit();
 
         try {
-            if (dialog.showAndWait().get()) {
-                editor.saveChanges();
-            }
+            dialog.showAndWait()
+                    .filter(result -> result)
+                    .ifPresent(result -> editor.saveChanges());
         } finally {
             dialog.close();
             editor.dispose();
