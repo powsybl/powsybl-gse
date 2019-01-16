@@ -89,6 +89,8 @@ public class ProjectPane extends Tab {
 
         private final KeyCombination closeKeyCombination = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN);
 
+        private final KeyCombination closeAllKeyCombination = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
+
 
         public MyTab(String text, ProjectFileViewer viewer) {
             super(text, viewer.getContent());
@@ -97,6 +99,12 @@ public class ProjectPane extends Tab {
                 if (closeKeyCombination.match(ke)) {
                     getTabPane().getTabs().remove(this);
                     viewer.dispose();
+                } else if (closeAllKeyCombination.match(ke)) {
+                    List<ProjectFileViewer> viewers = getTabPane().getTabs().stream()
+                            .map(tab -> ((MyTab) tab).getViewer())
+                            .collect(Collectors.toList());
+                    getTabPane().getTabs().removeAll(getTabPane().getTabs());
+                    viewers.forEach(ProjectFileViewer::dispose);
                 }
             });
         }
