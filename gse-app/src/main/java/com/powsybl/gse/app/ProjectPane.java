@@ -87,9 +87,18 @@ public class ProjectPane extends Tab {
 
         private ProjectFileViewer viewer;
 
+        private final KeyCombination closeKeyCombination = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN);
+
+
         public MyTab(String text, ProjectFileViewer viewer) {
             super(text, viewer.getContent());
             this.viewer = viewer;
+            getContent().setOnKeyPressed((KeyEvent ke) -> {
+                if (closeKeyCombination.match(ke)) {
+                    getTabPane().getTabs().remove(this);
+                    viewer.dispose();
+                }
+            });
         }
 
         public ProjectFileViewer getViewer() {
