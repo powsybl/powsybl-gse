@@ -97,12 +97,12 @@ public class ProjectPane extends Tab {
             this.viewer = viewer;
             getContent().setOnKeyPressed((KeyEvent ke) -> {
                 if (closeKeyCombination.match(ke)) {
-                    closetab(ke, this);
+                    closeTab(ke, this);
                 } else if (closeAllKeyCombination.match(ke)) {
                     List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
                             .map(tab -> (MyTab) tab)
                             .collect(Collectors.toList()));
-                    mytabs.forEach(mytab -> closetab(ke, mytab));
+                    mytabs.forEach(mytab -> closeTab(ke, mytab));
                 }
             });
         }
@@ -118,7 +118,7 @@ public class ProjectPane extends Tab {
             }
         }
 
-        private static void closetab(Event event, MyTab tab) {
+        private static void closeTab(Event event, MyTab tab) {
             if (!tab.getViewer().isClosable()) {
                 event.consume();
             } else {
