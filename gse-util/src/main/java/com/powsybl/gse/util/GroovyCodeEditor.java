@@ -47,9 +47,13 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
 
+    private final KeyCombination pasteKeyCombination = new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN);
+
     private boolean allowedDrag = false;
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
+
+        private int tabSize = 4;
 
         @Override
         public String getText() {
@@ -95,6 +99,16 @@ public class GroovyCodeEditor extends MasterDetailPane {
             }
 
         });
+        codeArea.addEventFilter(KeyEvent.KEY_PRESSED, (KeyEvent ke) -> {
+            if (pasteKeyCombination.match(ke)) {
+                setOnPaste(ke);
+            }
+        });
+        codeArea.setOnKeyPressed((KeyEvent ke) -> {
+            if (ke.getCode() == KeyCode.TAB) {
+                onTabPressed();
+            }
+        });
 
         codeArea.setOnDragEntered(event -> codeArea.setShowCaret(Caret.CaretVisibility.ON));
         codeArea.setOnDragExited(event -> codeArea.setShowCaret(Caret.CaretVisibility.AUTO));
@@ -102,6 +116,50 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.setOnDragOver(this::onDragOver);
         codeArea.setOnDragDropped(this::onDragDropped);
         codeArea.setOnSelectionDrag(p -> allowedDrag = true);
+    }
+
+    private void setOnPaste(KeyEvent ke) {
+        final Clipboard clipboard = Clipboard.getSystemClipboard();
+        if (clipboard.hasString()) {
+            ke.consume();
+            String formatedClipBoardText = clipboard.getString().replaceAll(Character.toString('\t'), tabSpace(getTabSize()));
+            codeArea.insertText(codeArea.getCaretPosition(), formatedClipBoardText);
+        }
+    }
+
+    private void onTabPressed() {
+        codeArea.deletePreviousChar();
+        int currentLine = codeArea.getCaretSelectionBind().getParagraphIndex();
+        int fromlineStartToCaret = codeArea.getText(currentLine, 0, currentLine, codeArea.getCaretColumn()).length();
+        codeArea.insertText(codeArea.getCaretPosition(), tabSpace(tabSpacesToComplete(fromlineStartToCaret)));
+    }
+
+    public void setTabSize(int size) {
+        codeArea.tabSize = size;
+    }
+
+    public int getTabSize() {
+        return codeArea.tabSize;
+    }
+
+    private String tabSpace(int size) {
+        StringBuilder space = new StringBuilder("");
+        for (int i = 0; i < size; i++) {
+            space.append(" ");
+        }
+        return space.toString();
+    }
+
+    private int tabSpacesToComplete(int length) {
+        int x = length;
+        int counter = 0;
+        int spaceTocomplete;
+        while ((x % getTabSize()) != 0) {
+            counter++;
+            x++;
+        }
+        spaceTocomplete = (counter == 0) ? getTabSize() : counter;
+        return spaceTocomplete;
     }
 
     private void onDragDetected(MouseEvent event) {

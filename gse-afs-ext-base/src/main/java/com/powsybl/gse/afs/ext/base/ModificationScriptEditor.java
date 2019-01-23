@@ -17,6 +17,7 @@ import com.powsybl.gse.util.GroovyCodeEditor;
 import com.powsybl.gse.util.GseAlerts;
 import com.powsybl.gse.util.GseUtil;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.collections.FXCollections;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.geometry.Orientation;
@@ -46,6 +47,12 @@ public class ModificationScriptEditor extends BorderPane
 
     private final ToolBar toolBar;
 
+    private final ToolBar bottomToolBar;
+
+    private final ComboBox<Integer> comboBox;
+
+    private final Label tabSizeLabel;
+
     private final Button saveButton;
 
     private final GroovyCodeEditor codeEditor;
@@ -72,13 +79,19 @@ public class ModificationScriptEditor extends BorderPane
         saveButton.getStyleClass().add("gse-toolbar-button");
         saveButton.disableProperty().bind(saved);
         saveButton.setOnAction(event -> save());
+        comboBox = new ComboBox(FXCollections.observableArrayList(2, 4, 8));
+        comboBox.getSelectionModel().select(1);
+        comboBox.getSelectionModel().selectedIndexProperty().addListener((observable, oldvalue, newvalue) -> codeEditor.setTabSize(comboBox.getItems().get((int) newvalue)));
+        tabSizeLabel = new Label(RESOURCE_BUNDLE.getString("TabSize") + ": ");
         codeEditorWithProgressIndicator = new StackPane(codeEditor, new Group(progressIndicator));
         codeEditor.codeProperty().addListener((observable, oldValue, newValue) -> saved.set(false));
         splitPane = new SplitPane(codeEditorWithProgressIndicator);
         toolBar = new ToolBar(saveButton);
+        bottomToolBar = new ToolBar(tabSizeLabel, comboBox);
         splitPane.setOrientation(Orientation.VERTICAL);
         splitPane.setDividerPosition(0, 0.8);
         setTop(toolBar);
+        setBottom(bottomToolBar);
         setCenter(splitPane);
 
         // listen to modifications
