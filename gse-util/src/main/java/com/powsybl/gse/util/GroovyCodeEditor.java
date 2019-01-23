@@ -143,7 +143,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
     }
 
     private String tabSpace(int size) {
-        StringBuilder space = new StringBuilder("");
+        StringBuilder space = new StringBuilder();
         for (int i = 0; i < size; i++) {
             space.append(" ");
         }
@@ -153,13 +153,11 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private int tabSpacesToComplete(int length) {
         int x = length;
         int counter = 0;
-        int spaceTocomplete;
         while ((x % getTabSize()) != 0) {
             counter++;
             x++;
         }
-        spaceTocomplete = (counter == 0) ? getTabSize() : counter;
-        return spaceTocomplete;
+        return (counter == 0) ? getTabSize() : counter;
     }
 
     private void onDragDetected(MouseEvent event) {
