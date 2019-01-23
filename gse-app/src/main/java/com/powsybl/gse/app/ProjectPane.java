@@ -880,7 +880,7 @@ public class ProjectPane extends Tab {
         ProjectFileCreator creator = creatorExtension.newCreator(folder, getContent().getScene(), context);
         Dialog<Boolean> dialog = createProjectItemDialog(creator.getTitle(), creator.okProperty(), creator.getContent());
         try {
-            if (dialog.showAndWait().get()) {
+            dialog.showAndWait().filter(result -> result).ifPresent(result -> {
                 ProjectCreationTask task = creator.createTask();
 
                 tasks.add(folder, task.getNamePreview());
@@ -894,7 +894,7 @@ public class ProjectPane extends Tab {
                         Platform.runLater(() -> refresh(selectedTreeItem));
                     }
                 });
-            }
+            });
         } finally {
             dialog.close();
             creator.dispose();
@@ -908,9 +908,9 @@ public class ProjectPane extends Tab {
         editor.edit();
 
         try {
-            if (dialog.showAndWait().get()) {
-                editor.saveChanges();
-            }
+            dialog.showAndWait()
+                    .filter(result -> result)
+                    .ifPresent(result -> editor.saveChanges());
         } finally {
             dialog.close();
             editor.dispose();
