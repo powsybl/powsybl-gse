@@ -89,6 +89,7 @@ public class ModificationScriptEditor extends BorderPane
         codeEditor.addEventFilter(KeyEvent.KEY_PRESSED, (KeyEvent ke) -> {
             if (undoKeyCombination.match(ke) && codeEditor.getCode().equals(storableScript.readScript())) {
                 ke.consume();
+                saved.set(true);
             }
         });
 
