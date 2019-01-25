@@ -85,7 +85,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         });
         setMasterNode(new VirtualizedScrollPane(codeArea));
         VBox vBox = new VBox();
-        vBox.getChildren().addAll(searchBar);
+        vBox.getChildren().add(searchBar);
         vBox.setSpacing(7);
         setDetailNode(vBox);
         setDetailSide(Side.TOP);
@@ -94,7 +94,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         setOnKeyPressed((KeyEvent ke) -> {
             if (searchKeyCombination.match(ke)) {
                 setShowDetailNode(false);
-                vBox.getChildren().remove(searchBar.replaceWordBar);
+                vBox.getChildren().remove(searchBar.getReplaceWordBar());
                 setDetailNode(vBox);
                 resetDividerPosition();
                 if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
@@ -104,13 +104,13 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 vBox.requestFocus();
             } else if (replaceWordKeyCombination.match(ke)) {
                 setShowDetailNode(false);
-                if (!vBox.getChildren().contains(searchBar.replaceWordBar)) {
-                    vBox.getChildren().add(searchBar.replaceWordBar);
+                if (!vBox.getChildren().contains(searchBar.getReplaceWordBar())) {
+                    vBox.getChildren().add(searchBar.getReplaceWordBar());
                 }
                 setDetailNode(vBox);
                 resetDividerPosition();
-                searchBar.getReplaceAllButton().setOnAction(event -> replaceAllOccurences(searchBar.getSearchedText(), codeArea.getText()));
-                searchBar.getReplaceButton().setOnAction(event -> replaceCurrentOccurence(searchBar.getMatcherCurrentMatchStart(), searchBar.getMatcherCurrentMatchEnd()));
+                searchBar.replaceAll(event -> replaceAllOccurences(searchBar.getSearchedText(), codeArea.getText()));
+                searchBar.replace(event -> replaceCurrentOccurence(searchBar.getMatcherCurrentMatchStart(), searchBar.getMatcherCurrentMatchEnd()));
                 if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
                     searchBar.setSearchPattern(codeArea.getSelectedText());
                 }
@@ -153,10 +153,10 @@ public class GroovyCodeEditor extends MasterDetailPane {
         searchBar.matcherFind(searchBar.getSearchedText(), codeArea.getText());
         if (searchBar.getReplaceText().contains(searchBar.getSearchedText())) {
             while (searchBar.getMatcherCurrentMatchProperty().get() <= i) {
-                if (searchBar.isLastMatcherMatch().get()) {
+                if (searchBar.isLastMatch().get()) {
                     break;
                 } else {
-                    searchBar.downButtonFire();
+                    searchBar.nextMatch();
                 }
             }
         }
