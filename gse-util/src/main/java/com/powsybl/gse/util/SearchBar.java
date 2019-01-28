@@ -26,6 +26,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import org.controlsfx.control.textfield.CustomTextField;
 import org.controlsfx.control.textfield.TextFields;
@@ -258,8 +259,18 @@ public final class SearchBar extends HBox {
         return getMatcherNbMatchesProperty().isEqualTo(0).or(searchField.textProperty().isEmpty());
     }
 
-    public ReplaceWordBar getReplaceWordBar() {
-        return  replaceWordBar;
+    public VBox setMode(String searchMode) {
+        VBox vBox = new VBox(6);
+        vBox.getChildren().add(this);
+        switch (searchMode) {
+            case "search":
+                return vBox;
+            case "replace":
+                vBox.getChildren().add(replaceWordBar);
+                return vBox;
+            default:
+                return null;
+        }
     }
 
     public String getSearchedText() {
@@ -274,11 +285,11 @@ public final class SearchBar extends HBox {
         matcher.previousMatch();
     }
 
-    public int getMatcherCurrentMatchStart() {
+    public int getCurrentMatchStart() {
         return matcher.currentMatchStart();
     }
 
-    public int getMatcherCurrentMatchEnd() {
+    public int getCurrentMatchEnd() {
         return matcher.currentMatchEnd();
     }
 
@@ -310,11 +321,11 @@ public final class SearchBar extends HBox {
         closeButton.setOnAction(eventHandler);
     }
 
-    public void replaceAll(EventHandler<ActionEvent> eventHandler) {
+    public void setReplaceAllAction(EventHandler<ActionEvent> eventHandler) {
         replaceWordBar.replaceAllButton.setOnAction(eventHandler);
     }
 
-    public void replace(EventHandler<ActionEvent> eventHandler) {
+    public void setReplaceAction(EventHandler<ActionEvent> eventHandler) {
         replaceWordBar.replaceButton.setOnAction(eventHandler);
     }
 
