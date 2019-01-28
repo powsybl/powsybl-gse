@@ -256,7 +256,7 @@ public final class SearchBar extends HBox {
     }
 
     private BooleanBinding validateDisableProperty() {
-        return getMatcherNbMatchesProperty().isEqualTo(0).or(searchField.textProperty().isEmpty());
+        return getNbMatchesProperty().isEqualTo(0).or(searchField.textProperty().isEmpty());
     }
 
     public VBox setMode(String searchMode) {
@@ -293,11 +293,11 @@ public final class SearchBar extends HBox {
         return matcher.currentMatchEnd();
     }
 
-    public IntegerProperty getMatcherNbMatchesProperty() {
+    public IntegerProperty getNbMatchesProperty() {
         return matcher.nbMatchesProperty;
     }
 
-    public IntegerProperty getMatcherCurrentMatchProperty() {
+    public IntegerProperty getCurrentMatchProperty() {
         return matcher.currentMatchProperty;
     }
 

@@ -143,11 +143,11 @@ public class GroovyCodeEditor extends MasterDetailPane {
     }
 
     private void replaceCurrentOccurence(int startPosition, int endPosition) {
-        int i = searchBar.getMatcherCurrentMatchProperty().get();
+        int i = searchBar.getCurrentMatchProperty().get();
         codeArea.replaceText(startPosition, endPosition, searchBar.getReplaceText());
         searchBar.matcherFind(searchBar.getSearchedText(), codeArea.getText());
         if (searchBar.getReplaceText().contains(searchBar.getSearchedText())) {
-            while (searchBar.getMatcherCurrentMatchProperty().get() <= i) {
+            while (searchBar.getCurrentMatchProperty().get() <= i) {
                 if (searchBar.isLastMatch().get()) {
                     break;
                 } else {
