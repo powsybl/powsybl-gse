@@ -92,25 +92,14 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
         setOnKeyPressed((KeyEvent ke) -> {
             if (searchKeyCombination.match(ke)) {
-                setShowDetailNode(false);
-                vBox.getChildren().setAll(searchBar.setMode("search"));
-                setDetailNode(vBox);
-                resetDividerPosition();
-                if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
-                    searchBar.setSearchPattern(codeArea.getSelectedText());
-                }
+                setSearchBar(vBox, "search");
                 showDetailNode();
-                vBox.requestFocus();
+                searchBar.requestFocus();
             } else if (replaceWordKeyCombination.match(ke)) {
                 setShowDetailNode(false);
-                vBox.getChildren().setAll(searchBar.setMode("replace"));
-                setDetailNode(vBox);
-                resetDividerPosition();
+                setSearchBar(vBox, "replace");
                 searchBar.setReplaceAllAction(event -> replaceAllOccurences(searchBar.getSearchedText(), codeArea.getText()));
                 searchBar.setReplaceAction(event -> replaceCurrentOccurence(searchBar.getCurrentMatchStart(), searchBar.getCurrentMatchEnd()));
-                if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
-                    searchBar.setSearchPattern(codeArea.getSelectedText());
-                }
                 showDetailNode();
                 vBox.requestFocus();
             }
@@ -128,6 +117,15 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private void showDetailNode() {
         if (!isShowDetailNode()) {
             setShowDetailNode(true);
+        }
+    }
+
+    private void setSearchBar(VBox vBox, String searchMode) {
+        vBox.getChildren().setAll(searchBar.setMode(searchMode));
+        setDetailNode(vBox);
+        resetDividerPosition();
+        if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
+            searchBar.setSearchPattern(codeArea.getSelectedText());
         }
     }
 
