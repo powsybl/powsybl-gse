@@ -24,10 +24,6 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCodeCombination;
-import javafx.scene.input.KeyCombination;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
@@ -45,8 +41,6 @@ public class ModificationScriptEditor extends BorderPane
     private static final Logger LOGGER = LoggerFactory.getLogger(ModificationScriptEditor.class);
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ModificationScript");
-
-    private final KeyCombination undoKeyCombination = new KeyCodeCombination(KeyCode.Z, KeyCombination.CONTROL_DOWN);
 
     private final GseContext context;
 
@@ -86,12 +80,6 @@ public class ModificationScriptEditor extends BorderPane
         splitPane.setDividerPosition(0, 0.8);
         setTop(toolBar);
         setCenter(splitPane);
-        codeEditor.addEventFilter(KeyEvent.KEY_PRESSED, (KeyEvent ke) -> {
-            if (undoKeyCombination.match(ke) && codeEditor.getCode().equals(storableScript.readScript())) {
-                ke.consume();
-                saved.set(true);
-            }
-        });
 
         // listen to modifications
         storableScript.addListener(this);
