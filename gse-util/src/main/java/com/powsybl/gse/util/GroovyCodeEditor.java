@@ -14,6 +14,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.input.*;
+import org.apache.commons.lang3.StringUtils;
 import org.codehaus.groovy.antlr.GroovySourceToken;
 import org.codehaus.groovy.antlr.SourceBuffer;
 import org.codehaus.groovy.antlr.UnicodeEscapingReader;
@@ -122,44 +123,35 @@ public class GroovyCodeEditor extends MasterDetailPane {
         final Clipboard clipboard = Clipboard.getSystemClipboard();
         if (clipboard.hasString()) {
             ke.consume();
-            String formatedClipBoardText = clipboard.getString().replaceAll(Character.toString('\t'), tabSpace(getTabSize()));
+            String formatedClipBoardText = clipboard.getString().replaceAll(Character.toString('\t'), generateTabSpace(getTabSize()));
             codeArea.insertText(codeArea.getCaretPosition(), formatedClipBoardText);
         }
     }
 
     private void onTabPressed() {
         codeArea.deletePreviousChar();
-        int currentLine = codeArea.getCaretSelectionBind().getParagraphIndex();
-        int fromlineStartToCaret = codeArea.getText(currentLine, 0, currentLine, codeArea.getCaretColumn()).length();
-        codeArea.insertText(codeArea.getCaretPosition(), tabSpace(tabSpacesToComplete(fromlineStartToCaret)));
+        codeArea.insertText(codeArea.getCaretPosition(), generateTabSpace(tabSpacesToAdd()));
     }
 
     public void setTabSize(int size) {
+        if (size <= 0) {
+            throw new IllegalArgumentException("Tabulation size might be strictly positive");
+        }
         codeArea.tabSize = size;
     }
 
-    public int getTabSize() {
+    private int getTabSize() {
         return codeArea.tabSize;
     }
 
-    private String tabSpace(int size) {
-        StringBuilder space = new StringBuilder("");
-        for (int i = 0; i < size; i++) {
-            space.append(" ");
-        }
-        return space.toString();
+    private static String generateTabSpace(int size) {
+        return StringUtils.repeat(" ", size);
     }
 
-    private int tabSpacesToComplete(int length) {
-        int x = length;
-        int counter = 0;
-        int spaceTocomplete;
-        while ((x % getTabSize()) != 0) {
-            counter++;
-            x++;
-        }
-        spaceTocomplete = (counter == 0) ? getTabSize() : counter;
-        return spaceTocomplete;
+    private int tabSpacesToAdd() {
+        int currentLine = codeArea.getCaretSelectionBind().getParagraphIndex();
+        int fromLineStartToCaret = codeArea.getText(currentLine, 0, currentLine, codeArea.getCaretColumn()).length();
+        return getTabSize() - (fromLineStartToCaret % getTabSize());
     }
 
     private void onDragDetected(MouseEvent event) {
