@@ -655,15 +655,39 @@ public class ProjectPane extends Tab {
         return menuItem;
     }
 
-    private void renameProjectNode(TreeItem selectedTreeItem) {
+    private void listProjectNodeTreeItems(TreeItem<Object> treeItem, Map<String, TreeItem<Object>> projectNodeTreeItems) {
+        if (treeItem.getValue() instanceof ProjectNode) {
+            projectNodeTreeItems.put(((ProjectNode) treeItem.getValue()).getId(), treeItem);
+        }
+        for (TreeItem<Object> childTreeItem : treeItem.getChildren()) {
+            listProjectNodeTreeItems(childTreeItem, projectNodeTreeItems);
+        }
+    }
+
+    private void renameProjectNode(TreeItem<Object> selectedTreeItem) {
         Optional<String> result = RenamePane.showAndWaitDialog((ProjectNode) selectedTreeItem.getValue());
         result.ifPresent(newName -> {
             if (selectedTreeItem.getValue() instanceof ProjectNode) {
-                ProjectNode selectedTreeNode = (ProjectNode) selectedTreeItem.getValue();
-                selectedTreeNode.rename(newName);
-                refresh(selectedTreeItem.getParent());
-                treeView.getSelectionModel().clearSelection();
-                treeView.getSelectionModel().select(selectedTreeItem);
+                ProjectNode selectedProjectNode = (ProjectNode) selectedTreeItem.getValue();
+                selectedProjectNode.rename(newName);
+
+                // to force the refresh
+                selectedTreeItem.setValue(null);
+                selectedTreeItem.setValue(selectedProjectNode);
+
+                // refresh impacted tabs
+                Map<String, TreeItem<Object>> treeItemsToRefresh = new HashMap<>();
+                listProjectNodeTreeItems(selectedTreeItem, treeItemsToRefresh);
+
+                for (DetachableTabPane tabPane : findDetachableTabPanes()) {
+                    for (Tab tab : new ArrayList<>(tabPane.getTabs())) {
+                        String tabNodeId = ((TabKey) tab.getUserData()).nodeId;
+                        TreeItem<Object> treeItem = treeItemsToRefresh.get(tabNodeId);
+                        if (treeItem != null) {
+                            tab.setText(getTabName(treeItem));
+                        }
+                    }
+                }
             }
         });
     }
