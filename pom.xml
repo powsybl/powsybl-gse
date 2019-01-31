@@ -82,6 +82,10 @@
         <maven.surefire.version>2.22.1</maven.surefire.version>
         <maven.templating.version>1.0.0</maven.templating.version>
         <maven.versions.version>2.7</maven.versions.version>
+        <maven.dependency.version>3.1.1</maven.dependency.version>
+        <maven.download.version>1.4.1</maven.download.version>
+        <maven.antrun.version>1.8</maven.antrun.version>
+        <maven.exec.version>1.6.0</maven.exec.version>
 
         <autoservice.version>1.0-rc2</autoservice.version>
         <commonscodec.version>1.9</commonscodec.version>
