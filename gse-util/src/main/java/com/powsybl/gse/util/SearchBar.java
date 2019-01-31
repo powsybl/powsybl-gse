@@ -305,8 +305,8 @@ public final class SearchBar extends HBox {
         return matcher.isLastMatch();
     }
 
-    public void matcherFind(String searchPattern, String searchedTxt) {
-        matcher.find(searchPattern, searchedTxt);
+    public void findMatch(String searchPattern, String searchText) {
+        matcher.find(searchPattern, searchText);
     }
 
     public String getReplaceText() {

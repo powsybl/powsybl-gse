@@ -139,13 +139,13 @@ public class GroovyCodeEditor extends MasterDetailPane {
             }
             codeText = codeArea.getText();
         }
-        searchBar.matcherFind(searchBar.getSearchedText(), codeArea.getText());
+        searchBar.findMatch(searchBar.getSearchedText(), codeArea.getText());
     }
 
     private void replaceCurrentOccurence(int startPosition, int endPosition) {
         int i = searchBar.getCurrentMatchProperty().get();
         codeArea.replaceText(startPosition, endPosition, searchBar.getReplaceText());
-        searchBar.matcherFind(searchBar.getSearchedText(), codeArea.getText());
+        searchBar.findMatch(searchBar.getSearchedText(), codeArea.getText());
         if (searchBar.getReplaceText().contains(searchBar.getSearchedText())) {
             while (searchBar.getCurrentMatchProperty().get() <= i) {
                 if (searchBar.isLastMatch().get()) {
