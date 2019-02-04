@@ -100,14 +100,11 @@ public class GroovyCodeEditor extends MasterDetailPane {
             }
 
         });
-        codeArea.addEventFilter(KeyEvent.KEY_PRESSED, (KeyEvent ke) -> {
-            if (pasteKeyCombination.match(ke)) {
-                setOnPaste(ke);
-            }
-        });
+        codeArea.addEventFilter(KeyEvent.KEY_PRESSED, this::filterTab);
         codeArea.setOnKeyPressed((KeyEvent ke) -> {
             if (ke.getCode() == KeyCode.TAB) {
-                onTabPressed();
+                codeArea.deletePreviousChar();
+                codeArea.insertText(codeArea.getCaretPosition(), generateTabSpace(tabSpacesToAdd()));
             }
         });
 
@@ -119,18 +116,26 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.setOnSelectionDrag(p -> allowedDrag = true);
     }
 
-    private void setOnPaste(KeyEvent ke) {
+    private void filterTab(KeyEvent ke) {
+        if (pasteKeyCombination.match(ke)) {
+            setOnPasteAction(ke);
+        } else if (ke.getCode() == KeyCode.TAB && !codeArea.selectedTextProperty().getValue().isEmpty()) {
+            ke.consume();
+            int startParagraphIndex = codeArea.getCaretSelectionBind().getStartParagraphIndex();
+            int endParagraphIndex = codeArea.getCaretSelectionBind().getEndParagraphIndex();
+            for (int line = startParagraphIndex; line <= endParagraphIndex; line++) {
+                codeArea.insertText(line, 0, generateTabSpace(getTabSize()));
+            }
+        }
+    }
+
+    private void setOnPasteAction(KeyEvent ke) {
         final Clipboard clipboard = Clipboard.getSystemClipboard();
         if (clipboard.hasString()) {
             ke.consume();
             String formatedClipBoardText = clipboard.getString().replaceAll(Character.toString('\t'), generateTabSpace(getTabSize()));
             codeArea.insertText(codeArea.getCaretPosition(), formatedClipBoardText);
         }
-    }
-
-    private void onTabPressed() {
-        codeArea.deletePreviousChar();
-        codeArea.insertText(codeArea.getCaretPosition(), generateTabSpace(tabSpacesToAdd()));
     }
 
     public void setTabSize(int size) {
