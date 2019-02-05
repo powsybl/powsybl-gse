@@ -7,7 +7,7 @@
 package com.powsybl.gse.app;
 
 import com.powsybl.afs.ws.client.utils.UserSession;
-import com.powsybl.afs.ws.utils.UserProfile;
+import com.powsybl.commons.net.UserProfile;
 import com.powsybl.gse.spi.GseAuthenticator;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.util.Glyph;
