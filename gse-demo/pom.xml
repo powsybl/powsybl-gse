@@ -160,6 +160,7 @@
                                    </target>
                                    <target name="untar" if="${jpackage.tar}">
                                        <untar src="${project.build.directory}/${jpackage.archive}" compression="gzip" dest="${project.build.directory}/jpackage"/>
+                                       <chmod file="${project.build.directory}/jpackage/jdk-13/bin/jpackage" perm="u+x"/>
                                    </target>
                                </configuration>
                             </execution>
