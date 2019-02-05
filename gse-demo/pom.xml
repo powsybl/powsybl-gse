@@ -208,7 +208,7 @@
                                         <argument>--class</argument>
                                         <argument>com.powsybl.gse.demo.GseDemo</argument>
                                         <argument>--main-jar</argument>
-                                        <argument>./lib/powsybl-gse-demo-1.4.0-SNAPSHOT.jar</argument>
+                                        <argument>lib/${project.artifactId}-${project.version}.jar</argument>
                                         <argument>--output</argument>
                                         <argument>${project.build.directory}/native</argument>
                                         <argument>--runtime-image</argument>
