@@ -198,7 +198,7 @@
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <executable>${jpackage.path}</executable>
+                                    <executable>${project.build.directory}/jpackage/jdk-13/bin/jpackage</executable>
                                     <workingDirectory>${project.build.directory}</workingDirectory>
                                     <arguments>
                                         <!-- packager arguments -->
