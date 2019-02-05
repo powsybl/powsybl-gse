@@ -22,11 +22,6 @@
     <name>GSE demo</name>
     <description>A demonstration module of GSE</description>
 
-    <properties>
-        <jpackager.path>${project.build.directory}/jpackager/jpackager</jpackager.path>
-    </properties>
-
-
     <profiles>
         <profile>
           <id>windows</id>
@@ -36,7 +31,8 @@
             </os>
           </activation>
           <properties>
-              <jpackager.zip>jdk.packager-windows.zip</jpackager.zip>
+              <jpackage.archive>openjdk-13-jpackage+8_windows-x64_bin.zip</jpackage.archive>
+              <jpackage.zip>true</jpackage.zip>
           </properties>
         </profile>
         <profile>
@@ -47,7 +43,8 @@
             </os>
           </activation>
           <properties>
-              <jpackager.zip>jdk.packager-osx.zip</jpackager.zip>
+              <jpackage.archive>openjdk-13-jpackage+8_osx-x64_bin.tar.gz</jpackage.archive>
+              <jpackage.tar>true</jpackage.tar>
           </properties>
         </profile>
         <profile>
@@ -58,17 +55,11 @@
             </os>
           </activation>
           <properties>
-              <jpackager.zip>jdk.packager-linux.zip</jpackager.zip>
+              <jpackage.archive>openjdk-13-jpackage+8_linux-x64_bin.tar.gz</jpackage.archive>
+              <jpackage.tar>true</jpackage.tar>
           </properties>
         </profile>
         <profile>
-        <!--
-        Adapted from https://raw.githubusercontent.com/skymatic/javafx11-test/182145163a68cdfa17e99a46dadb206dabdc470a/pom.xml
-        Changes:
-            - copy the jar of this project instead of outputting it directly in the jpackage input dir
-            - put the jars in a lib folder
-            - workaround jpackage behavior: if some files are not in the root input dir, we need to list everything manually...
-         -->
             <id>native-package</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
@@ -147,7 +138,7 @@
                             <goal>wget</goal>
                           </goals>
                           <configuration>
-                            <url>http://download2.gluonhq.com/jpackager/11/${jpackager.zip}</url>
+                            <url>https://download.java.net/java/early_access/jpackage/archive/0/binaries/${jpackage.archive}</url>
                           </configuration>
                         </execution>
                       </executions>
@@ -158,32 +149,18 @@
                         <version>${maven.antrun.version}</version>
                         <executions>
                             <execution>
-                                <id>list-jpackager-files</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
-                                <configuration>
-                                    <exportAntProperties>true</exportAntProperties>
-                                    <target>
-                                        <fileset id="dist.contents" dir="${project.build.directory}/jpackage-input/" includes="lib/*jar"/>
-                                        <pathconvert property="jpackage_files" refid="dist.contents">
-                                            <globmapper from="${project.build.directory}/jpackage-input/*" to="*" />
-                                        </pathconvert>
-                                    </target>
-                                </configuration>
-                            </execution>
-                            <execution>
-                               <id>prepare-jpackager</id>
+                               <id>prepare-jpackage</id>
                                <phase>package</phase>
                                <goals>
                                   <goal>run</goal>
                                </goals>
                                <configuration>
-                                  <target>
-                                     <unzip src="${project.build.directory}/jdk.packager-linux.zip" dest="${project.build.directory}/jpackager" />
-                                     <chmod file="${project.build.directory}/jpackager/jpackager" perm="u+x"/>
-                                  </target>
+                                   <target name="unzip" if="${jpackage.zip}">
+                                       <unzip src="${project.build.directory}/${jpackage.archive}" dest="${project.build.directory}/jpackage" />
+                                   </target>
+                                   <target name="untar" if="${jpackage.tar}">
+                                       <untar src="${project.build.directory}/${jpackage.archive}" compression="gzip" dest="${project.build.directory}/jpackage"/>
+                                   </target>
                                </configuration>
                             </execution>
                         </executions>
@@ -192,7 +169,27 @@
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
                         <version>${maven.exec.version}</version>
+                        <configuration>
+                            <longModulepath>false</longModulepath> <!-- fix for https://github.com/mojohaus/exec-maven-plugin/issues/75 -->
+                        </configuration>
                         <executions>
+                            <execution>
+                                <id>create-runtime</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${java.home}/bin/jlink</executable>
+                                    <arguments>
+                                        <!-- packager arguments -->
+                                        <argument>--add-modules</argument>
+                                        <argument>java.base,java.compiler,java.datatransfer,java.desktop,java.logging,java.management,java.management.rmi,java.naming,java.prefs,java.rmi,java.scripting,java.security.jgss,java.sql,java.xml,java.xml.crypto,jdk.javadoc,jdk.jsobject,jdk.unsupported,jdk.unsupported.desktop</argument>
+                                        <argument>--output</argument>
+                                        <argument>${project.build.directory}/jlink-runtime</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
                             <execution>
                                 <id>create-native</id>
                                 <phase>package</phase>
@@ -200,41 +197,30 @@
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <executable>${jpackager.path}</executable>
-                                    <workingDirectory>${project.build.directory}/jpackage-input</workingDirectory>
-                                    <longModulepath>false</longModulepath> <!-- fix for https://github.com/mojohaus/exec-maven-plugin/issues/75 -->
-                                    <environmentVariables>
-                                        <JAVA_HOME>${java.home}</JAVA_HOME>
-                                    </environmentVariables>
+                                    <executable>${jpackage.path}</executable>
+                                    <workingDirectory>${project.build.directory}</workingDirectory>
                                     <arguments>
                                         <!-- packager arguments -->
                                         <argument>create-image</argument>
                                         <argument>--verbose</argument>
-                                        <argument>--echo-mode</argument>
                                         <argument>--input</argument>
-                                        <argument>${project.build.directory}/jpackage-input</argument>
+                                        <argument>jpackage-input</argument>
                                         <argument>--class</argument>
                                         <argument>com.powsybl.gse.demo.GseDemo</argument>
-                                        <argument>--files</argument>
-                                        <argument>${jpackage_files}${path.separator}config.yml</argument>
                                         <argument>--main-jar</argument>
                                         <argument>./lib/powsybl-gse-demo-1.4.0-SNAPSHOT.jar</argument>
                                         <argument>--output</argument>
                                         <argument>${project.build.directory}/</argument>
+                                        <argument>--runtime-image</argument>
+                                        <argument>${project.build.directory}/jlink-runtime</argument>
                                         <argument>--identifier</argument>
                                         <argument>com.powsybl.gse.demo</argument>
                                         <argument>--name</argument>
                                         <argument>gse</argument>
-                                        <argument>--version</argument>
+                                        <argument>--app-version</argument>
                                         <argument>${project.version}</argument>
                                         <argument>--jvm-args</argument>
                                         <argument>-Dapp.root=$APPDIR -Dpowsybl.config.dirs=${user_home}/.powsybl:${app.root}/app -Djavafx.preloader=com.powsybl.gse.app.GsePreloader</argument>
-
-                                        <!-- jlink arguments -->
-                                        <argument>--module-path</argument>
-                                        <argument>${java.home}/jmods</argument>
-                                        <argument>--add-modules</argument>
-                                        <argument>java.base,java.compiler,java.datatransfer,java.desktop,java.logging,java.management,java.management.rmi,java.naming,java.prefs,java.rmi,java.scripting,java.security.jgss,java.sql,java.xml,java.xml.crypto,jdk.javadoc,jdk.jsobject,jdk.unsupported,jdk.unsupported.desktop</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
