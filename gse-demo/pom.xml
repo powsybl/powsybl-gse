@@ -210,7 +210,7 @@
                                         <argument>--main-jar</argument>
                                         <argument>./lib/powsybl-gse-demo-1.4.0-SNAPSHOT.jar</argument>
                                         <argument>--output</argument>
-                                        <argument>${project.build.directory}/</argument>
+                                        <argument>${project.build.directory}/native</argument>
                                         <argument>--runtime-image</argument>
                                         <argument>${project.build.directory}/jlink-runtime</argument>
                                         <argument>--identifier</argument>
