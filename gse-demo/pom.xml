@@ -60,49 +60,6 @@
           </properties>
         </profile>
         <profile>
-          <id>exec-jlink</id>
-          <activation>
-            <file>
-              <!--
-              From https://maven.apache.org/guides/introduction/introduction-to-profiles.html,
-                  > Please note that properties and values defined in the POM itself are not available for interpolation here,
-                  > e.g. the above example activator cannot use ${project.build.directory} but needs to hard-code the path target.
-              -->
-              <missing>target/jlink-runtime</missing>
-            </file>
-          </activation>
-          <build>
-              <plugins>
-                  <plugin>
-                      <groupId>org.codehaus.mojo</groupId>
-                      <artifactId>exec-maven-plugin</artifactId>
-                      <version>${maven.exec.version}</version>
-                      <configuration>
-                          <longModulepath>false</longModulepath> <!-- fix for https://github.com/mojohaus/exec-maven-plugin/issues/75 -->
-                      </configuration>
-                      <executions>
-                          <execution>
-                              <id>create-runtime</id>
-                              <phase>package</phase>
-                              <goals>
-                                  <goal>exec</goal>
-                              </goals>
-                              <configuration>
-                                  <executable>${java.home}/bin/jlink</executable>
-                                  <arguments>
-                                      <argument>--add-modules</argument>
-                                      <argument>java.base,java.compiler,java.datatransfer,java.desktop,java.logging,java.management,java.management.rmi,java.naming,java.prefs,java.rmi,java.scripting,java.security.jgss,java.sql,java.xml,java.xml.crypto,jdk.javadoc,jdk.jsobject,jdk.unsupported,jdk.unsupported.desktop</argument>
-                                      <argument>--output</argument>
-                                      <argument>${project.build.directory}/jlink-runtime</argument>
-                                  </arguments>
-                              </configuration>
-                          </execution>
-                      </executions>
-                  </plugin>
-              </plugins>
-          </build>
-        </profile>
-        <profile>
             <id>native-package</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
@@ -219,6 +176,35 @@
                         </executions>
                     </plugin>
                     <plugin>
+                        <!--
+                            jlink errors when the directory already exist. Remove it.
+                            There is no force option like with jpackager.
+                        -->
+                        <artifactId>maven-clean-plugin</artifactId>
+                        <version>${maven.clean.version}</version>
+                        <executions>
+                            <execution>
+                               <id>clean-jlink-runtime</id>
+                               <phase>package</phase>
+                               <goals>
+                                   <goal>clean</goal>
+                               </goals>
+                                <configuration>
+                                    <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                                    <filesets>
+                                        <fileset>
+                                            <directory>target/jlink-runtime</directory>
+                                            <includes>
+                                                <include>**</include>
+                                            </includes>
+                                            <followSymlinks>false</followSymlinks>
+                                        </fileset>
+                                    </filesets>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
                         <version>${maven.exec.version}</version>
@@ -226,6 +212,23 @@
                             <longModulepath>false</longModulepath> <!-- fix for https://github.com/mojohaus/exec-maven-plugin/issues/75 -->
                         </configuration>
                         <executions>
+                            <execution>
+                                <id>create-runtime</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${java.home}/bin/jlink</executable>
+                                    <arguments>
+                                        <!-- packager arguments -->
+                                        <argument>--add-modules</argument>
+                                        <argument>java.base,java.compiler,java.datatransfer,java.desktop,java.logging,java.management,java.management.rmi,java.naming,java.prefs,java.rmi,java.scripting,java.security.jgss,java.sql,java.xml,java.xml.crypto,jdk.javadoc,jdk.jsobject,jdk.unsupported,jdk.unsupported.desktop</argument>
+                                        <argument>--output</argument>
+                                        <argument>${project.build.directory}/jlink-runtime</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
                             <execution>
                                 <id>create-native</id>
                                 <phase>package</phase>
