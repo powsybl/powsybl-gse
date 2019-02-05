@@ -56,6 +56,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
         private int tabSize = 4;
 
+        private int caretPositionBeforePaste;
+
         @Override
         public String getText() {
             return super.getText();
@@ -105,6 +107,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
             if (ke.getCode() == KeyCode.TAB) {
                 codeArea.deletePreviousChar();
                 codeArea.insertText(codeArea.getCaretPosition(), generateTabSpace(tabSpacesToAdd()));
+            } else if (pasteKeyCombination.match(ke)) {
+                setOnPaste();
             }
         });
 
@@ -116,9 +120,19 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.setOnSelectionDrag(p -> allowedDrag = true);
     }
 
+    private void setOnPaste() {
+        for (int position = codeArea.caretPositionBeforePaste; position <= codeArea.getText().length() - 1; position++) {
+            if (codeArea.getText().charAt(position) == '\t') {
+                codeArea.deleteText(position, position + 1);
+                codeArea.displaceCaret(position);
+                codeArea.insertText(codeArea.getCaretPosition(), generateTabSpace(tabSpacesToAdd()));
+            }
+        }
+    }
+
     private void filterTab(KeyEvent ke) {
         if (pasteKeyCombination.match(ke)) {
-            setOnPasteAction(ke);
+            codeArea.caretPositionBeforePaste = codeArea.getCaretPosition();
         } else if (ke.getCode() == KeyCode.TAB && !codeArea.selectedTextProperty().getValue().isEmpty()) {
             ke.consume();
             int startParagraphIndex = codeArea.getCaretSelectionBind().getStartParagraphIndex();
@@ -126,15 +140,6 @@ public class GroovyCodeEditor extends MasterDetailPane {
             for (int line = startParagraphIndex; line <= endParagraphIndex; line++) {
                 codeArea.insertText(line, 0, generateTabSpace(getTabSize()));
             }
-        }
-    }
-
-    private void setOnPasteAction(KeyEvent ke) {
-        final Clipboard clipboard = Clipboard.getSystemClipboard();
-        if (clipboard.hasString()) {
-            ke.consume();
-            String formatedClipBoardText = clipboard.getString().replaceAll(Character.toString('\t'), generateTabSpace(getTabSize()));
-            codeArea.insertText(codeArea.getCaretPosition(), formatedClipBoardText);
         }
     }
 
@@ -207,6 +212,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.clear();
         codeArea.replaceText(0, 0, code);
         codeArea.showParagraphAtTop(0);
+        codeArea.getUndoManager().forgetHistory();
         resetDividerPosition();
     }
 
