@@ -149,7 +149,7 @@
                         <version>${maven.antrun.version}</version>
                         <executions>
                             <execution>
-                               <id>prepare-jpackage</id>
+                               <id>unzip-jpackage</id>
                                <phase>package</phase>
                                <goals>
                                   <goal>run</goal>
@@ -158,12 +158,21 @@
                                    <target name="unzip" if="${jpackage.zip}">
                                        <unzip src="${project.build.directory}/${jpackage.archive}" dest="${project.build.directory}/jpackage" />
                                    </target>
+                               </configuration>
+                           </execution>
+                           <execution>
+                               <id>untar-jpackage</id>
+                               <phase>package</phase>
+                               <goals>
+                                  <goal>run</goal>
+                               </goals>
+                               <configuration>
                                    <target name="untar" if="${jpackage.tar}">
                                        <untar src="${project.build.directory}/${jpackage.archive}" compression="gzip" dest="${project.build.directory}/jpackage"/>
                                        <chmod file="${project.build.directory}/jpackage/jdk-13/bin/jpackage" perm="u+x"/>
                                    </target>
                                </configuration>
-                            </execution>
+                           </execution>
                         </executions>
                     </plugin>
                     <plugin>
