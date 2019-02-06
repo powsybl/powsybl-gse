@@ -33,6 +33,7 @@
           <properties>
               <jpackage.archive>openjdk-13-jpackage+8_windows-x64_bin.zip</jpackage.archive>
               <jpackage.zip>true</jpackage.zip>
+              <powsybl-logo>logo.ico</powsybl-logo>
           </properties>
         </profile>
         <profile>
@@ -45,6 +46,7 @@
           <properties>
               <jpackage.archive>openjdk-13-jpackage+8_osx-x64_bin.tar.gz</jpackage.archive>
               <jpackage.tar>true</jpackage.tar>
+              <powsybl-logo>logo.png</powsybl-logo>
           </properties>
         </profile>
         <profile>
@@ -57,6 +59,7 @@
           <properties>
               <jpackage.archive>openjdk-13-jpackage+8_linux-x64_bin.tar.gz</jpackage.archive>
               <jpackage.tar>true</jpackage.tar>
+              <powsybl-logo>logo.png</powsybl-logo>
           </properties>
         </profile>
         <profile>
@@ -264,6 +267,8 @@
                                         <argument>--strip-native-commands</argument>
                                         <argument>--vendor</argument>
                                         <argument>PowSyBl</argument>
+                                        <argument>--icon</argument>
+                                        <argument>classes/images/${powsybl-logo}</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
