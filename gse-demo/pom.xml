@@ -60,6 +60,7 @@
               <jpackage.archive>openjdk-13-jpackage+8_linux-x64_bin.tar.gz</jpackage.archive>
               <jpackage.tar>true</jpackage.tar>
               <powsybl-logo>logo.png</powsybl-logo>
+              <gtk2-linux-jvm-arg>-Djdk.gtk.version=2</gtk2-linux-jvm-arg>
           </properties>
         </profile>
         <profile>
@@ -262,7 +263,7 @@
                                         <argument>--app-version</argument>
                                         <argument>${project.version}</argument>
                                         <argument>--jvm-args</argument>
-                                        <argument>-Dapp.root=$APPDIR -Dpowsybl.config.dirs=${user_home}/.powsybl:${app.root}/app -Djavafx.preloader=com.powsybl.gse.app.GsePreloader</argument>
+                                        <argument>-Dapp.root=$APPDIR -Dpowsybl.config.dirs=${user_home}/.powsybl:${app.root}/app -Djavafx.preloader=com.powsybl.gse.app.GsePreloader ${gtk2-linux-jvm-arg}</argument>
                                         <argument>--force</argument>
                                         <argument>--strip-native-commands</argument>
                                         <argument>--vendor</argument>
