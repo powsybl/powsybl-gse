@@ -9,13 +9,10 @@ package com.powsybl.gse.afs.ext.base;
 import com.powsybl.afs.ProjectFolder;
 import com.powsybl.gse.spi.ProjectCreationTask;
 import com.powsybl.gse.spi.ProjectFileCreator;
-import com.powsybl.gse.util.NameTextField;
+import com.powsybl.gse.util.AbstractCreationPane;
 import javafx.beans.binding.BooleanBinding;
 import javafx.scene.Node;
-import javafx.scene.control.Label;
-import javafx.scene.layout.ColumnConstraints;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.Priority;
+
 
 import java.util.Objects;
 import java.util.ResourceBundle;
@@ -23,27 +20,21 @@ import java.util.ResourceBundle;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public abstract class AbstractModificationScriptCreator extends GridPane implements ProjectFileCreator {
+public abstract class AbstractModificationScriptCreator extends AbstractCreationPane implements ProjectFileCreator {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ModificationScript");
 
     private final ProjectFolder folder;
 
-    private final NameTextField nameTextField;
-
     protected AbstractModificationScriptCreator(ProjectFolder folder) {
+        super(folder);
         this.folder = Objects.requireNonNull(folder);
-        nameTextField = NameTextField.create(folder);
         setPrefWidth(400);
-        setVgap(5);
-        setHgap(5);
-        ColumnConstraints column0 = new ColumnConstraints();
-        ColumnConstraints column1 = new ColumnConstraints();
-        column1.setHgrow(Priority.ALWAYS);
-        getColumnConstraints().addAll(column0, column1);
-        add(new Label(RESOURCE_BUNDLE.getString("ScriptName") + ":"), 0, 0);
-        add(nameTextField.getInputField(), 1, 0);
-        add(nameTextField.getFileAlreadyExistsLabel(), 0, 1, 2, 1);
+    }
+
+    @Override
+    protected String getLabelName() {
+        return RESOURCE_BUNDLE.getString("ScriptName");
     }
 
     @Override

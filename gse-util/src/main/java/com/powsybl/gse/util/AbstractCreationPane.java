@@ -6,36 +6,46 @@
  */
 package com.powsybl.gse.util;
 
+import com.powsybl.afs.AbstractNodeBase;
+import com.powsybl.afs.Node;
+import com.powsybl.afs.ProjectNode;
+
+import javafx.application.Platform;
+
 import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
-import javafx.scene.paint.Color;
 
+import java.util.Objects;
 import java.util.ResourceBundle;
 
 /**
  * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
  */
-public abstract class CreationPane extends GridPane {
+public abstract class AbstractCreationPane extends GridPane {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.CreationPane");
 
-    protected final TextField nameTextField = new TextField();
+    protected final NameTextField nameTextField;
 
-    protected final Label fileAlreadyExistsLabel = new Label();
-
-    public CreationPane() {
+    public AbstractCreationPane(AbstractNodeBase node) {
+        Objects.requireNonNull(node);
+        nameTextField = node instanceof ProjectNode ? NameTextField.create((ProjectNode) node) : NameTextField.create((Node) node);
         setVgap(5);
         setHgap(5);
         ColumnConstraints column0 = new ColumnConstraints();
         ColumnConstraints column1 = new ColumnConstraints();
         column1.setHgrow(Priority.ALWAYS);
         getColumnConstraints().addAll(column0, column1);
-        add(new Label(RESOURCE_BUNDLE.getString("Name")), 0, 0);
-        add(nameTextField, 1, 0);
-        add(fileAlreadyExistsLabel, 0, 1, 2, 1);
-        fileAlreadyExistsLabel.setTextFill(Color.RED);
+        add(new Label(getLabelName()), 0, 0);
+        add(nameTextField.getInputField(), 1, 0);
+        add(nameTextField.getFileAlreadyExistsLabel(), 0, 1, 2, 1);
+        Platform.runLater(nameTextField.getInputField()::requestFocus);
     }
+
+    protected String getLabelName() {
+        return RESOURCE_BUNDLE.getString("Name");
+    }
+
 }

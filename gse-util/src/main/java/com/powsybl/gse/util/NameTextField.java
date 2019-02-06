@@ -6,8 +6,7 @@
  */
 package com.powsybl.gse.util;
 
-import com.powsybl.afs.ProjectFolder;
-import com.powsybl.afs.ProjectNode;
+import com.powsybl.afs.*;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -35,12 +34,10 @@ public final class NameTextField {
     private final BooleanProperty uniqueName = new SimpleBooleanProperty(true);
     private Predicate<String> folderUnique;
 
-    private NameTextField(ProjectFolder folder) {
-        Objects.requireNonNull(folder);
+    private NameTextField() {
         new ValidationSupport().registerValidator(nameTextField, Validator.createEmptyValidator(RESOURCE_BUNDLE.getString("MandatoryName")));
         nameTextField.setText(null);
         fileAlreadyExistsLabel.setTextFill(Color.RED);
-        folderUnique = name -> name == null || !folder.getChild(name).isPresent();
         nameTextField.textProperty().addListener((observable, oldName, newName) -> uniqueName.setValue(folderUnique.test(newName)));
         nameTextField.disabledProperty().addListener((observable, oldName, newName) -> uniqueName.setValue(newName));
         uniqueName.addListener((observable, oldUnique, newUnique) -> {
@@ -48,9 +45,21 @@ public final class NameTextField {
                 fileAlreadyExistsLabel.setText(null);
             } else {
                 fileAlreadyExistsLabel.setText(MessageFormat.format(RESOURCE_BUNDLE.getString("FileAlreadyExistsInThisFolder"),
-                                                                    nameTextField.getText()));
+                        nameTextField.getText()));
             }
         });
+    }
+
+    private NameTextField(ProjectFolder folder) {
+        this();
+        Objects.requireNonNull(folder);
+        folderUnique = name -> name == null || !folder.getChild(name).isPresent();
+    }
+
+    private NameTextField(Folder folder) {
+        this();
+        Objects.requireNonNull(folder);
+        folderUnique = name -> name == null || !folder.getChild(name).isPresent();
     }
 
     public static NameTextField create(ProjectNode node) {
@@ -59,6 +68,16 @@ public final class NameTextField {
             return new NameTextField((ProjectFolder) node);
         } else {
             // project file
+            return node.getParent().map(NameTextField::new).orElseThrow(AssertionError::new);
+        }
+    }
+
+    public static NameTextField create(Node node) {
+        Objects.requireNonNull(node);
+        if (node instanceof Folder) {
+            return new NameTextField((Folder) node);
+        } else {
+            // file
             return node.getParent().map(NameTextField::new).orElseThrow(AssertionError::new);
         }
     }
