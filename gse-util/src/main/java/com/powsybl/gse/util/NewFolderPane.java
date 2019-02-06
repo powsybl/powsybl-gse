@@ -8,21 +8,10 @@ package com.powsybl.gse.util;
 
 import com.powsybl.afs.Folder;
 import com.powsybl.afs.ProjectFolder;
-import javafx.application.Platform;
-import javafx.beans.binding.BooleanBinding;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
-import javafx.scene.layout.ColumnConstraints;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.Priority;
-import javafx.scene.paint.Color;
 import javafx.stage.Window;
 
-import java.text.MessageFormat;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.ResourceBundle;
@@ -32,48 +21,22 @@ import java.util.function.Predicate;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public final class NewFolderPane<F> extends GridPane {
+public final class NewFolderPane<F> extends AbstractCreationPane {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.NewFolderPane");
 
     private final Function<String, F> folderCreator;
 
-    private final TextField nameTextField = new TextField();
-
-    private final Label fileAlreadyExistLabel = new Label();
-
-    private final BooleanProperty uniqueName = new SimpleBooleanProperty(true);
-
     private NewFolderPane(Function<String, F> folderCreator, Predicate<String> folderUnique) {
+        super();
+        fillCreationPane();
         this.folderCreator = Objects.requireNonNull(folderCreator);
-        setVgap(5);
-        setHgap(5);
-        ColumnConstraints column0 = new ColumnConstraints();
-        ColumnConstraints column1 = new ColumnConstraints();
-        column1.setHgrow(Priority.ALWAYS);
-        getColumnConstraints().addAll(column0, column1);
-        add(new Label(RESOURCE_BUNDLE.getString("Name")), 0, 0);
-        add(nameTextField, 1, 0);
-        add(fileAlreadyExistLabel, 0, 1, 2, 1);
-        fileAlreadyExistLabel.setTextFill(Color.RED);
-        nameTextField.textProperty().addListener((observable, oldName, newName) -> uniqueName.setValue(newName == null || folderUnique.test(newName)));
-        uniqueName.addListener((observable, oldUnique, newUnique) -> {
-            if (newUnique) {
-                fileAlreadyExistLabel.setText("");
-            } else {
-                fileAlreadyExistLabel.setText(MessageFormat.format(RESOURCE_BUNDLE.getString("FileAlreadyExistsInThisFolder"),
-                                                                   nameTextField.getText()));
-            }
-        });
-        Platform.runLater(nameTextField::requestFocus);
-    }
-
-    private BooleanBinding validatedProperty() {
-        return nameTextField.textProperty().isNotEmpty().and(uniqueName);
+        nameField.textProperty().addListener((observable, oldName, newName) -> uniqueName.setValue(newName == null || folderUnique.test(newName)));
+        addUniqueNameListener();
     }
 
     private F createFolder() {
-        String name = nameTextField.getText();
+        String name = nameField.getText();
         return folderCreator.apply(name);
     }
 
