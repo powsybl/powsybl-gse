@@ -47,7 +47,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
 
-    private static final String KEY_WORD = "keyWord";
+    private static final String KEY_WORD = "keyword";
 
     private boolean allowedDrag = false;
 
@@ -154,6 +154,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.clear();
         codeArea.replaceText(0, 0, code);
         codeArea.showParagraphAtTop(0);
+        codeArea.getUndoManager().forgetHistory();
         resetDividerPosition();
     }
 
@@ -166,7 +167,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
     }
 
     private static String imagridStyleClass(String text) {
-        if(text.startsWith("mapTo")) {
+        if (text.startsWith("mapTo")) {
             return KEY_WORD;
         }
         switch (text) {
