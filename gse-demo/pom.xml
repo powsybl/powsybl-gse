@@ -261,6 +261,8 @@
                                         <argument>--jvm-args</argument>
                                         <argument>-Dapp.root=$APPDIR -Dpowsybl.config.dirs=${user_home}/.powsybl:${app.root}/app -Djavafx.preloader=com.powsybl.gse.app.GsePreloader</argument>
                                         <argument>--force</argument>
+                                        <argument>--vendor</argument>
+                                        <argument>PowSyBl</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
