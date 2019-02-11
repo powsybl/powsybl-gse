@@ -24,44 +24,44 @@
 
     <profiles>
         <profile>
-          <id>windows</id>
-          <activation>
-            <os>
-              <family>windows</family>
-            </os>
-          </activation>
-          <properties>
-              <jpackage.archive>openjdk-13-jpackage+8_windows-x64_bin.zip</jpackage.archive>
-              <jpackage.zip>true</jpackage.zip>
-              <powsybl-logo>logo.ico</powsybl-logo>
-          </properties>
+            <id>windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <jpackage.archive>openjdk-13-jpackage+8_windows-x64_bin.zip</jpackage.archive>
+                <jpackage.zip>true</jpackage.zip>
+                <powsybl-logo>logo.ico</powsybl-logo>
+            </properties>
         </profile>
         <profile>
-          <id>mac</id>
-          <activation>
-            <os>
-              <family>mac</family>
-            </os>
-          </activation>
-          <properties>
-              <jpackage.archive>openjdk-13-jpackage+8_osx-x64_bin.tar.gz</jpackage.archive>
-              <jpackage.tar>true</jpackage.tar>
-              <powsybl-logo>logo.png</powsybl-logo>
-          </properties>
+            <id>mac</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                </os>
+            </activation>
+            <properties>
+                <jpackage.archive>openjdk-13-jpackage+8_osx-x64_bin.tar.gz</jpackage.archive>
+                <jpackage.tar>true</jpackage.tar>
+                <powsybl-logo>logo.png</powsybl-logo>
+            </properties>
         </profile>
         <profile>
-          <id>unix</id>
-          <activation>
-            <os>
-              <family>unix</family>
-            </os>
-          </activation>
-          <properties>
-              <jpackage.archive>openjdk-13-jpackage+8_linux-x64_bin.tar.gz</jpackage.archive>
-              <jpackage.tar>true</jpackage.tar>
-              <powsybl-logo>logo.png</powsybl-logo>
-              <gtk2-linux-jvm-arg>-Djdk.gtk.version=2</gtk2-linux-jvm-arg>
-          </properties>
+            <id>unix</id>
+            <activation>
+                <os>
+                    <family>unix</family>
+                </os>
+            </activation>
+            <properties>
+                <jpackage.archive>openjdk-13-jpackage+8_linux-x64_bin.tar.gz</jpackage.archive>
+                <jpackage.tar>true</jpackage.tar>
+                <powsybl-logo>logo.png</powsybl-logo>
+                <gtk2-linux-jvm-arg>-Djdk.gtk.version=2</gtk2-linux-jvm-arg>
+            </properties>
         </profile>
         <profile>
             <id>native-package</id>
@@ -132,20 +132,20 @@
                         </executions>
                     </plugin>
                     <plugin>
-                      <groupId>com.googlecode.maven-download-plugin</groupId>
-                      <artifactId>download-maven-plugin</artifactId>
-                      <version>${maven.download.version}</version>
-                      <executions>
-                        <execution>
-                          <phase>package</phase>
-                          <goals>
-                            <goal>wget</goal>
-                          </goals>
-                          <configuration>
-                            <url>https://download.java.net/java/early_access/jpackage/archive/0/binaries/${jpackage.archive}</url>
-                          </configuration>
-                        </execution>
-                      </executions>
+                        <groupId>com.googlecode.maven-download-plugin</groupId>
+                        <artifactId>download-maven-plugin</artifactId>
+                        <version>${maven.download.version}</version>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>wget</goal>
+                                </goals>
+                                <configuration>
+                                    <url>https://download.java.net/java/early_access/jpackage/archive/0/binaries/${jpackage.archive}</url>
+                                </configuration>
+                            </execution>
+                        </executions>
                     </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
@@ -153,30 +153,30 @@
                         <version>${maven.antrun.version}</version>
                         <executions>
                             <execution>
-                               <id>unzip-jpackage</id>
-                               <phase>package</phase>
-                               <goals>
-                                  <goal>run</goal>
-                               </goals>
-                               <configuration>
-                                   <target name="unzip" if="${jpackage.zip}">
-                                       <unzip src="${project.build.directory}/${jpackage.archive}" dest="${project.build.directory}/jpackage" />
-                                   </target>
-                               </configuration>
-                           </execution>
-                           <execution>
-                               <id>untar-jpackage</id>
-                               <phase>package</phase>
-                               <goals>
-                                  <goal>run</goal>
-                               </goals>
-                               <configuration>
-                                   <target name="untar" if="${jpackage.tar}">
-                                       <untar src="${project.build.directory}/${jpackage.archive}" compression="gzip" dest="${project.build.directory}/jpackage"/>
-                                       <chmod file="${project.build.directory}/jpackage/jdk-13/bin/jpackage" perm="u+x"/>
-                                   </target>
-                               </configuration>
-                           </execution>
+                                <id>unzip-jpackage</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target name="unzip" if="${jpackage.zip}">
+                                        <unzip src="${project.build.directory}/${jpackage.archive}" dest="${project.build.directory}/jpackage"/>
+                                    </target>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>untar-jpackage</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target name="untar" if="${jpackage.tar}">
+                                        <untar src="${project.build.directory}/${jpackage.archive}" compression="gzip" dest="${project.build.directory}/jpackage"/>
+                                        <chmod file="${project.build.directory}/jpackage/jdk-13/bin/jpackage" perm="u+x"/>
+                                    </target>
+                                </configuration>
+                            </execution>
                         </executions>
                     </plugin>
                     <plugin>
@@ -188,11 +188,11 @@
                         <version>${maven.clean.version}</version>
                         <executions>
                             <execution>
-                               <id>clean-jlink-runtime</id>
-                               <phase>package</phase>
-                               <goals>
-                                   <goal>clean</goal>
-                               </goals>
+                                <id>clean-jlink-runtime</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>clean</goal>
+                                </goals>
                                 <configuration>
                                     <excludeDefaultDirectories>true</excludeDefaultDirectories>
                                     <filesets>
@@ -213,7 +213,8 @@
                         <artifactId>exec-maven-plugin</artifactId>
                         <version>${maven.exec.version}</version>
                         <configuration>
-                            <longModulepath>false</longModulepath> <!-- fix for https://github.com/mojohaus/exec-maven-plugin/issues/75 -->
+                            <!-- fix for https://github.com/mojohaus/exec-maven-plugin/issues/75 -->
+                            <longModulepath>false</longModulepath>
                         </configuration>
                         <executions>
                             <execution>
