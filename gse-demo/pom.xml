@@ -34,6 +34,7 @@
                 <jpackage.archive>openjdk-13-jpackage+8_windows-x64_bin.zip</jpackage.archive>
                 <jpackage.zip>true</jpackage.zip>
                 <powsybl-logo>logo.ico</powsybl-logo>
+                <gtk2-linux-jvm-arg/>
             </properties>
         </profile>
         <profile>
@@ -47,6 +48,7 @@
                 <jpackage.archive>openjdk-13-jpackage+8_osx-x64_bin.tar.gz</jpackage.archive>
                 <jpackage.tar>true</jpackage.tar>
                 <powsybl-logo>logo.png</powsybl-logo>
+                <gtk2-linux-jvm-arg/>
             </properties>
         </profile>
         <profile>
