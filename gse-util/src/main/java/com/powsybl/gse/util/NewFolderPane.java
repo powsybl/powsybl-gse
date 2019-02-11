@@ -6,7 +6,6 @@
  */
 package com.powsybl.gse.util;
 
-import com.powsybl.afs.AbstractNodeBase;
 import com.powsybl.afs.Folder;
 import com.powsybl.afs.ProjectFolder;
 import javafx.beans.binding.BooleanBinding;
@@ -28,9 +27,14 @@ public final class NewFolderPane<F> extends AbstractCreationPane {
 
     private final Function<String, F> folderCreator;
 
-    private NewFolderPane(Function<String, F> folderCreator, AbstractNodeBase folder) {
+    private NewFolderPane(Function<String, F> folderCreator, F folder) {
         super(folder);
         this.folderCreator = Objects.requireNonNull(folderCreator);
+    }
+
+    @Override
+    protected NameTextField createNameTextField() {
+        return NameTextField.create(node);
     }
 
     private BooleanBinding validatedProperty() {
@@ -43,25 +47,23 @@ public final class NewFolderPane<F> extends AbstractCreationPane {
     }
 
     public static Optional<Folder> showAndWaitDialog(Window window, Folder parent) {
-        return showAndWaitDialog(window, parent, parent::createFolder, parent);
+        return showAndWaitDialog(window, parent, parent::createFolder);
     }
 
     public static Optional<ProjectFolder> showAndWaitDialog(Window window, ProjectFolder parent) {
-        return showAndWaitDialog(window, parent, parent::createFolder, parent);
+        return showAndWaitDialog(window, parent, parent::createFolder);
     }
 
-    public static <F> Optional<F> showAndWaitDialog(Window window, F parent, Function<String, F> folderCreator,
-                                                    AbstractNodeBase folder) {
+    public static <F> Optional<F> showAndWaitDialog(Window window, F parent, Function<String, F> folderCreator) {
         Objects.requireNonNull(window);
         Objects.requireNonNull(parent);
         Objects.requireNonNull(folderCreator);
-        Objects.requireNonNull(folder);
 
         Dialog<F> dialog = new Dialog<>();
         try {
             dialog.setTitle(RESOURCE_BUNDLE.getString("NewFolder"));
             dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-            NewFolderPane<F> newProjectPane = new NewFolderPane<>(folderCreator, folder);
+            NewFolderPane<F> newProjectPane = new NewFolderPane<>(folderCreator, parent);
             newProjectPane.setPrefSize(350, 100);
             dialog.getDialogPane().lookupButton(ButtonType.OK).disableProperty().bind(newProjectPane.validatedProperty().not());
             dialog.getDialogPane().setContent(newProjectPane);

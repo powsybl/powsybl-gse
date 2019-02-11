@@ -10,9 +10,10 @@ import com.powsybl.afs.ProjectFolder;
 import com.powsybl.gse.spi.ProjectCreationTask;
 import com.powsybl.gse.spi.ProjectFileCreator;
 import com.powsybl.gse.util.AbstractCreationPane;
+import com.powsybl.gse.util.NameTextField;
 import javafx.beans.binding.BooleanBinding;
 import javafx.scene.Node;
-
+import javafx.scene.control.Label;
 
 import java.util.Objects;
 import java.util.ResourceBundle;
@@ -33,8 +34,13 @@ public abstract class AbstractModificationScriptCreator extends AbstractCreation
     }
 
     @Override
-    protected String getLabelName() {
-        return RESOURCE_BUNDLE.getString("ScriptName");
+    protected NameTextField createNameTextField() {
+        return NameTextField.create(node);
+    }
+
+    @Override
+    protected Label getNameLabel() {
+        return new Label(RESOURCE_BUNDLE.getString("ScriptName"));
     }
 
     @Override

@@ -18,6 +18,7 @@ import org.controlsfx.validation.Validator;
 
 import java.text.MessageFormat;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.function.Predicate;
 
@@ -40,6 +41,63 @@ public final class NameTextField {
         fileAlreadyExistsLabel.setTextFill(Color.RED);
         nameTextField.textProperty().addListener((observable, oldName, newName) -> uniqueName.setValue(folderUnique.test(newName)));
         nameTextField.disabledProperty().addListener((observable, oldName, newName) -> uniqueName.setValue(newName));
+    }
+
+    private NameTextField(AbstractNodeBase folder) {
+        this();
+        Objects.requireNonNull(folder);
+        if (folder instanceof ProjectFolder) {
+            folderUnique = name -> name == null || !((ProjectFolder) folder).getChild(name).isPresent();
+        } else if (folder instanceof Folder) {
+            folderUnique = name -> name == null || !((Folder) folder).getChild(name).isPresent();
+        } else {
+            throw new IllegalArgumentException();
+        }
+        addUniqueNameListener();
+    }
+
+    private NameTextField(AbstractNodeBase folder, AbstractNodeBase node) {
+        this();
+        Objects.requireNonNull(folder);
+        if (node instanceof ProjectNode) {
+            folderUnique = name -> name == null || !((ProjectNode)node).getParent().map(f -> f.getChild(name).isPresent()).orElse(false);
+        } else {
+            folderUnique = name -> name == null ||  !((Node)node).getParent().map(f -> f.getChild(name).isPresent()).orElse(false);
+        }
+        nameTextField.setText(node.getName());
+        addUniqueNameListener();
+    }
+
+    public static NameTextField create(AbstractNodeBase node) {
+        Objects.requireNonNull(node);
+        if (node instanceof ProjectFolder || node instanceof Folder) {
+            return new NameTextField(node);
+        } else {
+            // project file or file
+            Optional parent = node.getParent();
+            if (parent.isPresent()) {
+                Object folder = parent.get();
+                return new NameTextField((AbstractNodeBase) folder);
+            } else {
+                throw new AssertionError();
+            }
+        }
+    }
+
+    public static NameTextField edit(AbstractNodeBase node) {
+        Optional parent = node.getParent();
+        if (parent.isPresent()) {
+            Object folder = parent.get();
+            if (folder instanceof ProjectFolder) {
+                return new NameTextField((ProjectFolder) folder, node);
+            } else {
+                return new NameTextField((Folder) folder, node);
+            }
+        }
+        return null;
+    }
+
+    private void addUniqueNameListener() {
         uniqueName.addListener((observable, oldUnique, newUnique) -> {
             if (newUnique || nameTextField.isDisabled()) {
                 fileAlreadyExistsLabel.setText(null);
@@ -48,38 +106,6 @@ public final class NameTextField {
                         nameTextField.getText()));
             }
         });
-    }
-
-    private NameTextField(ProjectFolder folder) {
-        this();
-        Objects.requireNonNull(folder);
-        folderUnique = name -> name == null || !folder.getChild(name).isPresent();
-    }
-
-    private NameTextField(Folder folder) {
-        this();
-        Objects.requireNonNull(folder);
-        folderUnique = name -> name == null || !folder.getChild(name).isPresent();
-    }
-
-    public static NameTextField create(ProjectNode node) {
-        Objects.requireNonNull(node);
-        if (node instanceof ProjectFolder) {
-            return new NameTextField((ProjectFolder) node);
-        } else {
-            // project file
-            return node.getParent().map(NameTextField::new).orElseThrow(AssertionError::new);
-        }
-    }
-
-    public static NameTextField create(Node node) {
-        Objects.requireNonNull(node);
-        if (node instanceof Folder) {
-            return new NameTextField((Folder) node);
-        } else {
-            // file
-            return node.getParent().map(NameTextField::new).orElseThrow(AssertionError::new);
-        }
     }
 
     public String getText() {

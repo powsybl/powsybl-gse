@@ -7,45 +7,43 @@
 package com.powsybl.gse.util;
 
 import com.powsybl.afs.AbstractNodeBase;
-import com.powsybl.afs.Node;
-import com.powsybl.afs.ProjectNode;
-
 import javafx.application.Platform;
-
 import javafx.scene.control.Label;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 
 import java.util.Objects;
-import java.util.ResourceBundle;
 
 /**
  * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
  */
-public abstract class AbstractCreationPane extends GridPane {
-
-    private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.CreationPane");
+public abstract class AbstractCreationPane<F> extends GridPane {
 
     protected final NameTextField nameTextField;
 
-    public AbstractCreationPane(AbstractNodeBase node) {
+    protected AbstractNodeBase node;
+
+    public AbstractCreationPane(F node) {
         Objects.requireNonNull(node);
-        nameTextField = node instanceof ProjectNode ? NameTextField.create((ProjectNode) node) : NameTextField.create((Node) node);
+        this.node = (AbstractNodeBase) node;
+        nameTextField = createNameTextField();
         setVgap(5);
         setHgap(5);
         ColumnConstraints column0 = new ColumnConstraints();
         ColumnConstraints column1 = new ColumnConstraints();
         column1.setHgrow(Priority.ALWAYS);
         getColumnConstraints().addAll(column0, column1);
-        add(new Label(getLabelName()), 0, 0);
+        add(getNameLabel(), 0, 0);
         add(nameTextField.getInputField(), 1, 0);
         add(nameTextField.getFileAlreadyExistsLabel(), 0, 1, 2, 1);
         Platform.runLater(nameTextField.getInputField()::requestFocus);
     }
 
-    protected String getLabelName() {
-        return RESOURCE_BUNDLE.getString("Name");
+    protected Label getNameLabel() {
+        return nameTextField.getNameLabel();
     }
+
+    protected abstract NameTextField createNameTextField();
 
 }

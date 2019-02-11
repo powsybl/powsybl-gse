@@ -24,7 +24,11 @@ public final class RenamePane extends AbstractCreationPane {
 
     private RenamePane(AbstractNodeBase node) {
         super(node);
-        nameTextField.setText(node.getName());
+    }
+
+    @Override
+    protected NameTextField createNameTextField() {
+        return NameTextField.edit(node);
     }
 
     private BooleanBinding validatedProperty() {
