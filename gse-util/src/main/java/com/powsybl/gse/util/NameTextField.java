@@ -51,20 +51,8 @@ public final class NameTextField {
         } else if (folder instanceof Folder) {
             folderUnique = name -> name == null || !((Folder) folder).getChild(name).isPresent();
         } else {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException("this argument should be either a ProjectFolder or a Folder");
         }
-        addUniqueNameListener();
-    }
-
-    private NameTextField(AbstractNodeBase folder, AbstractNodeBase node) {
-        this();
-        Objects.requireNonNull(folder);
-        if (node instanceof ProjectNode) {
-            folderUnique = name -> name == null || !((ProjectNode)node).getParent().map(f -> f.getChild(name).isPresent()).orElse(false);
-        } else {
-            folderUnique = name -> name == null ||  !((Node)node).getParent().map(f -> f.getChild(name).isPresent()).orElse(false);
-        }
-        nameTextField.setText(node.getName());
         addUniqueNameListener();
     }
 
@@ -84,17 +72,16 @@ public final class NameTextField {
         }
     }
 
-    public static NameTextField edit(AbstractNodeBase node) {
-        Optional parent = node.getParent();
-        if (parent.isPresent()) {
-            Object folder = parent.get();
-            if (folder instanceof ProjectFolder) {
-                return new NameTextField((ProjectFolder) folder, node);
-            } else {
-                return new NameTextField((Folder) folder, node);
-            }
+    public static NameTextField createWithName(AbstractNodeBase node) {
+        NameTextField nameTextField = new NameTextField();
+        if (node instanceof ProjectNode) {
+            nameTextField.folderUnique = name -> name == null || !((ProjectNode) node).getParent().map(f -> f.getChild(name).isPresent()).orElse(false);
+        } else {
+            nameTextField.folderUnique = name -> name == null || !((Node) node).getParent().map(f -> f.getChild(name).isPresent()).orElse(false);
         }
-        return null;
+        nameTextField.setText(node.getName());
+        nameTextField.addUniqueNameListener();
+        return nameTextField;
     }
 
     private void addUniqueNameListener() {

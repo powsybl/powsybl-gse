@@ -6,6 +6,7 @@
  */
 package com.powsybl.gse.util;
 
+import com.powsybl.afs.AbstractNodeBase;
 import com.powsybl.afs.Folder;
 import com.powsybl.afs.ProjectFolder;
 import javafx.beans.binding.BooleanBinding;
@@ -27,7 +28,7 @@ public final class NewFolderPane<F> extends AbstractCreationPane {
 
     private final Function<String, F> folderCreator;
 
-    private NewFolderPane(Function<String, F> folderCreator, F folder) {
+    private NewFolderPane(Function<String, F> folderCreator, AbstractNodeBase folder) {
         super(folder);
         this.folderCreator = Objects.requireNonNull(folderCreator);
     }
@@ -63,7 +64,7 @@ public final class NewFolderPane<F> extends AbstractCreationPane {
         try {
             dialog.setTitle(RESOURCE_BUNDLE.getString("NewFolder"));
             dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-            NewFolderPane<F> newProjectPane = new NewFolderPane<>(folderCreator, parent);
+            NewFolderPane<F> newProjectPane = new NewFolderPane<>(folderCreator, (AbstractNodeBase) parent);
             newProjectPane.setPrefSize(350, 100);
             dialog.getDialogPane().lookupButton(ButtonType.OK).disableProperty().bind(newProjectPane.validatedProperty().not());
             dialog.getDialogPane().setContent(newProjectPane);

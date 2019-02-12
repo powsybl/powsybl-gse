@@ -18,15 +18,15 @@ import java.util.Objects;
 /**
  * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
  */
-public abstract class AbstractCreationPane<F> extends GridPane {
+public abstract class AbstractCreationPane extends GridPane {
 
     protected final NameTextField nameTextField;
 
     protected AbstractNodeBase node;
 
-    public AbstractCreationPane(F node) {
+    public AbstractCreationPane(AbstractNodeBase node) {
         Objects.requireNonNull(node);
-        this.node = (AbstractNodeBase) node;
+        this.node =  node;
         nameTextField = createNameTextField();
         setVgap(5);
         setHgap(5);

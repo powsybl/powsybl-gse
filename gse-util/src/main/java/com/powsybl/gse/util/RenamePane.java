@@ -28,7 +28,7 @@ public final class RenamePane extends AbstractCreationPane {
 
     @Override
     protected NameTextField createNameTextField() {
-        return NameTextField.edit(node);
+        return NameTextField.createWithName(node);
     }
 
     private BooleanBinding validatedProperty() {
