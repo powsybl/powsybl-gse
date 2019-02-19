@@ -7,6 +7,8 @@
 package com.powsybl.gse.util;
 
 import com.google.common.base.Stopwatch;
+import com.powsybl.commons.util.ServiceLoaderCache;
+import com.powsybl.gse.spi.KeyWordsProvider;
 import groovyjarjarantlr.Token;
 import groovyjarjarantlr.TokenStream;
 import groovyjarjarantlr.TokenStreamException;
@@ -47,7 +49,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
 
-    private static final String KEY_WORD = "keyword";
+    private static final ServiceLoaderCache<KeyWordsProvider> KEY_WORDS_LOADER = new ServiceLoaderCache<>(KeyWordsProvider.class);
 
     private boolean allowedDrag = false;
 
@@ -166,25 +168,6 @@ public class GroovyCodeEditor extends MasterDetailPane {
         return codeArea.textProperty();
     }
 
-    private static String imagridStyleClass(String text) {
-        if (text.startsWith("mapTo")) {
-            return KEY_WORD;
-        }
-        switch (text) {
-            case "filter":
-            case "distributionKey":
-            case "variable":
-            case "timeSeriesName":
-            case "timeSeries":
-            case "ts":
-                return KEY_WORD;
-
-            default:
-                return null;
-        }
-    }
-
-
     private static String styleClass(int tokenType) {
         switch (tokenType) {
             case GroovyTokenTypes.LCURLY:
@@ -273,7 +256,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
             case GroovyTokenTypes.UNUSED_DO:
             case GroovyTokenTypes.UNUSED_GOTO:
             case GroovyTokenTypes.TYPE:
-                return KEY_WORD;
+                return "keyword";
 
             default:
                 return null;
@@ -284,6 +267,23 @@ public class GroovyCodeEditor extends MasterDetailPane {
         int offset1 = codeArea.getDocument().position(token.getLine() -  1, token.getColumn() - 1).toOffset();
         int offset2 = codeArea.getDocument().position(token.getLineLast() - 1, token.getColumnLast() - 1).toOffset();
         return offset2 - offset1;
+    }
+
+    private void buildStyle(String styleClass, StyleSpansBuilder<Collection<String>> spansBuilder, int length, Token token) {
+        if (styleClass != null) {
+            spansBuilder.add(Collections.singleton(styleClass), length);
+        } else if (!KEY_WORDS_LOADER.getServices().isEmpty()) {
+            for (KeyWordsProvider styleExtension : KEY_WORDS_LOADER.getServices()) {
+                String style = styleExtension.styleClass(token.getText());
+                if (style != null) {
+                    spansBuilder.add(Collections.singleton(style), length);
+                } else {
+                    spansBuilder.add(Collections.emptyList(), length);
+                }
+            }
+        } else {
+            spansBuilder.add(Collections.emptyList(), length);
+        }
     }
 
     private StyleSpans<Collection<String>> computeHighlighting(String text) {
@@ -300,15 +300,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 Token token = tokenStream.nextToken();
                 while (token.getType() != Token.EOF_TYPE) {
                     String styleClass = styleClass(token.getType());
-                    String imagridStyleClass = imagridStyleClass(token.getText());
                     int length = length((GroovySourceToken) token);
-                    if (styleClass != null) {
-                        spansBuilder.add(Collections.singleton(styleClass), length);
-                    } else if (imagridStyleClass != null) {
-                        spansBuilder.add(Collections.singleton(imagridStyleClass), length);
-                    } else {
-                        spansBuilder.add(Collections.emptyList(), length);
-                    }
+                    buildStyle(styleClass, spansBuilder, length, token);
                     added = true;
                     token = tokenStream.nextToken();
                 }
