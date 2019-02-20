@@ -8,7 +8,7 @@ package com.powsybl.gse.util;
 
 import com.google.common.base.Stopwatch;
 import com.powsybl.commons.util.ServiceLoaderCache;
-import com.powsybl.gse.spi.KeyWordsProvider;
+import com.powsybl.gse.spi.KeywordsProvider;
 import groovyjarjarantlr.Token;
 import groovyjarjarantlr.TokenStream;
 import groovyjarjarantlr.TokenStreamException;
@@ -49,7 +49,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
 
-    private static final ServiceLoaderCache<KeyWordsProvider> KEY_WORDS_LOADER = new ServiceLoaderCache<>(KeyWordsProvider.class);
+    private static final ServiceLoaderCache<KeywordsProvider> KEY_WORDS_LOADER = new ServiceLoaderCache<>(KeywordsProvider.class);
 
     private boolean allowedDrag = false;
 
@@ -273,7 +273,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         if (styleClass != null) {
             spansBuilder.add(Collections.singleton(styleClass), length);
         } else if (!KEY_WORDS_LOADER.getServices().isEmpty()) {
-            for (KeyWordsProvider styleExtension : KEY_WORDS_LOADER.getServices()) {
+            for (KeywordsProvider styleExtension : KEY_WORDS_LOADER.getServices()) {
                 String style = styleExtension.styleClass(token.getText());
                 if (style != null) {
                     spansBuilder.add(Collections.singleton(style), length);
