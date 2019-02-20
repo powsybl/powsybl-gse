@@ -238,6 +238,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.clear();
         codeArea.replaceText(0, 0, code);
         codeArea.showParagraphAtTop(0);
+        codeArea.getUndoManager().forgetHistory();
         resetDividerPosition();
     }
 
