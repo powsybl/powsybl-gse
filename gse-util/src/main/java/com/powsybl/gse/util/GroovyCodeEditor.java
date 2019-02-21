@@ -49,7 +49,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
 
-    private static final ServiceLoaderCache<KeywordsProvider> KEY_WORDS_LOADER = new ServiceLoaderCache<>(KeywordsProvider.class);
+    private static final ServiceLoaderCache<KeywordsProvider> KEYWORDS_LOADER = new ServiceLoaderCache<>(KeywordsProvider.class);
 
     private boolean allowedDrag = false;
 
@@ -272,8 +272,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private void buildStyle(String styleClass, StyleSpansBuilder<Collection<String>> spansBuilder, int length, Token token) {
         if (styleClass != null) {
             spansBuilder.add(Collections.singleton(styleClass), length);
-        } else if (!KEY_WORDS_LOADER.getServices().isEmpty()) {
-            for (KeywordsProvider styleExtension : KEY_WORDS_LOADER.getServices()) {
+        } else if (!KEYWORDS_LOADER.getServices().isEmpty()) {
+            for (KeywordsProvider styleExtension : KEYWORDS_LOADER.getServices()) {
                 String style = styleExtension.styleClass(token.getText());
                 if (style != null) {
                     spansBuilder.add(Collections.singleton(style), length);
