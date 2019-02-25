@@ -91,7 +91,6 @@ public class ProjectPane extends Tab {
 
         private final KeyCombination closeAllKeyCombination = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
 
-
         public MyTab(String text, ProjectFileViewer viewer) {
             super(text, viewer.getContent());
             this.viewer = viewer;
