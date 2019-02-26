@@ -12,7 +12,6 @@ public class DragAndDropMove {
     private Object source;
     private TreeItem sourceTreeItem;
 
-
     public Object getSource() {
         return source;
     }

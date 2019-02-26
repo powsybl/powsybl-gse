@@ -171,7 +171,6 @@ public final class SearchBar extends HBox {
         setMargin(searchField, new Insets(0, 0, 0, 5));
         setMargin(closeButton, new Insets(0, 5, 0, 0));
 
-
         searchField.textProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue == null || "".equals(newValue)) {
                 matcher.reset();
@@ -192,7 +191,6 @@ public final class SearchBar extends HBox {
                 ke.consume();
             }
         });
-
 
         matcher.nbMatchesProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue.intValue() == 0) {
