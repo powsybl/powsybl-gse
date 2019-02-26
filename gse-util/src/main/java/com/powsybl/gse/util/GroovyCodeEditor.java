@@ -37,6 +37,7 @@ import java.io.UncheckedIOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -59,8 +60,6 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
         private int tabSize = 4;
-
-        private int caretPositionBeforePaste;
 
         @Override
         public String getText() {
@@ -106,19 +105,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
             }
 
         });
-        codeArea.addEventFilter(KeyEvent.KEY_PRESSED, this::filterTab);
-        codeArea.setOnKeyPressed((KeyEvent ke) -> {
-            if (ke.getCode() == KeyCode.TAB) {
-                codeArea.deletePreviousChar();
-                codeArea.insertText(codeArea.getCaretPosition(), generateTabSpace(tabSpacesToAdd()));
-            } else if (pasteKeyCombination.match(ke)) {
-                final Clipboard clipboard = Clipboard.getSystemClipboard();
-                if(clipboard.getString() != null) {
-                    setOnPaste(clipboard.getString());
-                }
-            }
-        });
-
+        codeArea.addEventFilter(KeyEvent.KEY_PRESSED, this::setTabulationSpace);
         codeArea.setOnDragEntered(event -> codeArea.setShowCaret(Caret.CaretVisibility.ON));
         codeArea.setOnDragExited(event -> codeArea.setShowCaret(Caret.CaretVisibility.AUTO));
         codeArea.setOnDragDetected(this::onDragDetected);
@@ -127,32 +114,42 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.setOnSelectionDrag(p -> allowedDrag = true);
     }
 
-    private void setOnPaste(String text) {
-        int caretPosition = codeArea.getCaretPosition();
-        int spaceAdded = 0;
-        int length = text.length();
-        for (int position = codeArea.caretPositionBeforePaste; position <= codeArea.caretPositionBeforePaste + length - 1; position++) {
-            if (codeArea.getText().charAt(position) == '\t') {
-                codeArea.deleteText(position, position + 1);
-                codeArea.displaceCaret(position);
-                spaceAdded += tabSpacesToAdd() - 1;
-                length += tabSpacesToAdd() - 1;
-                codeArea.insertText(codeArea.getCaretPosition(), generateTabSpace(tabSpacesToAdd()));
+    private void setTabulationSpace(KeyEvent ke) {
+        if (ke.getCode() == KeyCode.TAB) {
+            ke.consume();
+            int currentLine = codeArea.getCaretSelectionBind().getParagraphIndex();
+            int fromLineStartToCaret = codeArea.getText(currentLine, 0, currentLine, codeArea.getCaretColumn()).length();
+            codeArea.insertText(codeArea.getCaretPosition(), generateTabSpace(tabSpacesToAdd(fromLineStartToCaret)));
+        } else if (pasteKeyCombination.match(ke)) {
+            ke.consume();
+            deleteSelection();
+            final Clipboard clipboard = Clipboard.getSystemClipboard();
+            if (clipboard.getString() != null) {
+                try (Scanner sc = new Scanner(clipboard.getString())) {
+                    while (sc.hasNextLine()) {
+                        replaceTabulation(sc);
+                    }
+                }
             }
         }
-        codeArea.getCaretSelectionBind().moveTo(caretPosition + spaceAdded);
     }
 
-    private void filterTab(KeyEvent ke) {
-        if (pasteKeyCombination.match(ke)) {
-            codeArea.caretPositionBeforePaste = codeArea.getCaretPosition();
-        } else if (ke.getCode() == KeyCode.TAB && !codeArea.selectedTextProperty().getValue().isEmpty()) {
-            ke.consume();
-            int startParagraphIndex = codeArea.getCaretSelectionBind().getStartParagraphIndex();
-            int endParagraphIndex = codeArea.getCaretSelectionBind().getEndParagraphIndex();
-            for (int line = startParagraphIndex; line <= endParagraphIndex; line++) {
-                codeArea.insertText(line, 0, generateTabSpace(getTabSize()));
+    private void deleteSelection() {
+        if (!codeArea.getSelectedText().isEmpty()) {
+            codeArea.deleteText(codeArea.selectionProperty().getValue());
+        }
+    }
+
+    private void replaceTabulation(Scanner sc) {
+        String line = sc.nextLine();
+        for (int j = 0; j < line.length(); j++) {
+            if (line.charAt(j) == '\t') {
+                line = line.replaceFirst(Character.toString('\t'), generateTabSpace(tabSpacesToAdd(line.indexOf('\t'))));
             }
+        }
+        codeArea.insertText(codeArea.getCaretPosition(), line);
+        if (sc.hasNextLine()) {
+            codeArea.replaceSelection("\n");
         }
     }
 
@@ -171,10 +168,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
         return StringUtils.repeat(" ", size);
     }
 
-    private int tabSpacesToAdd() {
-        int currentLine = codeArea.getCaretSelectionBind().getParagraphIndex();
-        int fromLineStartToCaret = codeArea.getText(currentLine, 0, currentLine, codeArea.getCaretColumn()).length();
-        return getTabSize() - (fromLineStartToCaret % getTabSize());
+    private int tabSpacesToAdd(int currentPosition) {
+        return getTabSize() - (currentPosition % getTabSize());
     }
 
     private void onDragDetected(MouseEvent event) {
