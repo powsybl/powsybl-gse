@@ -96,20 +96,16 @@ public final class NewFolderPane<F> extends GridPane {
         Objects.requireNonNull(folderCreator);
         Objects.requireNonNull(folderUnique);
 
-        Dialog<F> dialog = new Dialog<>();
+        Dialog<F> dialog = null;
         try {
-            dialog.setTitle(RESOURCE_BUNDLE.getString("NewFolder"));
-            dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
             NewFolderPane<F> newProjectPane = new NewFolderPane<>(folderCreator, folderUnique);
             newProjectPane.setPrefSize(350, 100);
-            dialog.getDialogPane().lookupButton(ButtonType.OK).disableProperty().bind(newProjectPane.validatedProperty().not());
-            dialog.getDialogPane().setContent(newProjectPane);
-            dialog.setResizable(true);
-            dialog.initOwner(window);
-            dialog.setResultConverter(buttonType -> buttonType == ButtonType.OK ? newProjectPane.createFolder() : null);
+            dialog = new GseDialog<>(RESOURCE_BUNDLE.getString("NewFolder"), newProjectPane, window, newProjectPane.validatedProperty().not(), buttonType -> buttonType == ButtonType.OK ? newProjectPane.createFolder() : null);
             return dialog.showAndWait();
         } finally {
-            dialog.close();
+            if (dialog != null) {
+                dialog.close();
+            }
         }
     }
 }

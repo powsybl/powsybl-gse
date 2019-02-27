@@ -11,6 +11,7 @@ import com.powsybl.afs.AppFileSystem;
 import com.powsybl.afs.Folder;
 import com.powsybl.afs.Project;
 import com.powsybl.gse.spi.GseContext;
+import com.powsybl.gse.util.GseDialog;
 import com.powsybl.gse.util.NodeChooser;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
@@ -123,20 +124,16 @@ public class NewProjectPane extends GridPane {
     }
 
     public static Optional<Project> showAndWaitDialog(Window window, AppData appData, GseContext context) {
-        Dialog<Project> dialog = new Dialog<>();
+        Dialog<Project> dialog = null;
         try {
-            dialog.setTitle(RESOURCE_BUNDLE.getString("NewProject"));
-            dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
             NewProjectPane newProjectPane = new NewProjectPane(window, appData, context);
             newProjectPane.setPrefSize(400, 200);
-            dialog.getDialogPane().lookupButton(ButtonType.OK).disableProperty().bind(newProjectPane.validatedProperty().not());
-            dialog.getDialogPane().setContent(newProjectPane);
-            dialog.setResizable(true);
-            dialog.initOwner(window);
-            dialog.setResultConverter(buttonType -> buttonType == ButtonType.OK ? newProjectPane.createProject() : null);
+            dialog = new GseDialog<>(RESOURCE_BUNDLE.getString("NewProject"), newProjectPane, window, newProjectPane.validatedProperty().not(), buttonType -> buttonType == ButtonType.OK ? newProjectPane.createProject() : null);
             return dialog.showAndWait();
         } finally {
-            dialog.close();
+            if (dialog != null) {
+                dialog.close();
+            }
         }
     }
 }

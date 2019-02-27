@@ -18,6 +18,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.paint.Color;
 import com.powsybl.afs.AbstractNodeBase;
+import javafx.stage.Window;
 
 import java.text.MessageFormat;
 import java.util.Objects;
@@ -73,29 +74,26 @@ public final class RenamePane extends GridPane {
         return nameTextField;
     }
 
-    public static Optional<String> showAndWaitDialog(ProjectNode selectedNode) {
-        return showAndWaitDialog(selectedNode, name -> !selectedNode.getParent().map(f -> f.getChild(name).isPresent()).orElse(false));
+    public static Optional<String> showAndWaitDialog(Window window, ProjectNode selectedNode) {
+        return showAndWaitDialog(window, selectedNode, name -> !selectedNode.getParent().map(f -> f.getChild(name).isPresent()).orElse(false));
     }
 
-    public static Optional<String> showAndWaitDialog(Node selectedNode) {
-        return showAndWaitDialog(selectedNode, name -> !selectedNode.getParent().map(f -> f.getChild(name).isPresent()).orElse(false));
+    public static Optional<String> showAndWaitDialog(Window window, Node selectedNode) {
+        return showAndWaitDialog(window, selectedNode, name -> !selectedNode.getParent().map(f -> f.getChild(name).isPresent()).orElse(false));
     }
 
-    public static Optional<String> showAndWaitDialog(AbstractNodeBase node, Predicate<String> nodeNameUnique) {
-        Dialog<String> dialog = new Dialog<>();
+    public static Optional<String> showAndWaitDialog(Window window, AbstractNodeBase node, Predicate<String> nodeNameUnique) {
+        Dialog<String> dialog = null;
         try {
-            dialog.setTitle(RESOURCE_BUNDLE.getString("RenameFile"));
-            dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
             RenamePane renamePane = new RenamePane(node, nodeNameUnique);
             renamePane.setPrefSize(350, 100);
-            dialog.getDialogPane().lookupButton(ButtonType.OK).disableProperty().bind(renamePane.validatedProperty().not());
-            dialog.getDialogPane().setContent(renamePane);
-            dialog.setResizable(true);
-            dialog.setResultConverter(buttonType -> buttonType == ButtonType.OK ? renamePane.getNameTextField().getText() : null);
-
+            dialog = new GseDialog<>(RESOURCE_BUNDLE.getString("RenameFile"), renamePane, window,
+                    renamePane.validatedProperty().not(), buttonType -> buttonType == ButtonType.OK ? renamePane.getNameTextField().getText() : null);
             return dialog.showAndWait();
         } finally {
-            dialog.close();
+            if (dialog != null) {
+                dialog.close();
+            }
         }
     }
 }

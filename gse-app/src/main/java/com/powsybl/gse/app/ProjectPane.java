@@ -688,7 +688,7 @@ public class ProjectPane extends Tab {
     }
 
     private void renameProjectNode(TreeItem<Object> selectedTreeItem) {
-        Optional<String> result = RenamePane.showAndWaitDialog((ProjectNode) selectedTreeItem.getValue());
+        Optional<String> result = RenamePane.showAndWaitDialog(getContent().getScene().getWindow(), (ProjectNode) selectedTreeItem.getValue());
         result.ifPresent(newName -> {
             if (selectedTreeItem.getValue() instanceof ProjectNode) {
                 ProjectNode selectedProjectNode = (ProjectNode) selectedTreeItem.getValue();
@@ -814,23 +814,18 @@ public class ProjectPane extends Tab {
     private void executionTaskLaunch(ProjectFileExecutionTaskExtension executionTaskExtension, ProjectFile file) {
         ExecutionTaskConfigurator configurator = executionTaskExtension.createConfigurator(file, getContent().getScene(), context);
         if (configurator != null) {
-            Dialog<Boolean> dialog = new Dialog<>();
+            Dialog<Boolean> dialog = null;
             try {
-                dialog.setTitle(configurator.getTitle());
-                dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-                Button button = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
-                button.disableProperty().bind(configurator.configProperty().isNull());
-                dialog.getDialogPane().setContent(configurator.getContent());
-                dialog.setResizable(true);
-                dialog.initOwner(getContent().getScene().getWindow());
-                dialog.setResultConverter(buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE);
+                dialog = new GseDialog<>(configurator.getTitle(), configurator.getContent(), getContent().getScene().getWindow(), configurator.configProperty().isNull(), buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE);
                 dialog.showAndWait().ifPresent(ok -> {
                     if (ok) {
                         GseUtil.execute(context.getExecutor(), () -> executionTaskExtension.execute(file, configurator.configProperty().get()));
                     }
                 });
             } finally {
-                dialog.close();
+                if (dialog != null) {
+                    dialog.close();
+                }
                 configurator.dispose();
             }
         } else {
@@ -941,16 +936,7 @@ public class ProjectPane extends Tab {
     }
 
     private Dialog<Boolean> createProjectItemDialog(String title, BooleanBinding okProperty, javafx.scene.Node content) {
-        Dialog<Boolean> dialog = new Dialog<>();
-        dialog.setTitle(title);
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        Button button = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
-        button.disableProperty().bind(okProperty.not());
-        dialog.getDialogPane().setContent(content);
-        dialog.setResizable(true);
-        dialog.initOwner(getContent().getScene().getWindow());
-        dialog.setResultConverter(buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE);
-        return dialog;
+        return new GseDialog<>(title, content, getContent().getScene().getWindow(), okProperty.not(), buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE);
     }
 
     private ContextMenu createFolderContextMenu(TreeItem<Object> selectedTreeItem) {
