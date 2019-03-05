@@ -100,7 +100,7 @@
         <maven.core.version>3.3.9</maven.core.version>
         <mockito.version>1.10.19</mockito.version>
         <poi.version>3.15</poi.version>
-        <richtextfx.version>0.8.2</richtextfx.version>
+        <richtextfx.version>0.9.3</richtextfx.version>
         <rtree.version>0.8.5</rtree.version>
         <simplify.version>1.0.0</simplify.version>
         <slf4j.version>1.7.22</slf4j.version>
