@@ -178,7 +178,6 @@ public final class SearchBar extends HBox {
         }
     }
 
-
     public SearchBar(Searchable textArea) {
         super(0);
 
@@ -232,7 +231,7 @@ public final class SearchBar extends HBox {
                 searchField.pseudoClassStateChanged(failed, true);
             } else {
                 searchField.pseudoClassStateChanged(failed, false);
-                matchLabel.setText(nbMatchFound.format(new Object[] {matcher.currentMatchProperty.getValue() + 1, newValue}));
+                matchLabel.setText(nbMatchFound.format(new Object[]{matcher.currentMatchProperty.getValue() + 1, newValue}));
             }
         });
 
@@ -244,7 +243,7 @@ public final class SearchBar extends HBox {
 
         matcher.currentMatchProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue.intValue() > -1) {
-                matchLabel.setText(nbMatchFound.format(new Object[] {newValue.intValue() + 1, matcher.nbMatchesProperty().getValue()}));
+                matchLabel.setText(nbMatchFound.format(new Object[]{newValue.intValue() + 1, matcher.nbMatchesProperty().getValue()}));
                 textArea.select(matcher.currentMatchStart(), matcher.currentMatchEnd());
             }
         });
