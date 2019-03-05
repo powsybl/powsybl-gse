@@ -87,9 +87,23 @@ public class ProjectPane extends Tab {
 
         private ProjectFileViewer viewer;
 
+        private final KeyCombination closeKeyCombination = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN);
+
+        private final KeyCombination closeAllKeyCombination = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
+
         public MyTab(String text, ProjectFileViewer viewer) {
             super(text, viewer.getContent());
             this.viewer = viewer;
+            getContent().setOnKeyPressed((KeyEvent ke) -> {
+                if (closeKeyCombination.match(ke)) {
+                    closeTab(ke, this);
+                } else if (closeAllKeyCombination.match(ke)) {
+                    List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
+                            .map(tab -> (MyTab) tab)
+                            .collect(Collectors.toList()));
+                    mytabs.forEach(mytab -> closeTab(ke, mytab));
+                }
+            });
         }
 
         public ProjectFileViewer getViewer() {
@@ -100,6 +114,15 @@ public class ProjectPane extends Tab {
             getTabPane().getTabs().remove(this);
             if (getOnClosed() != null) {
                 Event.fireEvent(this, new Event(Tab.CLOSED_EVENT));
+            }
+        }
+
+        private static void closeTab(Event event, MyTab tab) {
+            if (!tab.getViewer().isClosable()) {
+                event.consume();
+            } else {
+                tab.getTabPane().getTabs().remove(tab);
+                tab.getViewer().dispose();
             }
         }
     }
@@ -655,15 +678,39 @@ public class ProjectPane extends Tab {
         return menuItem;
     }
 
-    private void renameProjectNode(TreeItem selectedTreeItem) {
+    private void listProjectNodeTreeItems(TreeItem<Object> treeItem, Map<String, TreeItem<Object>> projectNodeTreeItems) {
+        if (treeItem.getValue() instanceof ProjectNode) {
+            projectNodeTreeItems.put(((ProjectNode) treeItem.getValue()).getId(), treeItem);
+        }
+        for (TreeItem<Object> childTreeItem : treeItem.getChildren()) {
+            listProjectNodeTreeItems(childTreeItem, projectNodeTreeItems);
+        }
+    }
+
+    private void renameProjectNode(TreeItem<Object> selectedTreeItem) {
         Optional<String> result = RenamePane.showAndWaitDialog((ProjectNode) selectedTreeItem.getValue());
         result.ifPresent(newName -> {
             if (selectedTreeItem.getValue() instanceof ProjectNode) {
-                ProjectNode selectedTreeNode = (ProjectNode) selectedTreeItem.getValue();
-                selectedTreeNode.rename(newName);
-                refresh(selectedTreeItem.getParent());
-                treeView.getSelectionModel().clearSelection();
-                treeView.getSelectionModel().select(selectedTreeItem);
+                ProjectNode selectedProjectNode = (ProjectNode) selectedTreeItem.getValue();
+                selectedProjectNode.rename(newName);
+
+                // to force the refresh
+                selectedTreeItem.setValue(null);
+                selectedTreeItem.setValue(selectedProjectNode);
+
+                // refresh impacted tabs
+                Map<String, TreeItem<Object>> treeItemsToRefresh = new HashMap<>();
+                listProjectNodeTreeItems(selectedTreeItem, treeItemsToRefresh);
+
+                for (DetachableTabPane tabPane : findDetachableTabPanes()) {
+                    for (Tab tab : new ArrayList<>(tabPane.getTabs())) {
+                        String tabNodeId = ((TabKey) tab.getUserData()).nodeId;
+                        TreeItem<Object> treeItem = treeItemsToRefresh.get(tabNodeId);
+                        if (treeItem != null) {
+                            tab.setText(getTabName(treeItem));
+                        }
+                    }
+                }
             }
         });
     }
