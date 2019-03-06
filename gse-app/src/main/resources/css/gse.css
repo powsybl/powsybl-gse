@@ -115,8 +115,8 @@
 
 .check-box .box{
      -fx-background-color: white;
-     -fx-border-color:grey;
-     -fx-border-radius:3px;
+     -fx-border-color: grey;
+     -fx-border-radius: 3px;
      -fx-padding: 2, 0, 2, 0;
  }
 
