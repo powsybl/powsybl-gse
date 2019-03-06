@@ -18,6 +18,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
@@ -53,6 +54,8 @@ public final class SearchBar extends HBox {
     private final Button closeButton = new Button();
     private final Button upButton;
     private final Button downButton;
+    private final CheckBox caseSensitiveBox;
+    private final Label caseSensitiveLabel;
     private final Label matchLabel = new Label();
     private MessageFormat nbMatchFound = new MessageFormat(RESOURCE_BUNDLE.getString("NbMatchFound"));
     private PseudoClass failed;
@@ -138,6 +141,20 @@ public final class SearchBar extends HBox {
             }
         }
 
+        void find(String searchPattern, String searchedTxt, int sensitiveCase) {
+            reset();
+            try {
+                Matcher matcherSensitive = Pattern.compile(searchPattern, sensitiveCase).matcher(searchedTxt);
+                while (matcherSensitive.find()) {
+                    positions.add(new SearchTuple(matcherSensitive.start(), matcherSensitive.end()));
+                }
+                nbMatchesProperty.set(positions.size());
+                nextMatch();
+            } catch (PatternSyntaxException psex) {
+                throw new PowsyblException(RESOURCE_BUNDLE.getString("SyntaxError"));
+            }
+        }
+
         void reset() {
             positions.clear();
             nbMatchesProperty.set(-1);
@@ -155,6 +172,11 @@ public final class SearchBar extends HBox {
 
         upButton = new Button(null, upGlyph);
         downButton = new Button(null, downGlyph);
+        caseSensitiveBox = new CheckBox();
+        caseSensitiveBox.getStyleClass().add("check-box");
+        caseSensitiveBox.setSelected(false);
+        matchLabel.getStyleClass().add("match-label");
+        caseSensitiveLabel = new Label("Match case");
         searchedArea = Objects.requireNonNull(textArea);
         setPrefHeight(20);
         setAlignment(Pos.CENTER_LEFT);
@@ -167,18 +189,31 @@ public final class SearchBar extends HBox {
         failed = PseudoClass.getPseudoClass("fail");
         Pane gluePanel = new Pane();
         setHgrow(gluePanel, Priority.ALWAYS);
-        getChildren().addAll(searchField, upButton, downButton, matchLabel, gluePanel, closeButton);
+        getChildren().addAll(searchField, upButton, downButton, caseSensitiveBox, caseSensitiveLabel, matchLabel, gluePanel, closeButton);
         setMargin(searchField, new Insets(0, 0, 0, 5));
+        setMargin(caseSensitiveBox, new Insets(0,0,0,5));
+        setMargin(matchLabel, new Insets(0,0,0,25));
         setMargin(closeButton, new Insets(0, 5, 0, 0));
+
+        caseSensitiveBox.selectedProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue) {
+                refresh(textArea);
+                matcher.find(searchField.getText(), searchedArea.getText());
+            } else {
+                refresh(textArea);
+                matcher.find(searchField.getText(), searchedArea.getText(), Pattern.CASE_INSENSITIVE);
+            }
+        });
 
         searchField.textProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue == null || "".equals(newValue)) {
-                matcher.reset();
-                matchLabel.setText("");
-                textArea.deselect();
-                searchField.pseudoClassStateChanged(failed, false);
+               refresh(textArea);
             } else {
-                matcher.find(newValue, searchedArea.getText());
+                if(caseSensitiveBox.selectedProperty().get()) {
+                    matcher.find(newValue, searchedArea.getText());
+                } else {
+                    matcher.find(newValue, searchedArea.getText(), Pattern.CASE_INSENSITIVE);
+                }
             }
         });
 
@@ -215,6 +250,13 @@ public final class SearchBar extends HBox {
                 textArea.select(matcher.currentMatchStart(), matcher.currentMatchEnd());
             }
         });
+    }
+
+    private void refresh(Searchable textArea) {
+        matcher.reset();
+        matchLabel.setText("");
+        textArea.deselect();
+        searchField.pseudoClassStateChanged(failed, false);
     }
 
     public void requestFocus() {
