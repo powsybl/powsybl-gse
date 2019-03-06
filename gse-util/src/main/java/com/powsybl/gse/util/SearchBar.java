@@ -127,26 +127,17 @@ public final class SearchBar extends HBox {
             return positions.get(currentMatchProperty.get()).end;
         }
 
-        void find(String searchPattern, String searchedTxt) {
+        void find(String searchPattern, String searchedTxt, boolean caseSensitive) {
             reset();
             try {
-                Matcher matcher = Pattern.compile(searchPattern).matcher(searchedTxt);
-                while (matcher.find()) {
-                    positions.add(new SearchTuple(matcher.start(), matcher.end()));
+                Matcher sensitiveMatcher;
+                if (caseSensitive) {
+                    sensitiveMatcher = Pattern.compile(searchPattern).matcher(searchedTxt);
+                } else {
+                    sensitiveMatcher = Pattern.compile(searchPattern, Pattern.CASE_INSENSITIVE).matcher(searchedTxt);
                 }
-                nbMatchesProperty.set(positions.size());
-                nextMatch();
-            } catch (PatternSyntaxException psex) {
-                throw new PowsyblException(RESOURCE_BUNDLE.getString("SyntaxError"));
-            }
-        }
-
-        void find(String searchPattern, String searchedTxt, int sensitiveCase) {
-            reset();
-            try {
-                Matcher matcherSensitive = Pattern.compile(searchPattern, sensitiveCase).matcher(searchedTxt);
-                while (matcherSensitive.find()) {
-                    positions.add(new SearchTuple(matcherSensitive.start(), matcherSensitive.end()));
+                while (sensitiveMatcher.find()) {
+                    positions.add(new SearchTuple(sensitiveMatcher.start(), sensitiveMatcher.end()));
                 }
                 nbMatchesProperty.set(positions.size());
                 nextMatch();
@@ -166,7 +157,7 @@ public final class SearchBar extends HBox {
     public SearchBar(Searchable textArea) {
         super(0);
 
-        Text searchGlyph = Glyph.createAwesomeFont('\uf002').size("1.4em");
+        Text searchGlyph = Glyph.createAwesomeFont('\uf002').size("1.2em");
         Text upGlyph = Glyph.createAwesomeFont('\uf106').size("1.4em");
         Text downGlyph = Glyph.createAwesomeFont('\uf107').size("1.4em");
 
@@ -176,7 +167,7 @@ public final class SearchBar extends HBox {
         caseSensitiveBox.getStyleClass().add("check-box");
         caseSensitiveBox.setSelected(false);
         matchLabel.getStyleClass().add("match-label");
-        caseSensitiveLabel = new Label("Match case");
+        caseSensitiveLabel = new Label(RESOURCE_BUNDLE.getString("MatchCase"));
         searchedArea = Objects.requireNonNull(textArea);
         setPrefHeight(20);
         setAlignment(Pos.CENTER_LEFT);
@@ -191,29 +182,17 @@ public final class SearchBar extends HBox {
         setHgrow(gluePanel, Priority.ALWAYS);
         getChildren().addAll(searchField, upButton, downButton, caseSensitiveBox, caseSensitiveLabel, matchLabel, gluePanel, closeButton);
         setMargin(searchField, new Insets(0, 0, 0, 5));
-        setMargin(caseSensitiveBox, new Insets(0,0,0,5));
-        setMargin(matchLabel, new Insets(0,0,0,25));
+        setMargin(caseSensitiveBox, new Insets(0, 0, 0, 5));
+        setMargin(matchLabel, new Insets(0, 0, 0, 25));
         setMargin(closeButton, new Insets(0, 5, 0, 0));
 
-        caseSensitiveBox.selectedProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue) {
-                refresh(textArea);
-                matcher.find(searchField.getText(), searchedArea.getText());
-            } else {
-                refresh(textArea);
-                matcher.find(searchField.getText(), searchedArea.getText(), Pattern.CASE_INSENSITIVE);
-            }
-        });
+        caseSensitiveBox.selectedProperty().addListener((observable, oldValue, newValue) -> findCaseSensitiveMatches(textArea, newValue));
 
         searchField.textProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue == null || "".equals(newValue)) {
-               refresh(textArea);
+                refresh(textArea);
             } else {
-                if(caseSensitiveBox.selectedProperty().get()) {
-                    matcher.find(newValue, searchedArea.getText());
-                } else {
-                    matcher.find(newValue, searchedArea.getText(), Pattern.CASE_INSENSITIVE);
-                }
+                matcher.find(newValue, searchedArea.getText(), caseSensitiveBox.selectedProperty().get());
             }
         });
 
@@ -250,6 +229,16 @@ public final class SearchBar extends HBox {
                 textArea.select(matcher.currentMatchStart(), matcher.currentMatchEnd());
             }
         });
+    }
+
+    private void findCaseSensitiveMatches(Searchable textArea, boolean newValue) {
+        if (newValue) {
+            refresh(textArea);
+            matcher.find(searchField.getText(), searchedArea.getText(), true);
+        } else {
+            refresh(textArea);
+            matcher.find(searchField.getText(), searchedArea.getText(), false);
+        }
     }
 
     private void refresh(Searchable textArea) {
