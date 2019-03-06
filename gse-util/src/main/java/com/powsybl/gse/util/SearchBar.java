@@ -130,12 +130,7 @@ public final class SearchBar extends HBox {
         void find(String searchPattern, String searchedTxt, boolean caseSensitive) {
             reset();
             try {
-                Matcher sensitiveMatcher;
-                if (caseSensitive) {
-                    sensitiveMatcher = Pattern.compile(searchPattern).matcher(searchedTxt);
-                } else {
-                    sensitiveMatcher = Pattern.compile(searchPattern, Pattern.CASE_INSENSITIVE).matcher(searchedTxt);
-                }
+                Matcher sensitiveMatcher = caseSensitive ? Pattern.compile(searchPattern).matcher(searchedTxt) : Pattern.compile(searchPattern, Pattern.CASE_INSENSITIVE).matcher(searchedTxt);
                 while (sensitiveMatcher.find()) {
                     positions.add(new SearchTuple(sensitiveMatcher.start(), sensitiveMatcher.end()));
                 }
@@ -232,13 +227,8 @@ public final class SearchBar extends HBox {
     }
 
     private void findCaseSensitiveMatches(Searchable textArea, boolean newValue) {
-        if (newValue) {
-            refresh(textArea);
-            matcher.find(searchField.getText(), searchedArea.getText(), true);
-        } else {
-            refresh(textArea);
-            matcher.find(searchField.getText(), searchedArea.getText(), false);
-        }
+        refresh(textArea);
+        matcher.find(searchField.getText(), searchedArea.getText(), newValue);
     }
 
     private void refresh(Searchable textArea) {
