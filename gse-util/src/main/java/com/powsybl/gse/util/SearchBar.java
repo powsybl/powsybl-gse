@@ -55,7 +55,6 @@ public final class SearchBar extends HBox {
     private final Button upButton;
     private final Button downButton;
     private final CheckBox caseSensitiveBox;
-    private final Label caseSensitiveLabel;
     private final Label matchLabel = new Label();
     private MessageFormat nbMatchFound = new MessageFormat(RESOURCE_BUNDLE.getString("NbMatchFound"));
     private PseudoClass failed;
@@ -158,11 +157,10 @@ public final class SearchBar extends HBox {
 
         upButton = new Button(null, upGlyph);
         downButton = new Button(null, downGlyph);
-        caseSensitiveBox = new CheckBox();
+        caseSensitiveBox = new CheckBox(RESOURCE_BUNDLE.getString("MatchCase"));
         caseSensitiveBox.getStyleClass().add("check-box");
         caseSensitiveBox.setSelected(false);
         matchLabel.getStyleClass().add("match-label");
-        caseSensitiveLabel = new Label(RESOURCE_BUNDLE.getString("MatchCase"));
         searchedArea = Objects.requireNonNull(textArea);
         setPrefHeight(20);
         setAlignment(Pos.CENTER_LEFT);
@@ -175,7 +173,7 @@ public final class SearchBar extends HBox {
         failed = PseudoClass.getPseudoClass("fail");
         Pane gluePanel = new Pane();
         setHgrow(gluePanel, Priority.ALWAYS);
-        getChildren().addAll(searchField, upButton, downButton, caseSensitiveBox, caseSensitiveLabel, matchLabel, gluePanel, closeButton);
+        getChildren().addAll(searchField, upButton, downButton, caseSensitiveBox, matchLabel, gluePanel, closeButton);
         setMargin(searchField, new Insets(0, 0, 0, 5));
         setMargin(caseSensitiveBox, new Insets(0, 0, 0, 5));
         setMargin(matchLabel, new Insets(0, 0, 0, 25));
