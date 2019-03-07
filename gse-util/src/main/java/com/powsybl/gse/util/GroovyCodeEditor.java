@@ -17,6 +17,7 @@ import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.input.*;
 import javafx.scene.layout.VBox;
+import org.apache.commons.lang3.StringUtils;
 import org.codehaus.groovy.antlr.GroovySourceToken;
 import org.codehaus.groovy.antlr.SourceBuffer;
 import org.codehaus.groovy.antlr.UnicodeEscapingReader;
@@ -38,6 +39,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -102,7 +104,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
             } else if (replaceWordKeyCombination.match(ke)) {
                 setShowDetailNode(false);
                 setSearchBar(vBox, "replace");
-                searchBar.setReplaceAllAction(event -> replaceAllOccurences(searchBar.getSearchedText(), codeArea.getText()));
+                searchBar.setReplaceAllAction(event -> replaceAllOccurences(searchBar.getSearchedText(), codeArea.getText(), searchBar.isCheckBoxSelected()));
                 searchBar.setReplaceAction(event -> replaceCurrentOccurence(searchBar.getCurrentMatchStart(), searchBar.getCurrentMatchEnd()));
                 showDetailNode();
                 vBox.requestFocus();
@@ -133,25 +135,21 @@ public class GroovyCodeEditor extends MasterDetailPane {
         }
     }
 
-    private void replaceAllOccurences(String word, String text) {
-        String codeText = text;
-        int size = word.length();
-        for (int i = 0; i <= codeText.length() - size; i++) {
-            String str = codeText.substring(i, i + size);
-            if (str.equals(word)) {
-                codeArea.replaceText(i, i + size, searchBar.getReplaceText());
-            }
-            codeText = codeArea.getText();
-        }
-        searchBar.findMatch(searchBar.getSearchedText(), codeArea.getText());
+    private void replaceAllOccurences(String wordToReplace, String text, boolean caseSensitive) {
+        String replaceText = searchBar.getReplaceText();
+        int ci = Pattern.CASE_INSENSITIVE;
+        String code = caseSensitive ? StringUtils.replacePattern(text, wordToReplace, replaceText) : Pattern.compile(wordToReplace, ci).matcher(text).replaceAll(replaceText);
+        codeArea.clear();
+        codeArea.replaceText(0, 0, code);
+        searchBar.findMatch(searchBar.getSearchedText(), codeArea.getText(), searchBar.isCheckBoxSelected());
     }
 
     private void replaceCurrentOccurence(int startPosition, int endPosition) {
-        int i = searchBar.getCurrentMatchProperty().get();
+        int lastMatch = searchBar.getCurrentMatchProperty().get();
         codeArea.replaceText(startPosition, endPosition, searchBar.getReplaceText());
-        searchBar.findMatch(searchBar.getSearchedText(), codeArea.getText());
+        searchBar.findMatch(searchBar.getSearchedText(), codeArea.getText(), searchBar.isCheckBoxSelected());
         if (searchBar.getReplaceText().contains(searchBar.getSearchedText())) {
-            while (searchBar.getCurrentMatchProperty().get() <= i) {
+            while (searchBar.getCurrentMatchProperty().get() <= lastMatch) {
                 if (searchBar.isLastMatch().get()) {
                     break;
                 } else {

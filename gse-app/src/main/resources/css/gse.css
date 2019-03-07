@@ -120,10 +120,16 @@
      -fx-padding: 2, 0, 2, 0;
  }
 
- .check-box:selected .mark {
+.check-box:selected .mark {
      -fx-background-color: white;
  }
 
 .check-box:selected .box {
      -fx-background-color: #28a3f4;
+}
+
+.replace-button {
+     -fx-background-color: white;
+     -fx-border-color: grey;
+     -fx-border-radius: 3px;
 }
