@@ -158,8 +158,6 @@ public final class SearchBar extends HBox {
         upButton = new Button(null, upGlyph);
         downButton = new Button(null, downGlyph);
         caseSensitiveBox = new CheckBox(RESOURCE_BUNDLE.getString("MatchCase"));
-        caseSensitiveBox.getStyleClass().add("check-box");
-        caseSensitiveBox.setSelected(false);
         matchLabel.getStyleClass().add("match-label");
         searchedArea = Objects.requireNonNull(textArea);
         setPrefHeight(20);
