@@ -9,9 +9,10 @@ package com.powsybl.gse.util;
 import javafx.scene.control.TreeItem;
 
 public class DragAndDropMove {
-    private Object source;
-    private TreeItem sourceTreeItem;
 
+    private Object source;
+
+    private TreeItem sourceTreeItem;
 
     public Object getSource() {
         return source;

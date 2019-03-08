@@ -7,6 +7,8 @@
 package com.powsybl.gse.util;
 
 import com.google.common.base.Stopwatch;
+import com.powsybl.commons.util.ServiceLoaderCache;
+import com.powsybl.gse.spi.KeywordsProvider;
 import groovyjarjarantlr.Token;
 import groovyjarjarantlr.TokenStream;
 import groovyjarjarantlr.TokenStreamException;
@@ -48,6 +50,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private final SearchableCodeArea codeArea = new SearchableCodeArea();
 
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
+
+    private static final ServiceLoaderCache<KeywordsProvider> KEYWORDS_LOADER = new ServiceLoaderCache<>(KeywordsProvider.class);
 
     private boolean allowedDrag = false;
 
@@ -363,6 +367,23 @@ public class GroovyCodeEditor extends MasterDetailPane {
         return offset2 - offset1;
     }
 
+    private void buildStyle(String styleClass, StyleSpansBuilder<Collection<String>> spansBuilder, int length, Token token) {
+        if (styleClass != null) {
+            spansBuilder.add(Collections.singleton(styleClass), length);
+        } else if (!KEYWORDS_LOADER.getServices().isEmpty()) {
+            for (KeywordsProvider styleExtension : KEYWORDS_LOADER.getServices()) {
+                String style = styleExtension.styleClass(token.getText());
+                if (style != null) {
+                    spansBuilder.add(Collections.singleton(style), length);
+                } else {
+                    spansBuilder.add(Collections.emptyList(), length);
+                }
+            }
+        } else {
+            spansBuilder.add(Collections.emptyList(), length);
+        }
+    }
+
     private StyleSpans<Collection<String>> computeHighlighting(String text) {
         Stopwatch stopwatch = Stopwatch.createStarted();
 
@@ -378,11 +399,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 while (token.getType() != Token.EOF_TYPE) {
                     String styleClass = styleClass(token.getType());
                     int length = length((GroovySourceToken) token);
-                    if (styleClass != null) {
-                        spansBuilder.add(Collections.singleton(styleClass), length);
-                    } else {
-                        spansBuilder.add(Collections.emptyList(), length);
-                    }
+                    buildStyle(styleClass, spansBuilder, length, token);
                     added = true;
                     token = tokenStream.nextToken();
                 }
