@@ -67,7 +67,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
         private final List<String> completionList = Arrays.asList("as", "assert", "boolean", "break", "byte",
                 "case", "catch", "char", "class", "continue", "def", "default", "double", "else", "enum",
-                "extends", "false", "filter", "finally", "float", "for", "if", "implements", "import", "in",
+                "extends", "false", "finally", "float", "for", "if", "implements", "import", "in",
                 "instanceof", "int", "interface", "long", "native", "new", "null", "package", "private",
                 "protected", "public", "return", "short", "static", "super", "switch", "synchronized", "this",
                 "threadsafe", "throw", "throws", "transient", "true", "try", "void", "volatile", "while"
