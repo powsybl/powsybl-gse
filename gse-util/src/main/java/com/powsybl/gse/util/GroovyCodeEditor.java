@@ -163,15 +163,13 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 double positionY = caretBounds.getMinY() + 20;
                 autoCompletion.contextMenu.show(getScene().getWindow(), positionX, positionY);
             });
-            if (!autoCompletion.contextMenu.getItems().isEmpty()) {
-                Node firstMenuItem = autoCompletion.contextMenu.getSkin().getNode().lookup(".menu-item");
-                firstMenuItem.requestFocus();
-                firstMenuItem.setOnKeyPressed(event -> {
-                    if (event.getCode() == KeyCode.SPACE) {
-                        event.consume();
-                    }
-                });
-            }
+            Node firstMenuItem = autoCompletion.contextMenu.getSkin().getNode().lookup(".menu-item");
+            firstMenuItem.requestFocus();
+            firstMenuItem.setOnKeyPressed(event -> {
+                if (event.getCode() == KeyCode.SPACE) {
+                    event.consume();
+                }
+            });
         }
     }
 
