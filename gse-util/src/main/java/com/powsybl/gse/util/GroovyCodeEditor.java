@@ -131,14 +131,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
             autoCompletion.contextMenu = new ContextMenu();
             int caretPosition = codeArea.getCaretPosition();
             String text = codeArea.getText(caretPosition - 1, caretPosition);
-            String token;
-            if (getLastToken().contains(".") && !getLastToken().endsWith(".")) {
-                String replace = getLastToken().replace('.', ' ');
-                token = replace.substring(replace.lastIndexOf(' ') + 1);
-            } else {
-                token = getLastToken();
-            }
-            String lastToken = text.equals(" ") ? text : token;
+            String lastToken = text.equals(" ") ? text : filterToken();
             autoCompletion.completionList.forEach(str -> {
                 if (!lastToken.isEmpty() && str.startsWith(lastToken) && !str.equals(lastToken)) {
                     MenuItem menuItem = new MenuItem(str);
@@ -152,7 +145,15 @@ public class GroovyCodeEditor extends MasterDetailPane {
             }));
             showContextMenu(menuItems);
         });
+    }
 
+    private String filterToken() {
+        String token = getLastToken();
+        Matcher matcher = Pattern.compile("\\w\\w*").matcher(token);
+        while (matcher.find()) {
+            token = matcher.group();
+        }
+        return token;
     }
 
     private void showContextMenu(List<MenuItem> menuItems) {
