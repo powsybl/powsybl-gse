@@ -13,14 +13,12 @@ import groovyjarjarantlr.Token;
 import groovyjarjarantlr.TokenStream;
 import groovyjarjarantlr.TokenStreamException;
 import javafx.beans.value.ObservableValue;
-import javafx.geometry.Bounds;
 import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.input.*;
-import org.apache.commons.lang3.StringUtils;
 import org.codehaus.groovy.antlr.GroovySourceToken;
 import org.codehaus.groovy.antlr.SourceBuffer;
 import org.codehaus.groovy.antlr.UnicodeEscapingReader;
@@ -40,6 +38,8 @@ import java.io.StringReader;
 import java.io.UncheckedIOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -131,7 +131,14 @@ public class GroovyCodeEditor extends MasterDetailPane {
             autoCompletion.contextMenu = new ContextMenu();
             int caretPosition = codeArea.getCaretPosition();
             String text = codeArea.getText(caretPosition - 1, caretPosition);
-            String lastToken = text.equals(" ") ? text : getLastToken();
+            String token;
+            if (getLastToken().contains(".") && !getLastToken().endsWith(".")) {
+                String replace = getLastToken().replace('.', ' ');
+                token = replace.substring(replace.lastIndexOf(' ') + 1);
+            } else {
+                token = getLastToken();
+            }
+            String lastToken = text.equals(" ") ? text : token;
             autoCompletion.completionList.forEach(str -> {
                 if (!lastToken.isEmpty() && str.startsWith(lastToken) && !str.equals(lastToken)) {
                     MenuItem menuItem = new MenuItem(str);
@@ -140,7 +147,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
             });
             List<MenuItem> menuItems = new ArrayList<>(autoCompletion.contextMenu.getItems());
             menuItems.forEach(menuItem -> menuItem.setOnAction(event -> {
-                completeText(getLastToken(), menuItem);
+                completeText(lastToken, menuItem);
                 autoCompletion.contextMenu.hide();
             }));
             showContextMenu(menuItems);
@@ -150,12 +157,10 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private void showContextMenu(List<MenuItem> menuItems) {
         if (!menuItems.isEmpty()) {
-            Optional<Bounds> caretBounds = codeArea.getCaretBounds();
-            caretBounds.ifPresent(caretBound -> {
-                double positionX = caretBound.getMinX() - 20;
-                double positionY = caretBound.getMinY() + 20;
+            codeArea.getCaretBounds().ifPresent(caretBounds -> {
+                double positionX = caretBounds.getMinX() - 20;
+                double positionY = caretBounds.getMinY() + 20;
                 autoCompletion.contextMenu.show(getScene().getWindow(), positionX, positionY);
-
             });
             if (!autoCompletion.contextMenu.getItems().isEmpty()) {
                 Node firstMenuItem = autoCompletion.contextMenu.getSkin().getNode().lookup(".menu-item");
@@ -171,11 +176,10 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private String getLastToken() {
         int currentLine = codeArea.getCaretSelectionBind().getParagraphIndex();
-        String[] characters = {".", "{", "(", "[", "}", ")", "]"};
-        String[] replacements = new String[characters.length];
-        Arrays.fill(replacements, " ");
-        String[] textArray = StringUtils.replaceEach(codeArea.getText(currentLine), characters, replacements).split(" ");
-        return textArray[textArray.length - 1];
+        String[] tokenArray = codeArea.getText(currentLine, 0, currentLine, codeArea.getCaretColumn()).split(" ");
+        String lastToken = tokenArray.length >= 1 ? tokenArray[tokenArray.length - 1] : " ";
+        Matcher matcher = Pattern.compile("\\w.*").matcher(lastToken);
+        return matcher.find() ? matcher.group() : " ";
     }
 
     private void completeText(String token, MenuItem menuItem) {
