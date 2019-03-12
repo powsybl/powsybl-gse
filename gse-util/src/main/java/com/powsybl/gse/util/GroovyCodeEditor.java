@@ -8,6 +8,7 @@ package com.powsybl.gse.util;
 
 import com.google.common.base.Stopwatch;
 import com.powsybl.commons.util.ServiceLoaderCache;
+import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.KeywordsProvider;
 import groovyjarjarantlr.Token;
 import groovyjarjarantlr.TokenStream;
@@ -54,6 +55,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private static final ServiceLoaderCache<KeywordsProvider> KEYWORDS_LOADER = new ServiceLoaderCache<>(KeywordsProvider.class);
 
+    private static final ServiceLoaderCache<AutoCompletionWordsProvider> AUTO_COMPLETION_WORDS_LOADER = new ServiceLoaderCache<>(AutoCompletionWordsProvider.class);
+
     private boolean allowedDrag = false;
 
     private final AutoCompletion autoCompletion = new AutoCompletion();
@@ -62,12 +65,12 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
         private ContextMenu contextMenu = new ContextMenu();
 
-        private final List<String> completionList = Arrays.asList("as", "assert", "boolean", "break", "byte", "case", "catch", "char",
-                "class", "continue", "def", "default", "distributionKey", "double", "else", "enum", "extends", "false",
-                "filter", "finally", "float", "for", "if", "implements", "import", "in", "instanceof", "int", "interface",
-                "long", "mapToLoads", "mapToGenerators", "mapToHvdcLines", "native", "new", "null", "package", "private", "protected",
-                "public", "return", "short", "static", "super", "switch", "synchronized", "ts", "timeSeries", "timeSeriesName", "this",
-                "threadsafe", "throw", "throws", "transient", "true", "try", "variable", "void", "volatile", "while"
+        private final List<String> completionList = Arrays.asList("as", "assert", "boolean", "break", "byte",
+                "case", "catch", "char", "class", "continue", "def", "default", "double", "else", "enum",
+                "extends", "false", "filter", "finally", "float", "for", "if", "implements", "import", "in",
+                "instanceof", "int", "interface", "long", "native", "new", "null", "package", "private",
+                "protected", "public", "return", "short", "static", "super", "switch", "synchronized", "this",
+                "threadsafe", "throw", "throws", "transient", "true", "try", "void", "volatile", "while"
         );
 
     }
@@ -132,7 +135,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
             int caretPosition = codeArea.getCaretPosition();
             String text = codeArea.getText(caretPosition - 1, caretPosition);
             String lastToken = text.equals(" ") ? text : filterToken();
-            autoCompletion.completionList.forEach(str -> {
+            List<String> autoCompletionWords = completionWords();
+            autoCompletionWords.forEach(str -> {
                 if (!lastToken.isEmpty() && str.startsWith(lastToken) && !str.equals(lastToken)) {
                     MenuItem menuItem = new MenuItem(str);
                     autoCompletion.contextMenu.getItems().add(menuItem);
@@ -145,6 +149,16 @@ public class GroovyCodeEditor extends MasterDetailPane {
             }));
             showContextMenu(menuItems);
         });
+    }
+
+    private List<String> completionWords() {
+        List<String> autoCompletionWords = new ArrayList<>(autoCompletion.completionList);
+        if (!AUTO_COMPLETION_WORDS_LOADER.getServices().isEmpty()) {
+            for (AutoCompletionWordsProvider services : AUTO_COMPLETION_WORDS_LOADER.getServices()) {
+                autoCompletionWords.addAll(services.completionWords());
+            }
+        }
+        return autoCompletionWords;
     }
 
     private String filterToken() {
