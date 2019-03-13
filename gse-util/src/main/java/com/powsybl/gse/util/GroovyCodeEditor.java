@@ -25,7 +25,10 @@ import org.codehaus.groovy.antlr.parser.GroovyLexer;
 import org.codehaus.groovy.antlr.parser.GroovyTokenTypes;
 import org.controlsfx.control.MasterDetailPane;
 import org.fxmisc.flowless.VirtualizedScrollPane;
-import org.fxmisc.richtext.*;
+import org.fxmisc.richtext.Caret;
+import org.fxmisc.richtext.CharacterHit;
+import org.fxmisc.richtext.CodeArea;
+import org.fxmisc.richtext.LineNumberFactory;
 import org.fxmisc.richtext.model.StyleSpans;
 import org.fxmisc.richtext.model.StyleSpansBuilder;
 import org.slf4j.Logger;
@@ -47,6 +50,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GroovyCodeEditor.class);
 
+    public static final int DEFAULT_TAB_SIZE = 4;
+
     private final SearchableCodeArea codeArea = new SearchableCodeArea();
 
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
@@ -57,9 +62,9 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private boolean allowedDrag = false;
 
-    private static final class SearchableCodeArea extends CodeArea implements Searchable {
+    private int tabSize = DEFAULT_TAB_SIZE;
 
-        private int tabSize = 4;
+    private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
         @Override
         public String getText() {
@@ -157,11 +162,11 @@ public class GroovyCodeEditor extends MasterDetailPane {
         if (size <= 0) {
             throw new IllegalArgumentException("Tabulation size might be strictly positive");
         }
-        codeArea.tabSize = size;
+        tabSize = size;
     }
 
     private int getTabSize() {
-        return codeArea.tabSize;
+        return tabSize;
     }
 
     private static String generateTabSpace(int size) {
