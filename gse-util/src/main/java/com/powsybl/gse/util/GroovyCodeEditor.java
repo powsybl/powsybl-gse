@@ -16,6 +16,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.input.*;
+import org.apache.commons.lang3.StringUtils;
 import org.codehaus.groovy.antlr.GroovySourceToken;
 import org.codehaus.groovy.antlr.SourceBuffer;
 import org.codehaus.groovy.antlr.UnicodeEscapingReader;
@@ -24,7 +25,10 @@ import org.codehaus.groovy.antlr.parser.GroovyLexer;
 import org.codehaus.groovy.antlr.parser.GroovyTokenTypes;
 import org.controlsfx.control.MasterDetailPane;
 import org.fxmisc.flowless.VirtualizedScrollPane;
-import org.fxmisc.richtext.*;
+import org.fxmisc.richtext.Caret;
+import org.fxmisc.richtext.CharacterHit;
+import org.fxmisc.richtext.CodeArea;
+import org.fxmisc.richtext.LineNumberFactory;
 import org.fxmisc.richtext.model.StyleSpans;
 import org.fxmisc.richtext.model.StyleSpansBuilder;
 import org.slf4j.Logger;
@@ -36,6 +40,7 @@ import java.io.UncheckedIOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -45,13 +50,19 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GroovyCodeEditor.class);
 
+    public static final int DEFAULT_TAB_SIZE = 4;
+
     private final SearchableCodeArea codeArea = new SearchableCodeArea();
 
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
 
+    private final KeyCombination pasteKeyCombination = new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN);
+
     private static final ServiceLoaderCache<KeywordsProvider> KEYWORDS_LOADER = new ServiceLoaderCache<>(KeywordsProvider.class);
 
     private boolean allowedDrag = false;
+
+    private int tabSize = DEFAULT_TAB_SIZE;
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
@@ -99,13 +110,71 @@ public class GroovyCodeEditor extends MasterDetailPane {
             }
 
         });
-
+        codeArea.addEventFilter(KeyEvent.KEY_PRESSED, this::setTabulationSpace);
         codeArea.setOnDragEntered(event -> codeArea.setShowCaret(Caret.CaretVisibility.ON));
         codeArea.setOnDragExited(event -> codeArea.setShowCaret(Caret.CaretVisibility.AUTO));
         codeArea.setOnDragDetected(this::onDragDetected);
         codeArea.setOnDragOver(this::onDragOver);
         codeArea.setOnDragDropped(this::onDragDropped);
         codeArea.setOnSelectionDrag(p -> allowedDrag = true);
+    }
+
+    private void setTabulationSpace(KeyEvent ke) {
+        if (ke.getCode() == KeyCode.TAB) {
+            ke.consume();
+            int currentLine = codeArea.getCaretSelectionBind().getParagraphIndex();
+            int fromLineStartToCaret = codeArea.getText(currentLine, 0, currentLine, codeArea.getCaretColumn()).length();
+            codeArea.insertText(codeArea.getCaretPosition(), generateTabSpace(tabSpacesToAdd(fromLineStartToCaret)));
+        } else if (pasteKeyCombination.match(ke)) {
+            ke.consume();
+            deleteSelection();
+            final Clipboard clipboard = Clipboard.getSystemClipboard();
+            if (clipboard.getString() != null) {
+                try (Scanner sc = new Scanner(clipboard.getString())) {
+                    while (sc.hasNextLine()) {
+                        replaceTabulation(sc);
+                    }
+                }
+            }
+        }
+    }
+
+    private void deleteSelection() {
+        if (!codeArea.getSelectedText().isEmpty()) {
+            codeArea.deleteText(codeArea.selectionProperty().getValue());
+        }
+    }
+
+    private void replaceTabulation(Scanner sc) {
+        String line = sc.nextLine();
+        for (int j = 0; j < line.length(); j++) {
+            if (line.charAt(j) == '\t') {
+                line = line.replaceFirst(Character.toString('\t'), generateTabSpace(tabSpacesToAdd(line.indexOf('\t'))));
+            }
+        }
+        codeArea.insertText(codeArea.getCaretPosition(), line);
+        if (sc.hasNextLine()) {
+            codeArea.replaceSelection("\n");
+        }
+    }
+
+    public void setTabSize(int size) {
+        if (size <= 0) {
+            throw new IllegalArgumentException("Tabulation size might be strictly positive");
+        }
+        tabSize = size;
+    }
+
+    private int getTabSize() {
+        return tabSize;
+    }
+
+    private static String generateTabSpace(int size) {
+        return StringUtils.repeat(" ", size);
+    }
+
+    private int tabSpacesToAdd(int currentPosition) {
+        return getTabSize() - (currentPosition % getTabSize());
     }
 
     private void onDragDetected(MouseEvent event) {
