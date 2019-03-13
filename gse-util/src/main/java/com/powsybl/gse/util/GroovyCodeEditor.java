@@ -134,7 +134,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
             autoCompletion.contextMenu = new ContextMenu();
             int caretPosition = codeArea.getCaretPosition();
             String text = codeArea.getText(caretPosition - 1, caretPosition);
-            String lastToken = text.equals(" ") ? text : filterToken();
+            String lastToken = text.equals(" ") ? text : getLastToken();
             List<String> autoCompletionWords = completionWords();
             autoCompletionWords.forEach(str -> {
                 if (!lastToken.isEmpty() && str.startsWith(lastToken) && !str.equals(lastToken)) {
@@ -161,15 +161,6 @@ public class GroovyCodeEditor extends MasterDetailPane {
         return autoCompletionWords;
     }
 
-    private String filterToken() {
-        String token = getLastToken();
-        Matcher matcher = Pattern.compile("\\w\\w*").matcher(token);
-        while (matcher.find()) {
-            token = matcher.group();
-        }
-        return token;
-    }
-
     private void showContextMenu(List<MenuItem> menuItems) {
         if (!menuItems.isEmpty()) {
             codeArea.getCaretBounds().ifPresent(caretBounds -> {
@@ -189,10 +180,21 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private String getLastToken() {
         int currentLine = codeArea.getCaretSelectionBind().getParagraphIndex();
+        int caretPosition = codeArea.getCaretPosition();
         String[] tokenArray = codeArea.getText(currentLine, 0, currentLine, codeArea.getCaretColumn()).split(" ");
         String lastToken = tokenArray.length >= 1 ? tokenArray[tokenArray.length - 1] : " ";
-        Matcher matcher = Pattern.compile("\\w.*").matcher(lastToken);
-        return matcher.find() ? matcher.group() : " ";
+
+        //extract words from token
+        Matcher matcher = Pattern.compile("\\w\\w*").matcher(lastToken);
+        String word = " ";
+        while (matcher.find()) {
+            word = matcher.group();
+        }
+        Matcher matcher1 = Pattern.compile("\\W").matcher(codeArea.getText(caretPosition - 1, caretPosition));
+       /* if (matcher1.find()) {
+            word = lastToken;
+        }*/
+        return matcher1.find() ? lastToken : word;
     }
 
     private void completeText(String token, MenuItem menuItem) {
