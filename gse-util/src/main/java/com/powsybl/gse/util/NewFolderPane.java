@@ -21,6 +21,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.paint.Color;
 import javafx.stage.Window;
+import javafx.util.Callback;
 
 import java.text.MessageFormat;
 import java.util.Objects;
@@ -100,7 +101,8 @@ public final class NewFolderPane<F> extends GridPane {
         try {
             NewFolderPane<F> newProjectPane = new NewFolderPane<>(folderCreator, folderUnique);
             newProjectPane.setPrefSize(350, 100);
-            dialog = new GseDialog<>(RESOURCE_BUNDLE.getString("NewFolder"), newProjectPane, window, newProjectPane.validatedProperty().not(), buttonType -> buttonType == ButtonType.OK ? newProjectPane.createFolder() : null);
+            Callback<ButtonType, F> resutlConverter = buttonType -> buttonType == ButtonType.OK ? newProjectPane.createFolder() : null;
+            dialog = new GseDialog<>(RESOURCE_BUNDLE.getString("NewFolder"), newProjectPane, window, newProjectPane.validatedProperty().not(), resutlConverter);
             return dialog.showAndWait();
         } finally {
             if (dialog != null) {

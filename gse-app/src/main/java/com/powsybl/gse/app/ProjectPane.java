@@ -30,6 +30,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -787,7 +788,8 @@ public class ProjectPane extends Tab {
         if (configurator != null) {
             Dialog<Boolean> dialog = null;
             try {
-                dialog = new GseDialog<>(configurator.getTitle(), configurator.getContent(), getContent().getScene().getWindow(), configurator.configProperty().isNull(), buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE);
+                Callback<ButtonType, Boolean> resultConverter = buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE;
+                dialog = new GseDialog<>(configurator.getTitle(), configurator.getContent(), getContent().getScene().getWindow(), configurator.configProperty().isNull(), resultConverter);
                 dialog.showAndWait().ifPresent(ok -> {
                     if (ok) {
                         GseUtil.execute(context.getExecutor(), () -> executionTaskExtension.execute(file, configurator.configProperty().get()));
@@ -907,7 +909,8 @@ public class ProjectPane extends Tab {
     }
 
     private Dialog<Boolean> createProjectItemDialog(String title, BooleanBinding okProperty, javafx.scene.Node content) {
-        return new GseDialog<>(title, content, getContent().getScene().getWindow(), okProperty.not(), buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE);
+        Callback<ButtonType, Boolean> resultConverter = buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE;
+        return new GseDialog<>(title, content, getContent().getScene().getWindow(), okProperty.not(), resultConverter);
     }
 
     private ContextMenu createFolderContextMenu(TreeItem<Object> selectedTreeItem) {

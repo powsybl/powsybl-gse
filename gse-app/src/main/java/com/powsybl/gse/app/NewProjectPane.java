@@ -26,6 +26,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.paint.Color;
 import javafx.stage.Window;
+import javafx.util.Callback;
 import org.controlsfx.validation.ValidationSupport;
 import org.controlsfx.validation.Validator;
 
@@ -128,7 +129,8 @@ public class NewProjectPane extends GridPane {
         try {
             NewProjectPane newProjectPane = new NewProjectPane(window, appData, context);
             newProjectPane.setPrefSize(400, 200);
-            dialog = new GseDialog<>(RESOURCE_BUNDLE.getString("NewProject"), newProjectPane, window, newProjectPane.validatedProperty().not(), buttonType -> buttonType == ButtonType.OK ? newProjectPane.createProject() : null);
+            Callback<ButtonType, Project> resultConverter = buttonType -> buttonType == ButtonType.OK ? newProjectPane.createProject() : null;
+            dialog = new GseDialog<>(RESOURCE_BUNDLE.getString("NewProject"), newProjectPane, window, newProjectPane.validatedProperty().not(), resultConverter);
             return dialog.showAndWait();
         } finally {
             if (dialog != null) {

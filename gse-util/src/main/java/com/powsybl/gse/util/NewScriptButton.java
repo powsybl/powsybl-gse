@@ -24,6 +24,7 @@ import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.stage.Window;
+import javafx.util.Callback;
 
 import java.util.Objects;
 import java.util.ResourceBundle;
@@ -81,7 +82,8 @@ public final class NewScriptButton {
         BooleanBinding okProperty = folderSelectionPane.nodeProperty().isNotNull()
                                                        .and(nameTextField.okProperty());
         Platform.runLater(nameTextField.getInputField()::requestFocus);
-        return new GseDialog<>(RESOURCE_BUNDLE.getString("DialogTitle"), pane, window, okProperty.not(), buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE);
+        Callback<ButtonType, Boolean> resultConverter = buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE;
+        return new GseDialog<>(RESOURCE_BUNDLE.getString("DialogTitle"), pane, window, okProperty.not(), resultConverter);
     }
 
     private void showAndWaitDialog(ProjectFolder folder, Project project, Window window, GseContext context) {

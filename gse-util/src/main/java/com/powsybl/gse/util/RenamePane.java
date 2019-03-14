@@ -19,6 +19,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.paint.Color;
 import com.powsybl.afs.AbstractNodeBase;
 import javafx.stage.Window;
+import javafx.util.Callback;
 
 import java.text.MessageFormat;
 import java.util.Objects;
@@ -87,8 +88,9 @@ public final class RenamePane extends GridPane {
         try {
             RenamePane renamePane = new RenamePane(node, nodeNameUnique);
             renamePane.setPrefSize(350, 100);
+            Callback<ButtonType, String> resultConverter = buttonType -> buttonType == ButtonType.OK ? renamePane.getNameTextField().getText() : null;
             dialog = new GseDialog<>(RESOURCE_BUNDLE.getString("RenameFile"), renamePane, window,
-                    renamePane.validatedProperty().not(), buttonType -> buttonType == ButtonType.OK ? renamePane.getNameTextField().getText() : null);
+                    renamePane.validatedProperty().not(), resultConverter);
             return dialog.showAndWait();
         } finally {
             if (dialog != null) {

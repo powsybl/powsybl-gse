@@ -810,7 +810,8 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         Dialog<T> dialog = null;
         try {
             NodeChooser<N, F, D, T> nodeChooser = new NodeChooser<>(window, treeModel, appData, context, filter, openedProjectsList);
-            dialog = new GseDialog<>(RESOURCE_BUNDLE.getString("OpenFile"), nodeChooser, window, nodeChooser.selectedNodeProperty().isNull(), buttonType -> buttonType == ButtonType.OK ? nodeChooser.selectedNodeProperty().get() : null);
+            Callback<ButtonType, T> resultConverter = buttonType -> buttonType == ButtonType.OK ? nodeChooser.selectedNodeProperty().get() : null;
+            dialog = new GseDialog<>(RESOURCE_BUNDLE.getString("OpenFile"), nodeChooser, window, nodeChooser.selectedNodeProperty().isNull(), resultConverter);
             Button button = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
             nodeChooser.doubleClick().addListener((observable, oldValue, newValue) -> {
                 if (Boolean.TRUE.equals(newValue)) {
