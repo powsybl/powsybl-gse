@@ -237,6 +237,16 @@ public class GroovyCodeEditor extends MasterDetailPane {
         return codeArea.textProperty();
     }
 
+    public ObservableValue<Integer> caretPositionProperty() {
+        return codeArea.caretPositionProperty();
+    }
+
+    public String currentPosition() {
+        int caretColumn = codeArea.getCaretColumn() + 1;
+        int paragraphIndex = codeArea.getCaretSelectionBind().getParagraphIndex() + 1;
+        return paragraphIndex + ":" + caretColumn;
+    }
+
     private static String styleClass(int tokenType) {
         switch (tokenType) {
             case GroovyTokenTypes.LCURLY:
