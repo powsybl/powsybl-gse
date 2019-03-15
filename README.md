@@ -49,7 +49,7 @@ $ mvn clean package -pl :powsybl-gse-demo -am -Pnative-package
 
 If you want to avoid having to clone and build the powsybl-core repository, you can checkout the latest release version of the powsybl-gse repository which will download the PowSyBl Core dependencies from maven central. For example:
 ```
-$ git checkout 2.4.0
+$ git checkout v1.4.0
 $ mvn package -Pnative-package
 # And you can modify code and experiment!
 ```
