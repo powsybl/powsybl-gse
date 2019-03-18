@@ -4,6 +4,7 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/dbwhmay33ynnftmq/branch/master?svg=true)](https://ci.appveyor.com/project/powsybl/powsybl-gse/branch/master)
 [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=com.powsybl%3Apowsybl-gse&metric=alert_status)](https://sonarcloud.io/dashboard?id=com.powsybl%3Apowsybl-gse)
 [![MPL-2.0 License](https://img.shields.io/badge/license-MPL_2.0-blue.svg)](https://www.mozilla.org/en-US/MPL/2.0/)
+[![Javadocs](https://www.javadoc.io/badge/com.powsybl/powsybl-gse.svg?color=blue)](https://www.javadoc.io/doc/com.powsybl/powsybl-gse)
 
 PowSyBl (Power System Blocks) is an open source framework written in Java, that makes it easy to write complex software for power systems’ simulations and analysis. Its modular approach allows developers to extend or customize its features.
 
