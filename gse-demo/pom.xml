@@ -15,7 +15,7 @@
     <parent>
         <artifactId>powsybl-gse</artifactId>
         <groupId>com.powsybl</groupId>
-        <version>1.2.0-SNAPSHOT</version>
+        <version>1.5.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>powsybl-gse-demo</artifactId>
@@ -137,6 +137,18 @@
         </dependency>
 
         <!-- Converters -->
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-cgmes-conversion</artifactId>
+            <version>${powsyblcore.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>powsybl-triple-store-impl-rdf4j</artifactId>
+            <version>${powsyblcore.version}</version>
+            <scope>runtime</scope>
+        </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-cim1-converter</artifactId>

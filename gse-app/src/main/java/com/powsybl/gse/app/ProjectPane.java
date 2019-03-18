@@ -87,9 +87,23 @@ public class ProjectPane extends Tab {
 
         private ProjectFileViewer viewer;
 
+        private final KeyCombination closeKeyCombination = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN);
+
+        private final KeyCombination closeAllKeyCombination = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
+
         public MyTab(String text, ProjectFileViewer viewer) {
             super(text, viewer.getContent());
             this.viewer = viewer;
+            getContent().setOnKeyPressed((KeyEvent ke) -> {
+                if (closeKeyCombination.match(ke)) {
+                    closeTab(ke, this);
+                } else if (closeAllKeyCombination.match(ke)) {
+                    List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
+                            .map(tab -> (MyTab) tab)
+                            .collect(Collectors.toList()));
+                    mytabs.forEach(mytab -> closeTab(ke, mytab));
+                }
+            });
         }
 
         public ProjectFileViewer getViewer() {
@@ -102,9 +116,16 @@ public class ProjectPane extends Tab {
                 Event.fireEvent(this, new Event(Tab.CLOSED_EVENT));
             }
         }
-    }
 
-    private int counter;
+        private static void closeTab(Event event, MyTab tab) {
+            if (!tab.getViewer().isClosable()) {
+                event.consume();
+            } else {
+                tab.getTabPane().getTabs().remove(tab);
+                tab.getViewer().dispose();
+            }
+        }
+    }
 
     private boolean success;
 
@@ -267,9 +288,7 @@ public class ProjectPane extends Tab {
     }
 
     private void setDragOverStyle(TreeCell<Object> treeCell) {
-        if (getCounter() < 1) {
-            treeCell.getStyleClass().add("treecell-drag-over");
-        }
+        treeCell.getStyleClass().add("treecell-drag-over");
     }
 
     private void fillCellInfosForObject(Object value, TreeCell<Object> treecell, TreeItem<Object> treeItem) {
@@ -313,22 +332,30 @@ public class ProjectPane extends Tab {
         return targetTreeItem == dragAndDropMove.getSourceTreeItem().getParent();
     }
 
-    public boolean isMovable(Object item, TreeItem<Object> targetTreeItem) {
-        return dragAndDropMove != null && item != dragAndDropMove.getSource() && !isSourceAncestorOf(targetTreeItem) && !isChildOf(targetTreeItem);
+    private boolean isMovable(Object item, TreeItem<Object> targetTreeItem) {
+        return dragAndDropMove != null && item != dragAndDropMove.getSource() && !isSourceAncestorOf(targetTreeItem) && !isChildOf(targetTreeItem) && !areSourceAndTargetProjectFileSiblings(item);
+    }
+
+    private boolean areSourceAndTargetProjectFileSiblings(Object targetItem) {
+        Object sourceItem = dragAndDropMove.getSource();
+        Optional<ProjectFolder> sourceParent = ((ProjectNode) sourceItem).getParent();
+        Optional<ProjectFolder> targetParent = ((ProjectNode) targetItem).getParent();
+        if (sourceParent.isPresent() && targetParent.isPresent()) {
+            return sourceItem instanceof ProjectFile && targetItem instanceof ProjectFile && sourceParent.get().getId().equals(targetParent.get().getId());
+        } else {
+            return false;
+        }
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
         if (item instanceof ProjectNode && isMovable(item, treeItem)) {
-            int count = 0;
-            treeItemChildrenSize(treeItem, count);
-            setDragOverStyle(treeCell);
+            boolean nameExists = item instanceof ProjectFolder ? dragNodeNameAlreadyExists((ProjectFolder) treeItem.getValue()) : dragNodeNameAlreadyExists((ProjectFolder) treeItem.getParent().getValue());
+            if (!nameExists) {
+                setDragOverStyle(treeCell);
+            }
             event.acceptTransferModes(TransferMode.ANY);
             event.consume();
         }
-    }
-
-    private int getCounter() {
-        return counter;
     }
 
     private void dragDetectedEvent(Object value, TreeItem<Object> treeItem, MouseEvent event) {
@@ -347,9 +374,7 @@ public class ProjectPane extends Tab {
 
     private void dragDroppedEvent(Object value, TreeItem<Object> treeItem, DragEvent event, ProjectNode projectNode) {
         if (value != dragAndDropMove.getSource()) {
-            int count = 0;
             success = false;
-            treeItemChildrenSize(treeItem, count);
             if (value instanceof ProjectFolder) {
                 ProjectFolder projectFolder = (ProjectFolder) projectNode;
                 acceptTransferDrag(projectFolder, success);
@@ -366,27 +391,15 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private void treeItemChildrenSize(TreeItem<Object> treeItem, int compte) {
-        counter = compte;
-        if (!treeItem.isLeaf()) {
-            ProjectFolder treeItemFolder = (ProjectFolder) treeItem.getValue();
-            if (!treeItemFolder.getChildren().isEmpty()) {
-                for (ProjectNode node : treeItemFolder.getChildren()) {
-                    if (node == null) {
-                        break;
-                    } else if (node.getName().equals(dragAndDropMove.getSource().toString())) {
-                        counter++;
-                    }
-                }
-            }
-        }
+    private boolean dragNodeNameAlreadyExists(ProjectFolder projectFolder) {
+        return projectFolder.getChildren().stream().anyMatch(projectNode -> projectNode.getName().equals(((ProjectNode) dragAndDropMove.getSource()).getName()));
     }
 
     private void acceptTransferDrag(ProjectFolder projectFolder, boolean s) {
         success = s;
-        if (getCounter() >= 1) {
+        if (dragNodeNameAlreadyExists(projectFolder)) {
             GseAlerts.showDraggingError();
-        } else if (getCounter() < 1) {
+        } else {
             ProjectNode monfichier = (ProjectNode) dragAndDropMove.getSource();
             monfichier.moveTo(projectFolder);
             success = true;
@@ -636,15 +649,39 @@ public class ProjectPane extends Tab {
         return menuItem;
     }
 
-    private void renameProjectNode(TreeItem selectedTreeItem) {
+    private void listProjectNodeTreeItems(TreeItem<Object> treeItem, Map<String, TreeItem<Object>> projectNodeTreeItems) {
+        if (treeItem.getValue() instanceof ProjectNode) {
+            projectNodeTreeItems.put(((ProjectNode) treeItem.getValue()).getId(), treeItem);
+        }
+        for (TreeItem<Object> childTreeItem : treeItem.getChildren()) {
+            listProjectNodeTreeItems(childTreeItem, projectNodeTreeItems);
+        }
+    }
+
+    private void renameProjectNode(TreeItem<Object> selectedTreeItem) {
         Optional<String> result = RenamePane.showAndWaitDialog((ProjectNode) selectedTreeItem.getValue());
         result.ifPresent(newName -> {
             if (selectedTreeItem.getValue() instanceof ProjectNode) {
-                ProjectNode selectedTreeNode = (ProjectNode) selectedTreeItem.getValue();
-                selectedTreeNode.rename(newName);
-                refresh(selectedTreeItem.getParent());
-                treeView.getSelectionModel().clearSelection();
-                treeView.getSelectionModel().select(selectedTreeItem);
+                ProjectNode selectedProjectNode = (ProjectNode) selectedTreeItem.getValue();
+                selectedProjectNode.rename(newName);
+
+                // to force the refresh
+                selectedTreeItem.setValue(null);
+                selectedTreeItem.setValue(selectedProjectNode);
+
+                // refresh impacted tabs
+                Map<String, TreeItem<Object>> treeItemsToRefresh = new HashMap<>();
+                listProjectNodeTreeItems(selectedTreeItem, treeItemsToRefresh);
+
+                for (DetachableTabPane tabPane : findDetachableTabPanes()) {
+                    for (Tab tab : new ArrayList<>(tabPane.getTabs())) {
+                        String tabNodeId = ((TabKey) tab.getUserData()).nodeId;
+                        TreeItem<Object> treeItem = treeItemsToRefresh.get(tabNodeId);
+                        if (treeItem != null) {
+                            tab.setText(getTabName(treeItem));
+                        }
+                    }
+                }
             }
         });
     }
@@ -837,7 +874,7 @@ public class ProjectPane extends Tab {
         ProjectFileCreator creator = creatorExtension.newCreator(folder, getContent().getScene(), context);
         Dialog<Boolean> dialog = createProjectItemDialog(creator.getTitle(), creator.okProperty(), creator.getContent());
         try {
-            if (dialog.showAndWait().get()) {
+            dialog.showAndWait().filter(result -> result).ifPresent(result -> {
                 ProjectCreationTask task = creator.createTask();
 
                 tasks.add(folder, task.getNamePreview());
@@ -851,7 +888,7 @@ public class ProjectPane extends Tab {
                         Platform.runLater(() -> refresh(selectedTreeItem));
                     }
                 });
-            }
+            });
         } finally {
             dialog.close();
             creator.dispose();
@@ -865,9 +902,9 @@ public class ProjectPane extends Tab {
         editor.edit();
 
         try {
-            if (dialog.showAndWait().get()) {
-                editor.saveChanges();
-            }
+            dialog.showAndWait()
+                    .filter(result -> result)
+                    .ifPresent(result -> editor.saveChanges());
         } finally {
             dialog.close();
             editor.dispose();
@@ -908,12 +945,6 @@ public class ProjectPane extends Tab {
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
                 .collect(Collectors.toList()));
-        System.out.println("");
-        System.out.println("style : "+contextMenu.getStyle());
-        System.out.println("styleClass : "+contextMenu.getStyleClass());
-        System.out.println("styleSheet : "+contextMenu.getScene().getStylesheets());
-        System.out.println("styleeableParent : "+contextMenu.getStyleableParent());
-        System.out.println("styleeableParent style : "+contextMenu.getStyleableParent().getStyle());
         return contextMenu;
     }
 

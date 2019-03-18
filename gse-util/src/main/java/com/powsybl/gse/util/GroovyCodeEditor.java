@@ -7,6 +7,8 @@
 package com.powsybl.gse.util;
 
 import com.google.common.base.Stopwatch;
+import com.powsybl.commons.util.ServiceLoaderCache;
+import com.powsybl.gse.spi.KeywordsProvider;
 import groovyjarjarantlr.Token;
 import groovyjarjarantlr.TokenStream;
 import groovyjarjarantlr.TokenStreamException;
@@ -16,6 +18,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.input.*;
+import org.apache.commons.lang3.StringUtils;
 import org.codehaus.groovy.antlr.GroovySourceToken;
 import org.codehaus.groovy.antlr.SourceBuffer;
 import org.codehaus.groovy.antlr.UnicodeEscapingReader;
@@ -24,7 +27,10 @@ import org.codehaus.groovy.antlr.parser.GroovyLexer;
 import org.codehaus.groovy.antlr.parser.GroovyTokenTypes;
 import org.controlsfx.control.MasterDetailPane;
 import org.fxmisc.flowless.VirtualizedScrollPane;
-import org.fxmisc.richtext.*;
+import org.fxmisc.richtext.Caret;
+import org.fxmisc.richtext.CharacterHit;
+import org.fxmisc.richtext.CodeArea;
+import org.fxmisc.richtext.LineNumberFactory;
 import org.fxmisc.richtext.model.StyleSpans;
 import org.fxmisc.richtext.model.StyleSpansBuilder;
 import org.slf4j.Logger;
@@ -37,6 +43,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -46,14 +53,21 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GroovyCodeEditor.class);
 
+    public static final int DEFAULT_TAB_SIZE = 4;
+
     private final SearchableCodeArea codeArea = new SearchableCodeArea();
 
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
+
+    private final KeyCombination pasteKeyCombination = new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN);
+
+    private static final ServiceLoaderCache<KeywordsProvider> KEYWORDS_LOADER = new ServiceLoaderCache<>(KeywordsProvider.class);
 
     private boolean allowedDrag = false;
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.GroovyCodeEditor");
 
+    private int tabSize = DEFAULT_TAB_SIZE;
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
@@ -101,7 +115,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
             }
 
         });
-
+        codeArea.addEventFilter(KeyEvent.KEY_PRESSED, this::setTabulationSpace);
         codeArea.setOnDragEntered(event -> codeArea.setShowCaret(Caret.CaretVisibility.ON));
         codeArea.setOnDragExited(event -> codeArea.setShowCaret(Caret.CaretVisibility.AUTO));
         codeArea.setOnDragDetected(this::onDragDetected);
@@ -113,55 +127,80 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private ContextMenu codeAreaContextMenu() {
         final String iconSize = "1.1em";
+
         MenuItem copyMenu = new MenuItem(RESOURCE_BUNDLE.getString("Copy"), Glyph.createAwesomeFont('\uf0c5').size(iconSize));
         copyMenu.setDisable(true);
         MenuItem cutMenu = new MenuItem(RESOURCE_BUNDLE.getString("Cut"), Glyph.createAwesomeFont('\uf0c4').size(iconSize));
         cutMenu.setDisable(true);
         MenuItem pasteMenu = new MenuItem(RESOURCE_BUNDLE.getString("Paste"), Glyph.createAwesomeFont('\uf0ea').size(iconSize));
-        ContextMenu contextMenu = new ContextMenu(copyMenu, cutMenu, pasteMenu);
-        System.out.println("");
-        System.out.println("style : "+contextMenu.getStyle());
-        System.out.println("styleClass : "+contextMenu.getStyleClass());
-        System.out.println("styleSheet : "+contextMenu.getScene().getStylesheets());
-        System.out.println("styleeableParent : "+contextMenu.getStyleableParent());
-        System.out.println("styleeableParent style : "+contextMenu.getStyleableParent().getStyle());
-        copyMenu.setOnAction(event -> {
-            final Clipboard clipboard = Clipboard.getSystemClipboard();
-            final ClipboardContent content = new ClipboardContent();
-            content.putString(codeArea.getSelectedText());
-            clipboard.setContent(content);
-            System.out.println("");
-            System.out.println("style : "+contextMenu.getStyle());
-            System.out.println("styleClass : "+contextMenu.getStyleClass());
-            System.out.println("styleSheet : "+contextMenu.getScene().getStylesheets());
-            System.out.println("styleeableParent : "+contextMenu.getStyleableParent());
-            System.out.println("styleeableParent style : "+contextMenu.getStyleableParent().getStyle());
-            event.consume();
-        });
-        cutMenu.setOnAction(event -> {
-            final Clipboard clipboard = Clipboard.getSystemClipboard();
-            final ClipboardContent content = new ClipboardContent();
-            content.putString(codeArea.getSelectedText());
-            clipboard.setContent(content);
-            int length = codeArea.getSelectedText().length();
-            int caretPosition = codeArea.getCaretPosition();
-            codeArea.replaceText(caretPosition - length, caretPosition, "");
-            event.consume();
-        });
+
+        copyMenu.setOnAction(event -> codeArea.copy());
+        cutMenu.setOnAction(event -> codeArea.cut());
+        pasteMenu.setOnAction(event -> codeArea.paste());
 
         codeArea.selectedTextProperty().addListener((observable, oldValue, newValue) -> {
             copyMenu.setDisable(newValue.isEmpty());
             cutMenu.setDisable(newValue.isEmpty());
         });
-        pasteMenu.setOnAction(event -> {
+        return new ContextMenu(copyMenu, cutMenu, pasteMenu);
+    }
+
+    private void setTabulationSpace(KeyEvent ke) {
+        if (ke.getCode() == KeyCode.TAB) {
+            ke.consume();
+            int currentLine = codeArea.getCaretSelectionBind().getParagraphIndex();
+            int fromLineStartToCaret = codeArea.getText(currentLine, 0, currentLine, codeArea.getCaretColumn()).length();
+            codeArea.insertText(codeArea.getCaretPosition(), generateTabSpace(tabSpacesToAdd(fromLineStartToCaret)));
+        } else if (pasteKeyCombination.match(ke)) {
+            ke.consume();
+            deleteSelection();
             final Clipboard clipboard = Clipboard.getSystemClipboard();
-            if (clipboard.hasString()) {
-                codeArea.insertText(codeArea.getCaretPosition(), clipboard.getString());
+            if (clipboard.getString() != null) {
+                try (Scanner sc = new Scanner(clipboard.getString())) {
+                    while (sc.hasNextLine()) {
+                        replaceTabulation(sc);
+                    }
+                }
             }
-            event.consume();
-        });
-        contextMenu.getStyleClass().setAll("gse-context-menu");
-        return contextMenu;
+        }
+    }
+
+    private void deleteSelection() {
+        if (!codeArea.getSelectedText().isEmpty()) {
+            codeArea.deleteText(codeArea.selectionProperty().getValue());
+        }
+    }
+
+    private void replaceTabulation(Scanner sc) {
+        String line = sc.nextLine();
+        for (int j = 0; j < line.length(); j++) {
+            if (line.charAt(j) == '\t') {
+                line = line.replaceFirst(Character.toString('\t'), generateTabSpace(tabSpacesToAdd(line.indexOf('\t'))));
+            }
+        }
+        codeArea.insertText(codeArea.getCaretPosition(), line);
+        if (sc.hasNextLine()) {
+            codeArea.replaceSelection("\n");
+        }
+    }
+
+    public void setTabSize(int size) {
+        if (size <= 0) {
+            throw new IllegalArgumentException("Tabulation size might be strictly positive");
+        }
+        tabSize = size;
+    }
+
+    private int getTabSize() {
+        return tabSize;
+    }
+
+    private static String generateTabSpace(int size) {
+        return StringUtils.repeat(" ", size);
+    }
+
+    private int tabSpacesToAdd(int currentPosition) {
+        return getTabSize() - (currentPosition % getTabSize());
     }
 
     private void onDragDetected(MouseEvent event) {
@@ -212,6 +251,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.clear();
         codeArea.replaceText(0, 0, code);
         codeArea.showParagraphAtTop(0);
+        codeArea.getUndoManager().forgetHistory();
         resetDividerPosition();
     }
 
@@ -221,6 +261,16 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     public ObservableValue<String> codeProperty() {
         return codeArea.textProperty();
+    }
+
+    public ObservableValue<Integer> caretPositionProperty() {
+        return codeArea.caretPositionProperty();
+    }
+
+    public String currentPosition() {
+        int caretColumn = codeArea.getCaretColumn() + 1;
+        int paragraphIndex = codeArea.getCaretSelectionBind().getParagraphIndex() + 1;
+        return paragraphIndex + ":" + caretColumn;
     }
 
     private static String styleClass(int tokenType) {
@@ -319,9 +369,26 @@ public class GroovyCodeEditor extends MasterDetailPane {
     }
 
     private int length(GroovySourceToken token) {
-        int offset1 = codeArea.getDocument().position(token.getLine() - 1, token.getColumn() - 1).toOffset();
+        int offset1 = codeArea.getDocument().position(token.getLine() -  1, token.getColumn() - 1).toOffset();
         int offset2 = codeArea.getDocument().position(token.getLineLast() - 1, token.getColumnLast() - 1).toOffset();
         return offset2 - offset1;
+    }
+
+    private void buildStyle(String styleClass, StyleSpansBuilder<Collection<String>> spansBuilder, int length, Token token) {
+        if (styleClass != null) {
+            spansBuilder.add(Collections.singleton(styleClass), length);
+        } else if (!KEYWORDS_LOADER.getServices().isEmpty()) {
+            for (KeywordsProvider styleExtension : KEYWORDS_LOADER.getServices()) {
+                String style = styleExtension.styleClass(token.getText());
+                if (style != null) {
+                    spansBuilder.add(Collections.singleton(style), length);
+                } else {
+                    spansBuilder.add(Collections.emptyList(), length);
+                }
+            }
+        } else {
+            spansBuilder.add(Collections.emptyList(), length);
+        }
     }
 
     private StyleSpans<Collection<String>> computeHighlighting(String text) {
@@ -339,11 +406,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 while (token.getType() != Token.EOF_TYPE) {
                     String styleClass = styleClass(token.getType());
                     int length = length((GroovySourceToken) token);
-                    if (styleClass != null) {
-                        spansBuilder.add(Collections.singleton(styleClass), length);
-                    } else {
-                        spansBuilder.add(Collections.emptyList(), length);
-                    }
+                    buildStyle(styleClass, spansBuilder, length, token);
                     added = true;
                     token = tokenStream.nextToken();
                 }
