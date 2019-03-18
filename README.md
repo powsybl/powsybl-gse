@@ -23,7 +23,7 @@ This document describes how to build the code of PowSyBl GSE. If you just want t
 
 The PowSyBl GSE is not a standalone project. Read on to learn how to modify the GSE code, be it for fun, for diagnosing bugs, for improving your understanding of the framework, or for preparing pull requests to suggest improvements! GSE stands for "Grid Study Environment". PowSyBl GSE provides JavaFX components, a base for JavaFX applications and a build system to create standalone distributable GUI applications. A basic demo application is also provided:
 
-![GSE Demo](https://user-images.githubusercontent.com/89208/52073009-b55b0f80-2586-11e9-8c7d-40f7abfb0ff6.gif)
+![GSE Demo](https://user-images.githubusercontent.com/89208/54545007-0beaa480-49a1-11e9-8bcd-ae4fdefe4012.gif)
 
 ## Environment requirements
 
