@@ -94,16 +94,22 @@ public class ProjectPane extends Tab {
         public MyTab(String text, ProjectFileViewer viewer) {
             super(text, viewer.getContent());
             this.viewer = viewer;
-            getContent().setOnKeyPressed((KeyEvent ke) -> {
-                if (closeKeyCombination.match(ke)) {
-                    closeTab(ke, this);
-                } else if (closeAllKeyCombination.match(ke)) {
-                    List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
-                            .map(tab -> (MyTab) tab)
-                            .collect(Collectors.toList()));
-                    mytabs.forEach(mytab -> closeTab(ke, mytab));
-                }
+            setContextMenu(contextMenu());
+        }
+
+        private ContextMenu contextMenu() {
+            MenuItem closeMenuItem = new MenuItem("Close");
+            MenuItem closeAllMenuItem = new MenuItem("Close All");
+            closeMenuItem.setOnAction(event -> closeTab(event, this));
+            closeAllMenuItem.setOnAction(event -> {
+                List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
+                        .map(tab -> (MyTab) tab)
+                        .collect(Collectors.toList()));
+                mytabs.forEach(mytab -> closeTab(event, mytab));
             });
+            closeMenuItem.setAccelerator(closeKeyCombination);
+            closeAllMenuItem.setAccelerator(closeAllKeyCombination);
+            return new ContextMenu(closeMenuItem, closeAllMenuItem);
         }
 
         public ProjectFileViewer getViewer() {
