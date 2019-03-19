@@ -98,8 +98,8 @@ public class ProjectPane extends Tab {
         }
 
         private ContextMenu contextMenu() {
-            MenuItem closeMenuItem = new MenuItem("Close");
-            MenuItem closeAllMenuItem = new MenuItem("Close All");
+            MenuItem closeMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Close"));
+            MenuItem closeAllMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("CloseAll"));
             closeMenuItem.setOnAction(event -> closeTab(event, this));
             closeAllMenuItem.setOnAction(event -> {
                 List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
