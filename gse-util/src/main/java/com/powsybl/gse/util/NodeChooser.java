@@ -49,7 +49,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private Set<String> openedProjects = new HashSet<>();
     private SimpleBooleanProperty deleteMenuItemDisableProperty = new SimpleBooleanProperty(false);
 
-
     public interface TreeModel<N, F, D> {
         Collection<N> getChildren(D folder);
 
@@ -395,7 +394,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             }
         }
     }
-
 
     private void onMouseClickedEvent(MouseEvent event) {
         TreeItem<N> item = tree.getSelectionModel().getSelectedItem();

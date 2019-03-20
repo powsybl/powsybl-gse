@@ -91,7 +91,6 @@ public class ProjectPane extends Tab {
 
         private final KeyCombination closeAllKeyCombination = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
 
-
         public MyTab(String text, ProjectFileViewer viewer) {
             super(text, viewer.getContent());
             this.viewer = viewer;
@@ -127,8 +126,6 @@ public class ProjectPane extends Tab {
             }
         }
     }
-
-    private int counter;
 
     private boolean success;
 
@@ -291,9 +288,7 @@ public class ProjectPane extends Tab {
     }
 
     private void setDragOverStyle(TreeCell<Object> treeCell) {
-        if (getCounter() < 1) {
-            treeCell.getStyleClass().add("treecell-drag-over");
-        }
+        treeCell.getStyleClass().add("treecell-drag-over");
     }
 
     private void fillCellInfosForObject(Object value, TreeCell<Object> treecell, TreeItem<Object> treeItem) {
@@ -354,20 +349,13 @@ public class ProjectPane extends Tab {
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
         if (item instanceof ProjectNode && isMovable(item, treeItem)) {
-            int count = 0;
-            if (item instanceof ProjectFolder) {
-                treeItemChildrenSize(treeItem, count);
-            } else {
-                treeItemChildrenSize(treeItem.getParent(), count);
+            boolean nameExists = item instanceof ProjectFolder ? dragNodeNameAlreadyExists((ProjectFolder) treeItem.getValue()) : dragNodeNameAlreadyExists((ProjectFolder) treeItem.getParent().getValue());
+            if (!nameExists) {
+                setDragOverStyle(treeCell);
             }
-            setDragOverStyle(treeCell);
             event.acceptTransferModes(TransferMode.ANY);
             event.consume();
         }
-    }
-
-    private int getCounter() {
-        return counter;
     }
 
     private void dragDetectedEvent(Object value, TreeItem<Object> treeItem, MouseEvent event) {
@@ -386,13 +374,7 @@ public class ProjectPane extends Tab {
 
     private void dragDroppedEvent(Object value, TreeItem<Object> treeItem, DragEvent event, ProjectNode projectNode) {
         if (value != dragAndDropMove.getSource()) {
-            int count = 0;
             success = false;
-            if (value instanceof ProjectFolder) {
-                treeItemChildrenSize(treeItem, count);
-            } else {
-                treeItemChildrenSize(treeItem.getParent(), count);
-            }
             if (value instanceof ProjectFolder) {
                 ProjectFolder projectFolder = (ProjectFolder) projectNode;
                 acceptTransferDrag(projectFolder, success);
@@ -409,27 +391,15 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private void treeItemChildrenSize(TreeItem<Object> treeItem, int compte) {
-        counter = compte;
-        if (!treeItem.isLeaf()) {
-            ProjectFolder treeItemFolder = (ProjectFolder) treeItem.getValue();
-            if (!treeItemFolder.getChildren().isEmpty()) {
-                for (ProjectNode node : treeItemFolder.getChildren()) {
-                    if (node == null) {
-                        break;
-                    } else if (node.getName().equals(((ProjectNode) dragAndDropMove.getSource()).getName())) {
-                        counter++;
-                    }
-                }
-            }
-        }
+    private boolean dragNodeNameAlreadyExists(ProjectFolder projectFolder) {
+        return projectFolder.getChildren().stream().anyMatch(projectNode -> projectNode.getName().equals(((ProjectNode) dragAndDropMove.getSource()).getName()));
     }
 
     private void acceptTransferDrag(ProjectFolder projectFolder, boolean s) {
         success = s;
-        if (getCounter() >= 1) {
+        if (dragNodeNameAlreadyExists(projectFolder)) {
             GseAlerts.showDraggingError();
-        } else if (getCounter() < 1) {
+        } else {
             ProjectNode monfichier = (ProjectNode) dragAndDropMove.getSource();
             monfichier.moveTo(projectFolder);
             success = true;
