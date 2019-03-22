@@ -131,9 +131,11 @@ public class GroovyCodeEditor extends MasterDetailPane {
             final Clipboard clipboard = Clipboard.getSystemClipboard();
             if (clipboard.getString() != null) {
                 try (Scanner sc = new Scanner(clipboard.getString())) {
+                    StringBuilder formatClipboard = new StringBuilder();
                     while (sc.hasNextLine()) {
-                        replaceTabulation(sc);
+                        replaceTabulation(sc, formatClipboard);
                     }
+                    codeArea.insertText(codeArea.getCaretPosition(), formatClipboard.toString());
                 }
             }
         }
@@ -145,16 +147,14 @@ public class GroovyCodeEditor extends MasterDetailPane {
         }
     }
 
-    private void replaceTabulation(Scanner sc) {
+    private void replaceTabulation(Scanner sc, StringBuilder sb) {
         String line = sc.nextLine();
-        for (int j = 0; j < line.length(); j++) {
-            if (line.charAt(j) == '\t') {
-                line = line.replaceFirst(Character.toString('\t'), generateTabSpace(tabSpacesToAdd(line.indexOf('\t'))));
-            }
+        while (line.contains("\t")) {
+            line = line.replaceFirst(Character.toString('\t'), generateTabSpace(tabSpacesToAdd(line.indexOf('\t'))));
         }
-        codeArea.insertText(codeArea.getCaretPosition(), line);
+        sb.append(line);
         if (sc.hasNextLine()) {
-            codeArea.replaceSelection("\n");
+            sb.append("\n");
         }
     }
 
