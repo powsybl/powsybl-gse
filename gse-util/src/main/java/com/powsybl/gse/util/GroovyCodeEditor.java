@@ -64,6 +64,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private int tabSize = DEFAULT_TAB_SIZE;
 
+    private static final String SELECTED_WORD_MATCHES = "select-word-matches";
+
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
         @Override
@@ -117,6 +119,9 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.setOnDragOver(this::onDragOver);
         codeArea.setOnDragDropped(this::onDragDropped);
         codeArea.setOnSelectionDrag(p -> allowedDrag = true);
+
+        codeArea.selectedTextProperty().addListener((observable, oldvalue, newvalue) -> codeArea.setStyleSpans(0, computeHighlighting(codeArea.getText())));
+
     }
 
     private void setTabulationSpace(KeyEvent ke) {
@@ -365,6 +370,10 @@ public class GroovyCodeEditor extends MasterDetailPane {
         }
     }
 
+    private boolean tokenIsSelected(Token token, int tokenPosition) {
+        return token.getLine() == codeArea.getCaretSelectionBind().getParagraphIndex() + 1 && tokenPosition == codeArea.getCaretSelectionBind().getColumnPosition();
+    }
+
     private StyleSpans<Collection<String>> computeHighlighting(String text) {
         Stopwatch stopwatch = Stopwatch.createStarted();
 
@@ -378,7 +387,13 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 TokenStream tokenStream = lexer.plumb();
                 Token token = tokenStream.nextToken();
                 while (token.getType() != Token.EOF_TYPE) {
-                    String styleClass = styleClass(token.getType());
+                    String styleClass = "";
+                    if (codeArea.selectedTextProperty() != null && token.getText().equals(codeArea.selectedTextProperty().getValue())) {
+                        int selectedTokenPosition = token.getColumn() + token.getText().length() - 1;
+                        styleClass = selectedWordStyleClass(token, styleClass, selectedTokenPosition);
+                    } else {
+                        styleClass = styleClass(token.getType());
+                    }
                     int length = length((GroovySourceToken) token);
                     buildStyle(styleClass, spansBuilder, length, token);
                     added = true;
@@ -399,5 +414,13 @@ public class GroovyCodeEditor extends MasterDetailPane {
         LOGGER.trace("Highlighting of {} characters computed in {} ms", text.length(), stopwatch.elapsed(TimeUnit.MILLISECONDS));
 
         return spansBuilder.create();
+    }
+
+    private String selectedWordStyleClass(Token token, String style, int selectedTokenPosition) {
+        String styleClass = style;
+        if (!tokenIsSelected(token, selectedTokenPosition)) {
+            styleClass = SELECTED_WORD_MATCHES;
+        }
+        return styleClass;
     }
 }

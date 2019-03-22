@@ -33,3 +33,7 @@
     -fx-fill: #008080;
     -fx-font-weight: bold;
 }
+
+.select-word-matches {
+    -rtfx-background-color: #FFCDFF;
+}
