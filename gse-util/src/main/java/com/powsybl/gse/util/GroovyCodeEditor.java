@@ -149,10 +149,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private void replaceTabulation(Scanner sc, StringBuilder sb) {
         String line = sc.nextLine();
-        for (int j = 0; j < line.length(); j++) {
-            if (line.charAt(j) == '\t') {
-                line = line.replaceFirst(Character.toString('\t'), generateTabSpace(tabSpacesToAdd(line.indexOf('\t'))));
-            }
+        while (line.contains("\t")) {
+            line = line.replaceFirst(Character.toString('\t'), generateTabSpace(tabSpacesToAdd(line.indexOf('\t'))));
         }
         sb.append(line);
         if (sc.hasNextLine()) {
