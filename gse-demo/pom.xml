@@ -31,7 +31,7 @@
                 </os>
             </activation>
             <properties>
-                <jpackage.archive>openjdk-13-jpackage+8_windows-x64_bin.zip</jpackage.archive>
+                <jpackage.archive>openjdk-13-jpackage+30_windows-x64_bin.zip</jpackage.archive>
                 <jpackage.zip>true</jpackage.zip>
                 <powsybl-logo>logo.ico</powsybl-logo>
                 <gtk2-linux-jvm-arg/>
@@ -45,7 +45,7 @@
                 </os>
             </activation>
             <properties>
-                <jpackage.archive>openjdk-13-jpackage+8_osx-x64_bin.tar.gz</jpackage.archive>
+                <jpackage.archive>openjdk-13-jpackage+30_osx-x64_bin.tar.gz</jpackage.archive>
                 <jpackage.tar>true</jpackage.tar>
                 <powsybl-logo>logo.png</powsybl-logo>
                 <gtk2-linux-jvm-arg/>
@@ -59,7 +59,7 @@
                 </os>
             </activation>
             <properties>
-                <jpackage.archive>openjdk-13-jpackage+8_linux-x64_bin.tar.gz</jpackage.archive>
+                <jpackage.archive>openjdk-13-jpackage+30_linux-x64_bin.tar.gz</jpackage.archive>
                 <jpackage.tar>true</jpackage.tar>
                 <powsybl-logo>logo.png</powsybl-logo>
                 <gtk2-linux-jvm-arg>-Djdk.gtk.version=2</gtk2-linux-jvm-arg>
@@ -144,7 +144,7 @@
                                     <goal>wget</goal>
                                 </goals>
                                 <configuration>
-                                    <url>https://download.java.net/java/early_access/jpackage/archive/0/binaries/${jpackage.archive}</url>
+                                    <url>https://download.java.net/java/early_access/jpackage/30/${jpackage.archive}</url>
                                 </configuration>
                             </execution>
                         </executions>
@@ -208,6 +208,25 @@
                                     </filesets>
                                 </configuration>
                             </execution>
+                            <execution>
+                               <id>clean-jpackage</id>
+                               <phase>package</phase>
+                               <goals>
+                                   <goal>clean</goal>
+                               </goals>
+                                <configuration>
+                                    <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                                    <filesets>
+                                        <fileset>
+                                            <directory>target/native</directory>
+                                            <includes>
+                                                <include>**</include>
+                                            </includes>
+                                            <followSymlinks>false</followSymlinks>
+                                        </fileset>
+                                    </filesets>
+                                </configuration>
+                            </execution>
                         </executions>
                     </plugin>
                     <plugin>
@@ -233,6 +252,10 @@
                                         <argument>java.base,java.compiler,java.datatransfer,java.desktop,java.logging,java.management,java.management.rmi,java.naming,java.prefs,java.rmi,java.scripting,java.security.jgss,java.sql,java.xml,java.xml.crypto,jdk.javadoc,jdk.jsobject,jdk.unsupported,jdk.unsupported.desktop</argument>
                                         <argument>--output</argument>
                                         <argument>${project.build.directory}/jlink-runtime</argument>
+										<argument>--strip-native-commands</argument>
+										<argument>--strip-debug</argument>
+										<argument>--no-header-files</argument>
+										<argument>--no-man-pages</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -251,7 +274,7 @@
                                         <argument>--verbose</argument>
                                         <argument>--input</argument>
                                         <argument>jpackage-input</argument>
-                                        <argument>--class</argument>
+                                        <argument>--main-class</argument>
                                         <argument>com.powsybl.gse.demo.GseDemo</argument>
                                         <argument>--main-jar</argument>
                                         <argument>lib/${project.artifactId}-${project.version}.jar</argument>
@@ -267,8 +290,6 @@
                                         <argument>${project.version}</argument>
                                         <argument>--jvm-args</argument>
                                         <argument>-Dapp.root=$APPDIR -Dpowsybl.config.dirs=${user_home}/.powsybl:${app.root}/app -Djavafx.preloader=com.powsybl.gse.app.GsePreloader ${gtk2-linux-jvm-arg}</argument>
-                                        <argument>--force</argument>
-                                        <argument>--strip-native-commands</argument>
                                         <argument>--vendor</argument>
                                         <argument>PowSyBl</argument>
                                         <argument>--icon</argument>
