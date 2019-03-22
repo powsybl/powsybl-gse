@@ -52,6 +52,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     public static final int DEFAULT_TAB_SIZE = 4;
 
+    public static final String SELECTED_WORD_MATCHES_STYLE = "select-word-matches";
+
     private final SearchableCodeArea codeArea = new SearchableCodeArea();
 
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
@@ -64,7 +66,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private int tabSize = DEFAULT_TAB_SIZE;
 
-    private static final String SELECTED_WORD_MATCHES = "select-word-matches";
+    private String selectedWordMatchesStyle = SELECTED_WORD_MATCHES_STYLE;
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
@@ -94,6 +96,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         searchBar.setCloseAction(e -> {
             setShowDetailNode(false);
             codeArea.requestFocus();
+            selectedWordMatchesStyle = SELECTED_WORD_MATCHES_STYLE;
         });
         setMasterNode(new VirtualizedScrollPane(codeArea));
         setDetailNode(searchBar);
@@ -104,6 +107,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
             if (searchKeyCombination.match(ke)) {
                 if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
                     searchBar.setSearchPattern(codeArea.getSelectedText());
+                    selectedWordMatchesStyle = "";
+                    codeArea.setStyleSpans(0, computeHighlighting(codeArea.getText()));
                 }
                 if (!isShowDetailNode()) {
                     setShowDetailNode(true);
@@ -120,7 +125,12 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.setOnDragDropped(this::onDragDropped);
         codeArea.setOnSelectionDrag(p -> allowedDrag = true);
 
-        codeArea.selectedTextProperty().addListener((observable, oldvalue, newvalue) -> codeArea.setStyleSpans(0, computeHighlighting(codeArea.getText())));
+        codeArea.selectedTextProperty().addListener((observable, oldvalue, newvalue) -> {
+            if (!isShowDetailNode()) {
+                codeArea.setStyleSpans(0, computeHighlighting(codeArea.getText()));
+            }
+
+        });
 
     }
 
@@ -388,7 +398,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 Token token = tokenStream.nextToken();
                 while (token.getType() != Token.EOF_TYPE) {
                     String styleClass = "";
-                    if (codeArea.selectedTextProperty() != null && token.getText().equals(codeArea.selectedTextProperty().getValue())) {
+                    if (!codeArea.selectedTextProperty().getValue().isEmpty() && token.getText().equals(codeArea.selectedTextProperty().getValue())) {
                         int selectedTokenPosition = token.getColumn() + token.getText().length() - 1;
                         styleClass = selectedWordStyleClass(token, styleClass, selectedTokenPosition);
                     } else {
@@ -419,7 +429,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private String selectedWordStyleClass(Token token, String style, int selectedTokenPosition) {
         String styleClass = style;
         if (!tokenIsSelected(token, selectedTokenPosition)) {
-            styleClass = SELECTED_WORD_MATCHES;
+            styleClass = selectedWordMatchesStyle;
         }
         return styleClass;
     }
