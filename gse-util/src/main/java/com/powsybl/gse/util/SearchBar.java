@@ -136,17 +136,13 @@ public final class SearchBar extends HBox {
                 } else {
                     sensitiveMatcher = caseSensitive ? Pattern.compile("\\W" + searchPattern + "\\W").matcher(searchedTxt) : Pattern.compile("\\W" + searchPattern + "\\W", Pattern.CASE_INSENSITIVE).matcher(searchedTxt);
                 }
-                addPositions(sensitiveMatcher, positions, wordSensitive);
+                while (sensitiveMatcher.find()) {
+                    positions.add(wordSensitive ? new SearchTuple(sensitiveMatcher.start() + 1, sensitiveMatcher.end() - 1) : new SearchTuple(sensitiveMatcher.start(), sensitiveMatcher.end()));
+                }
                 nbMatchesProperty.set(positions.size());
                 nextMatch();
             } catch (PatternSyntaxException psex) {
                 throw new PowsyblException(RESOURCE_BUNDLE.getString("SyntaxError"));
-            }
-        }
-
-        private void addPositions(Matcher matcher, List<SearchTuple> positions, boolean wordSensitive) {
-            while (matcher.find()) {
-                positions.add(wordSensitive ? new SearchTuple(matcher.start() + 1, matcher.end() - 1) : new SearchTuple(matcher.start(), matcher.end()));
             }
         }
 
