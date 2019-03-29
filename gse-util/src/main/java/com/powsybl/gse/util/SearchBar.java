@@ -55,6 +55,7 @@ public final class SearchBar extends HBox {
     private final Button upButton;
     private final Button downButton;
     private final CheckBox caseSensitiveBox;
+    private final CheckBox wordSensitiveBox;
     private final Label matchLabel = new Label();
     private MessageFormat nbMatchFound = new MessageFormat(RESOURCE_BUNDLE.getString("NbMatchFound"));
     private PseudoClass failed;
@@ -126,17 +127,26 @@ public final class SearchBar extends HBox {
             return positions.get(currentMatchProperty.get()).end;
         }
 
-        void find(String searchPattern, String searchedTxt, boolean caseSensitive) {
+        void find(String searchPattern, String searchedTxt, boolean caseSensitive, boolean wordSensitive) {
             reset();
             try {
-                Matcher sensitiveMatcher = caseSensitive ? Pattern.compile(searchPattern).matcher(searchedTxt) : Pattern.compile(searchPattern, Pattern.CASE_INSENSITIVE).matcher(searchedTxt);
-                while (sensitiveMatcher.find()) {
-                    positions.add(new SearchTuple(sensitiveMatcher.start(), sensitiveMatcher.end()));
+                Matcher sensitiveMatcher;
+                if (!wordSensitive) {
+                    sensitiveMatcher = caseSensitive ? Pattern.compile(searchPattern).matcher(searchedTxt) : Pattern.compile(searchPattern, Pattern.CASE_INSENSITIVE).matcher(searchedTxt);
+                } else {
+                    sensitiveMatcher = caseSensitive ? Pattern.compile("\\W" + searchPattern + "\\W").matcher(searchedTxt) : Pattern.compile("\\W" + searchPattern + "\\W", Pattern.CASE_INSENSITIVE).matcher(searchedTxt);
                 }
+                addPositions(sensitiveMatcher, positions, wordSensitive);
                 nbMatchesProperty.set(positions.size());
                 nextMatch();
             } catch (PatternSyntaxException psex) {
                 throw new PowsyblException(RESOURCE_BUNDLE.getString("SyntaxError"));
+            }
+        }
+
+        private void addPositions(Matcher matcher, List<SearchTuple> positions, boolean wordSensitive) {
+            while (matcher.find()) {
+                positions.add(wordSensitive ? new SearchTuple(matcher.start() + 1, matcher.end() - 1) : new SearchTuple(matcher.start(), matcher.end()));
             }
         }
 
@@ -158,6 +168,7 @@ public final class SearchBar extends HBox {
         upButton = new Button(null, upGlyph);
         downButton = new Button(null, downGlyph);
         caseSensitiveBox = new CheckBox(RESOURCE_BUNDLE.getString("MatchCase"));
+        wordSensitiveBox = new CheckBox(RESOURCE_BUNDLE.getString("Words"));
         matchLabel.getStyleClass().add("match-label");
         searchedArea = Objects.requireNonNull(textArea);
         setPrefHeight(20);
@@ -171,19 +182,21 @@ public final class SearchBar extends HBox {
         failed = PseudoClass.getPseudoClass("fail");
         Pane gluePanel = new Pane();
         setHgrow(gluePanel, Priority.ALWAYS);
-        getChildren().addAll(searchField, upButton, downButton, caseSensitiveBox, matchLabel, gluePanel, closeButton);
+        getChildren().addAll(searchField, upButton, downButton, caseSensitiveBox, wordSensitiveBox, matchLabel, gluePanel, closeButton);
         setMargin(searchField, new Insets(0, 0, 0, 5));
         setMargin(caseSensitiveBox, new Insets(0, 0, 0, 5));
+        setMargin(wordSensitiveBox, new Insets(0, 0, 0, 8));
         setMargin(matchLabel, new Insets(0, 0, 0, 25));
         setMargin(closeButton, new Insets(0, 5, 0, 0));
 
         caseSensitiveBox.selectedProperty().addListener((observable, oldValue, newValue) -> findCaseSensitiveMatches(textArea, newValue));
+        wordSensitiveBox.selectedProperty().addListener((observable, oldValue, newValue) -> findWordSensitiveMatches(textArea, newValue));
 
         searchField.textProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue == null || "".equals(newValue)) {
                 refresh(textArea);
             } else {
-                matcher.find(newValue, searchedArea.getText(), caseSensitiveBox.selectedProperty().get());
+                matcher.find(newValue, searchedArea.getText(), caseSensitiveBox.selectedProperty().get(), wordSensitiveBox.selectedProperty().get());
             }
         });
 
@@ -224,7 +237,12 @@ public final class SearchBar extends HBox {
 
     private void findCaseSensitiveMatches(Searchable textArea, boolean newValue) {
         refresh(textArea);
-        matcher.find(searchField.getText(), searchedArea.getText(), newValue);
+        matcher.find(searchField.getText(), searchedArea.getText(), newValue, wordSensitiveBox.selectedProperty().get());
+    }
+
+    private void findWordSensitiveMatches(Searchable textArea, boolean newValue) {
+        refresh(textArea);
+        matcher.find(searchField.getText(), searchedArea.getText(), caseSensitiveBox.selectedProperty().get(), newValue);
     }
 
     private void refresh(Searchable textArea) {
