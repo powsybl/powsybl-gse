@@ -24,6 +24,7 @@ import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.stage.Window;
+import javafx.util.Callback;
 
 import java.util.Objects;
 import java.util.ResourceBundle;
@@ -58,13 +59,6 @@ public final class NewScriptButton {
     }
 
     private Dialog<Boolean> createDialog(ProjectFolder folder, Project project, Window window, GseContext context) {
-        Dialog<Boolean> dialog = new Dialog<>();
-        dialog.initOwner(window);
-        dialog.setTitle(RESOURCE_BUNDLE.getString("DialogTitle"));
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-
-        Button button = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
-
         nameTextField = NameTextField.create(folder);
         folderSelectionPane = new ProjectNodeSelectionPane<>(project, RESOURCE_BUNDLE.getString("Folder"), true,
                                                              window, context, ProjectFolder.class);
@@ -85,14 +79,11 @@ public final class NewScriptButton {
         pane.add(folderSelectionPane.getTextField(), 1, 1, 2, 1);
         pane.add(folderSelectionPane.getButton(), 3, 1);
         pane.add(nameTextField.getFileAlreadyExistsLabel(), 0, 2, 4, 1);
-        dialog.getDialogPane().setContent(pane);
         BooleanBinding okProperty = folderSelectionPane.nodeProperty().isNotNull()
                                                        .and(nameTextField.okProperty());
-        button.disableProperty().bind(okProperty.not());
-        dialog.setResizable(true);
-        dialog.setResultConverter(buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE);
         Platform.runLater(nameTextField.getInputField()::requestFocus);
-        return dialog;
+        Callback<ButtonType, Boolean> resultConverter = buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE;
+        return new GseDialog<>(RESOURCE_BUNDLE.getString("DialogTitle"), pane, window, okProperty.not(), resultConverter);
     }
 
     private void showAndWaitDialog(ProjectFolder folder, Project project, Window window, GseContext context) {
