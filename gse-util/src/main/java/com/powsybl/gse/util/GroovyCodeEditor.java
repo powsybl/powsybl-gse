@@ -16,6 +16,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.input.*;
+import javafx.scene.layout.VBox;
 import org.apache.commons.lang3.StringUtils;
 import org.codehaus.groovy.antlr.GroovySourceToken;
 import org.codehaus.groovy.antlr.SourceBuffer;
@@ -42,6 +43,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -55,6 +58,10 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private final SearchableCodeArea codeArea = new SearchableCodeArea();
 
     private final KeyCombination searchKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
+
+    private final KeyCombination replaceWordKeyCombination = new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN);
+
+    private final SearchBar searchBar;
 
     private final KeyCombination pasteKeyCombination = new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN);
 
@@ -88,24 +95,29 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.richChanges()
                 .filter(ch -> !ch.getInserted().equals(ch.getRemoved()))
                 .subscribe(change -> codeArea.setStyleSpans(0, computeHighlighting(codeArea.getText())));
-        SearchBar searchBar = new SearchBar(codeArea);
+        searchBar = new SearchBar(codeArea);
         searchBar.setCloseAction(e -> {
             setShowDetailNode(false);
             codeArea.requestFocus();
         });
         setMasterNode(new VirtualizedScrollPane(codeArea));
-        setDetailNode(searchBar);
+        VBox vBox = new VBox();
+        vBox.getChildren().add(searchBar);
+        setDetailNode(vBox);
         setDetailSide(Side.TOP);
         setShowDetailNode(false);
 
         setOnKeyPressed((KeyEvent ke) -> {
             if (searchKeyCombination.match(ke)) {
-                if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
-                    searchBar.setSearchPattern(codeArea.getSelectedText());
-                }
-                if (!isShowDetailNode()) {
-                    setShowDetailNode(true);
-                }
+                setSearchBar(vBox, "search");
+                showDetailNode();
+                searchBar.requestFocus();
+            } else if (replaceWordKeyCombination.match(ke)) {
+                setShowDetailNode(false);
+                setSearchBar(vBox, "replace");
+                searchBar.setReplaceAllAction(event -> replaceAllOccurences(searchBar.getSearchedText(), codeArea.getText(), searchBar.isCaseSensitiveBoxSelected(), searchBar.isWordSensitiveBoxSelected()));
+                searchBar.setReplaceAction(event -> replaceCurrentOccurence(searchBar.getCurrentMatchStart(), searchBar.getCurrentMatchEnd()));
+                showDetailNode();
                 searchBar.requestFocus();
             }
 
@@ -117,6 +129,57 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.setOnDragOver(this::onDragOver);
         codeArea.setOnDragDropped(this::onDragDropped);
         codeArea.setOnSelectionDrag(p -> allowedDrag = true);
+    }
+
+    private void showDetailNode() {
+        if (!isShowDetailNode()) {
+            setShowDetailNode(true);
+        }
+    }
+
+    private void setSearchBar(VBox vBox, String searchMode) {
+        vBox.getChildren().setAll(searchBar.setMode(searchMode));
+        setDetailNode(vBox);
+        resetDividerPosition();
+        if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
+            searchBar.setSearchPattern(codeArea.getSelectedText());
+        }
+    }
+
+    private void replaceAllOccurences(String wordToReplace, String text, boolean caseSensitive, boolean wordSensitive) {
+        String replaceText = searchBar.getReplaceText();
+        int ci = Pattern.CASE_INSENSITIVE;
+        String code;
+        if (!wordSensitive) {
+            code = caseSensitive ? StringUtils.replacePattern(text, wordToReplace, replaceText) : Pattern.compile(wordToReplace, ci).matcher(text).replaceAll(replaceText);
+        } else {
+            Matcher matcher = caseSensitive ? Pattern.compile("\\W" + wordToReplace + "\\W").matcher(text) : Pattern.compile("\\W" + wordToReplace + "\\W", ci).matcher(text);
+            String txt = text;
+            while (matcher.find()) {
+                int length = txt.length();
+                txt = txt.substring(0, matcher.start() + 1) + replaceText + txt.substring(matcher.end() - 1, length);
+                matcher = caseSensitive ? Pattern.compile("\\W" + wordToReplace + "\\W").matcher(txt) : Pattern.compile("\\W" + wordToReplace + "\\W", ci).matcher(txt);
+            }
+            code = txt;
+        }
+        codeArea.clear();
+        codeArea.replaceText(0, 0, code);
+        searchBar.findMatch(searchBar.getSearchedText(), codeArea.getText(), searchBar.isCaseSensitiveBoxSelected(), searchBar.isWordSensitiveBoxSelected());
+    }
+
+    private void replaceCurrentOccurence(int startPosition, int endPosition) {
+        int lastMatch = searchBar.getCurrentMatchProperty().get();
+        codeArea.replaceText(startPosition, endPosition, searchBar.getReplaceText());
+        searchBar.findMatch(searchBar.getSearchedText(), codeArea.getText(), searchBar.isCaseSensitiveBoxSelected(), searchBar.isWordSensitiveBoxSelected());
+        if (searchBar.getReplaceText().contains(searchBar.getSearchedText())) {
+            while (searchBar.getCurrentMatchProperty().get() <= lastMatch) {
+                if (searchBar.isLastMatch().get()) {
+                    break;
+                } else {
+                    searchBar.nextMatch();
+                }
+            }
+        }
     }
 
     private void setTabulationSpace(KeyEvent ke) {

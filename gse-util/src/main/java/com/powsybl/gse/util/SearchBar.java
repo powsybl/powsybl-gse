@@ -27,6 +27,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import org.controlsfx.control.textfield.CustomTextField;
 import org.controlsfx.control.textfield.TextFields;
@@ -61,6 +62,8 @@ public final class SearchBar extends HBox {
     private PseudoClass failed;
 
     private Searchable searchedArea;
+
+    private final ReplaceWordBar replaceWordBar = new ReplaceWordBar();
 
     private final SearchMatcher matcher = new SearchMatcher();
 
@@ -154,10 +157,38 @@ public final class SearchBar extends HBox {
 
     }
 
+    private class ReplaceWordBar extends HBox {
+
+        private final Button replaceButton;
+        private final Button replaceAllButton;
+        private final CustomTextField searchField = (CustomTextField) TextFields.createClearableTextField();
+
+        ReplaceWordBar() {
+            super(6);
+
+            designSearchField(searchField);
+            replaceButton = new Button(RESOURCE_BUNDLE.getString("Replace"));
+            replaceAllButton = new Button(RESOURCE_BUNDLE.getString("ReplaceAll"));
+            replaceButton.getStyleClass().add("replace-button");
+            replaceAllButton.getStyleClass().add("replace-button");
+            searchField.setOnKeyPressed((KeyEvent ke) -> {
+                if (ke.getCode() == KeyCode.ENTER) {
+                    replaceButton.fire();
+                }
+            });
+            setMargin(searchField, new Insets(0, 0, 0, 5));
+            getChildren().addAll(searchField, replaceButton, replaceAllButton);
+
+        }
+
+        CustomTextField getSearchField() {
+            return searchField;
+        }
+    }
+
     public SearchBar(Searchable textArea) {
         super(0);
 
-        Text searchGlyph = Glyph.createAwesomeFont('\uf002').size("1.2em");
         Text upGlyph = Glyph.createAwesomeFont('\uf106').size("1.4em");
         Text downGlyph = Glyph.createAwesomeFont('\uf107').size("1.4em");
 
@@ -170,11 +201,9 @@ public final class SearchBar extends HBox {
         setPrefHeight(20);
         setAlignment(Pos.CENTER_LEFT);
         closeButton.getStyleClass().add("close-button");
-        searchField.setLeft(searchGlyph);
-        searchField.setPrefWidth(300);
+        designSearchField(searchField);
         upButton.getStyleClass().add("transparent-button");
         downButton.getStyleClass().add("transparent-button");
-        searchField.getStyleClass().add("search-field");
         failed = PseudoClass.getPseudoClass("fail");
         Pane gluePanel = new Pane();
         setHgrow(gluePanel, Priority.ALWAYS);
@@ -229,6 +258,82 @@ public final class SearchBar extends HBox {
                 textArea.select(matcher.currentMatchStart(), matcher.currentMatchEnd());
             }
         });
+
+        replaceWordBar.replaceAllButton.disableProperty().bind(validateDisableProperty());
+        replaceWordBar.replaceButton.disableProperty().bind(validateDisableProperty());
+    }
+
+    private BooleanBinding validateDisableProperty() {
+        return getNbMatchesProperty().isEqualTo(0).or(searchField.textProperty().isEmpty());
+    }
+
+    public VBox setMode(String searchMode) {
+        VBox vBox = new VBox(6);
+        vBox.getChildren().add(this);
+        switch (searchMode) {
+            case "search":
+                return vBox;
+            case "replace":
+                vBox.getChildren().add(replaceWordBar);
+                return vBox;
+            default:
+                return null;
+        }
+    }
+
+    private static void designSearchField(CustomTextField searchField) {
+        Text searchGlyph = Glyph.createAwesomeFont('\uf002').size("1.2em");
+        searchField.setLeft(searchGlyph);
+        searchField.setPrefWidth(300);
+        searchField.getStyleClass().add("search-field");
+    }
+
+    public boolean isCaseSensitiveBoxSelected() {
+        return caseSensitiveBox.isSelected();
+    }
+
+    public boolean isWordSensitiveBoxSelected() {
+        return wordSensitiveBox.isSelected();
+    }
+
+    public String getSearchedText() {
+        return searchField.getText();
+    }
+
+    public void nextMatch() {
+        matcher.nextMatch();
+    }
+
+    public void previousMatch() {
+        matcher.previousMatch();
+    }
+
+    public int getCurrentMatchStart() {
+        return matcher.currentMatchStart();
+    }
+
+    public int getCurrentMatchEnd() {
+        return matcher.currentMatchEnd();
+    }
+
+    public IntegerProperty getNbMatchesProperty() {
+        return matcher.nbMatchesProperty;
+    }
+
+    public IntegerProperty getCurrentMatchProperty() {
+        return matcher.currentMatchProperty;
+    }
+
+    public BooleanBinding isLastMatch() {
+        return matcher.isLastMatch();
+    }
+
+    public void findMatch(String searchPattern, String searchText, boolean caseSensitive, boolean wordSensitive) {
+        matcher.find(searchPattern, searchText, caseSensitive, wordSensitive);
+    }
+
+    public String getReplaceText() {
+        return replaceWordBar.getSearchField().getText();
     }
 
     private void findCaseSensitiveMatches(Searchable textArea, boolean newValue) {
@@ -254,6 +359,14 @@ public final class SearchBar extends HBox {
 
     public void setCloseAction(EventHandler<ActionEvent> eventHandler) {
         closeButton.setOnAction(eventHandler);
+    }
+
+    public void setReplaceAllAction(EventHandler<ActionEvent> eventHandler) {
+        replaceWordBar.replaceAllButton.setOnAction(eventHandler);
+    }
+
+    public void setReplaceAction(EventHandler<ActionEvent> eventHandler) {
+        replaceWordBar.replaceButton.setOnAction(eventHandler);
     }
 
     public void setSearchPattern(String pattern) {
