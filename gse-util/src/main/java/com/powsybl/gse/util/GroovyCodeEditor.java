@@ -43,6 +43,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -114,7 +115,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
             } else if (replaceWordKeyCombination.match(ke)) {
                 setShowDetailNode(false);
                 setSearchBar(vBox, "replace");
-                searchBar.setReplaceAllAction(event -> replaceAllOccurences(searchBar.getSearchedText(), codeArea.getText(), searchBar.isCheckBoxSelected()));
+                searchBar.setReplaceAllAction(event -> replaceAllOccurences(searchBar.getSearchedText(), codeArea.getText(), searchBar.isCaseSensitiveBoxSelected(), searchBar.isWordSensitiveBoxSelected()));
                 searchBar.setReplaceAction(event -> replaceCurrentOccurence(searchBar.getCurrentMatchStart(), searchBar.getCurrentMatchEnd()));
                 showDetailNode();
                 vBox.requestFocus();
@@ -145,19 +146,31 @@ public class GroovyCodeEditor extends MasterDetailPane {
         }
     }
 
-    private void replaceAllOccurences(String wordToReplace, String text, boolean caseSensitive) {
+    private void replaceAllOccurences(String wordToReplace, String text, boolean caseSensitive, boolean wordSensitive) {
         String replaceText = searchBar.getReplaceText();
         int ci = Pattern.CASE_INSENSITIVE;
-        String code = caseSensitive ? StringUtils.replacePattern(text, wordToReplace, replaceText) : Pattern.compile(wordToReplace, ci).matcher(text).replaceAll(replaceText);
+        String code;
+        if (!wordSensitive) {
+            code = caseSensitive ? StringUtils.replacePattern(text, wordToReplace, replaceText) : Pattern.compile(wordToReplace, ci).matcher(text).replaceAll(replaceText);
+        } else {
+            Matcher matcher = caseSensitive ? Pattern.compile("\\W" + wordToReplace + "\\W").matcher(text) : Pattern.compile("\\W" + wordToReplace + "\\W", ci).matcher(text);
+            String txt = text;
+            while (matcher.find()) {
+                int length = txt.length();
+                txt = txt.substring(0, matcher.start() + 1) + replaceText + txt.substring(matcher.end() - 1, length);
+                matcher = caseSensitive ? Pattern.compile("\\W" + wordToReplace + "\\W").matcher(txt) : Pattern.compile("\\W" + wordToReplace + "\\W", ci).matcher(txt);
+            }
+            code = txt;
+        }
         codeArea.clear();
         codeArea.replaceText(0, 0, code);
-        searchBar.findMatch(searchBar.getSearchedText(), codeArea.getText(), searchBar.isCheckBoxSelected());
+        searchBar.findMatch(searchBar.getSearchedText(), codeArea.getText(), searchBar.isCaseSensitiveBoxSelected(), searchBar.isWordSensitiveBoxSelected());
     }
 
     private void replaceCurrentOccurence(int startPosition, int endPosition) {
         int lastMatch = searchBar.getCurrentMatchProperty().get();
         codeArea.replaceText(startPosition, endPosition, searchBar.getReplaceText());
-        searchBar.findMatch(searchBar.getSearchedText(), codeArea.getText(), searchBar.isCheckBoxSelected());
+        searchBar.findMatch(searchBar.getSearchedText(), codeArea.getText(), searchBar.isCaseSensitiveBoxSelected(), searchBar.isWordSensitiveBoxSelected());
         if (searchBar.getReplaceText().contains(searchBar.getSearchedText())) {
             while (searchBar.getCurrentMatchProperty().get() <= lastMatch) {
                 if (searchBar.isLastMatch().get()) {

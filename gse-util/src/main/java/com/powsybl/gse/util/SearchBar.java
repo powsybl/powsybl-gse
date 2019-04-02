@@ -288,8 +288,12 @@ public final class SearchBar extends HBox {
         searchField.getStyleClass().add("search-field");
     }
 
-    public boolean isCheckBoxSelected() {
+    public boolean isCaseSensitiveBoxSelected() {
         return caseSensitiveBox.isSelected();
+    }
+
+    public boolean isWordSensitiveBoxSelected() {
+        return wordSensitiveBox.isSelected();
     }
 
     public String getSearchedText() {
@@ -324,8 +328,8 @@ public final class SearchBar extends HBox {
         return matcher.isLastMatch();
     }
 
-    public void findMatch(String searchPattern, String searchText, boolean caseSensitive) {
-        matcher.find(searchPattern, searchText, caseSensitive);
+    public void findMatch(String searchPattern, String searchText, boolean caseSensitive, boolean wordSensitive) {
+        matcher.find(searchPattern, searchText, caseSensitive, wordSensitive);
     }
 
     public String getReplaceText() {
