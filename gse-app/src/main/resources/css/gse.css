@@ -133,3 +133,7 @@
      -fx-border-color: grey;
      -fx-border-radius: 3px;
 }
+
+.replace-button : hover {
+    -fx-fill: lightgrey;
+}

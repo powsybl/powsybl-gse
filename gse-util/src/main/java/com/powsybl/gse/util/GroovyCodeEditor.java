@@ -118,7 +118,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 searchBar.setReplaceAllAction(event -> replaceAllOccurences(searchBar.getSearchedText(), codeArea.getText(), searchBar.isCaseSensitiveBoxSelected(), searchBar.isWordSensitiveBoxSelected()));
                 searchBar.setReplaceAction(event -> replaceCurrentOccurence(searchBar.getCurrentMatchStart(), searchBar.getCurrentMatchEnd()));
                 showDetailNode();
-                vBox.requestFocus();
+                searchBar.requestFocus();
             }
 
         });
