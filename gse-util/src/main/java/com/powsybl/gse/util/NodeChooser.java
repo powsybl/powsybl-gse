@@ -49,7 +49,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private Set<String> openedProjects = new HashSet<>();
     private SimpleBooleanProperty deleteMenuItemDisableProperty = new SimpleBooleanProperty(false);
 
-
     public interface TreeModel<N, F, D> {
         Collection<N> getChildren(D folder);
 
@@ -396,7 +395,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         }
     }
 
-
     private void onMouseClickedEvent(MouseEvent event) {
         TreeItem<N> item = tree.getSelectionModel().getSelectedItem();
         N node = item != null ? item.getValue() : null;
@@ -610,7 +608,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private void renameNode(TreeItem selectedTreeItem) {
-        Optional<String> result = RenamePane.showAndWaitDialog((Node) selectedTreeItem.getValue());
+        Optional<String> result = RenamePane.showAndWaitDialog(getScene().getWindow(), (Node) selectedTreeItem.getValue());
         result.ifPresent(newName -> {
             if (selectedTreeItem.getValue() instanceof Node) {
                 Node selectedTreeNode = (Node) selectedTreeItem.getValue();
@@ -809,32 +807,24 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     public static <N, F extends N, D extends N, T extends N> Optional<T> showAndWaitDialog(
             TreeModel<N, F, D> treeModel, Window window, AppData appData, GseContext context,
             BiPredicate<N, TreeModel<N, F, D>> filter, Set<String>... openedProjectsList) {
-        Dialog<T> dialog = new Dialog<>();
+        Dialog<T> dialog = null;
         try {
-            dialog.setTitle(RESOURCE_BUNDLE.getString("OpenFile"));
-            dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
             NodeChooser<N, F, D, T> nodeChooser = new NodeChooser<>(window, treeModel, appData, context, filter, openedProjectsList);
+            Callback<ButtonType, T> resultConverter = buttonType -> buttonType == ButtonType.OK ? nodeChooser.selectedNodeProperty().get() : null;
+            dialog = new GseDialog<>(RESOURCE_BUNDLE.getString("OpenFile"), nodeChooser, window, nodeChooser.selectedNodeProperty().isNull(), resultConverter);
             Button button = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
-            button.disableProperty().bind(nodeChooser.selectedNodeProperty().isNull());
             nodeChooser.doubleClick().addListener((observable, oldValue, newValue) -> {
                 if (Boolean.TRUE.equals(newValue)) {
                     button.fire();
                 }
             });
-            dialog.setResultConverter(buttonType -> {
-                if (buttonType == ButtonType.OK) {
-                    return nodeChooser.selectedNodeProperty().get();
-                }
-                return null;
-            });
-            dialog.getDialogPane().setContent(nodeChooser);
-            dialog.setResizable(true);
-            dialog.initOwner(window);
             Optional<T> node = dialog.showAndWait();
             nodeChooser.savePreferences();
             return node;
         } finally {
-            dialog.close();
+            if (dialog != null) {
+                dialog.close();
+            }
         }
     }
 }

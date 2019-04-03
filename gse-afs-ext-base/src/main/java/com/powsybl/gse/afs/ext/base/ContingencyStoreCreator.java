@@ -9,13 +9,22 @@ package com.powsybl.gse.afs.ext.base;
 import com.powsybl.afs.ProjectFolder;
 import com.powsybl.contingency.afs.ContingencyStoreBuilder;
 
+import java.util.ResourceBundle;
+
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
 public class ContingencyStoreCreator extends AbstractModificationScriptCreator {
 
+    private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ContingencyStore");
+
     public ContingencyStoreCreator(ProjectFolder folder) {
         super(folder);
+    }
+
+    @Override
+    public String getTitle() {
+        return RESOURCE_BUNDLE.getString("CreateContingencies");
     }
 
     @Override

@@ -30,6 +30,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,20 +92,25 @@ public class ProjectPane extends Tab {
 
         private final KeyCombination closeAllKeyCombination = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
 
-
         public MyTab(String text, ProjectFileViewer viewer) {
             super(text, viewer.getContent());
             this.viewer = viewer;
-            getContent().setOnKeyPressed((KeyEvent ke) -> {
-                if (closeKeyCombination.match(ke)) {
-                    closeTab(ke, this);
-                } else if (closeAllKeyCombination.match(ke)) {
-                    List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
-                            .map(tab -> (MyTab) tab)
-                            .collect(Collectors.toList()));
-                    mytabs.forEach(mytab -> closeTab(ke, mytab));
-                }
+            setContextMenu(contextMenu());
+        }
+
+        private ContextMenu contextMenu() {
+            MenuItem closeMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Close"));
+            MenuItem closeAllMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("CloseAll"));
+            closeMenuItem.setOnAction(event -> closeTab(event, this));
+            closeAllMenuItem.setOnAction(event -> {
+                List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
+                        .map(tab -> (MyTab) tab)
+                        .collect(Collectors.toList()));
+                mytabs.forEach(mytab -> closeTab(event, mytab));
             });
+            closeMenuItem.setAccelerator(closeKeyCombination);
+            closeAllMenuItem.setAccelerator(closeAllKeyCombination);
+            return new ContextMenu(closeMenuItem, closeAllMenuItem);
         }
 
         public ProjectFileViewer getViewer() {
@@ -127,8 +133,6 @@ public class ProjectPane extends Tab {
             }
         }
     }
-
-    private int counter;
 
     private boolean success;
 
@@ -291,9 +295,7 @@ public class ProjectPane extends Tab {
     }
 
     private void setDragOverStyle(TreeCell<Object> treeCell) {
-        if (getCounter() < 1) {
-            treeCell.getStyleClass().add("treecell-drag-over");
-        }
+        treeCell.getStyleClass().add("treecell-drag-over");
     }
 
     private void fillCellInfosForObject(Object value, TreeCell<Object> treecell, TreeItem<Object> treeItem) {
@@ -354,20 +356,13 @@ public class ProjectPane extends Tab {
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
         if (item instanceof ProjectNode && isMovable(item, treeItem)) {
-            int count = 0;
-            if (item instanceof ProjectFolder) {
-                treeItemChildrenSize(treeItem, count);
-            } else {
-                treeItemChildrenSize(treeItem.getParent(), count);
+            boolean nameExists = item instanceof ProjectFolder ? dragNodeNameAlreadyExists((ProjectFolder) treeItem.getValue()) : dragNodeNameAlreadyExists((ProjectFolder) treeItem.getParent().getValue());
+            if (!nameExists) {
+                setDragOverStyle(treeCell);
             }
-            setDragOverStyle(treeCell);
             event.acceptTransferModes(TransferMode.ANY);
             event.consume();
         }
-    }
-
-    private int getCounter() {
-        return counter;
     }
 
     private void dragDetectedEvent(Object value, TreeItem<Object> treeItem, MouseEvent event) {
@@ -386,13 +381,7 @@ public class ProjectPane extends Tab {
 
     private void dragDroppedEvent(Object value, TreeItem<Object> treeItem, DragEvent event, ProjectNode projectNode) {
         if (value != dragAndDropMove.getSource()) {
-            int count = 0;
             success = false;
-            if (value instanceof ProjectFolder) {
-                treeItemChildrenSize(treeItem, count);
-            } else {
-                treeItemChildrenSize(treeItem.getParent(), count);
-            }
             if (value instanceof ProjectFolder) {
                 ProjectFolder projectFolder = (ProjectFolder) projectNode;
                 acceptTransferDrag(projectFolder, success);
@@ -409,27 +398,15 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private void treeItemChildrenSize(TreeItem<Object> treeItem, int compte) {
-        counter = compte;
-        if (!treeItem.isLeaf()) {
-            ProjectFolder treeItemFolder = (ProjectFolder) treeItem.getValue();
-            if (!treeItemFolder.getChildren().isEmpty()) {
-                for (ProjectNode node : treeItemFolder.getChildren()) {
-                    if (node == null) {
-                        break;
-                    } else if (node.getName().equals(((ProjectNode) dragAndDropMove.getSource()).getName())) {
-                        counter++;
-                    }
-                }
-            }
-        }
+    private boolean dragNodeNameAlreadyExists(ProjectFolder projectFolder) {
+        return projectFolder.getChildren().stream().anyMatch(projectNode -> projectNode.getName().equals(((ProjectNode) dragAndDropMove.getSource()).getName()));
     }
 
     private void acceptTransferDrag(ProjectFolder projectFolder, boolean s) {
         success = s;
-        if (getCounter() >= 1) {
+        if (dragNodeNameAlreadyExists(projectFolder)) {
             GseAlerts.showDraggingError();
-        } else if (getCounter() < 1) {
+        } else {
             ProjectNode monfichier = (ProjectNode) dragAndDropMove.getSource();
             monfichier.moveTo(projectFolder);
             success = true;
@@ -689,7 +666,7 @@ public class ProjectPane extends Tab {
     }
 
     private void renameProjectNode(TreeItem<Object> selectedTreeItem) {
-        Optional<String> result = RenamePane.showAndWaitDialog((ProjectNode) selectedTreeItem.getValue());
+        Optional<String> result = RenamePane.showAndWaitDialog(getContent().getScene().getWindow(), (ProjectNode) selectedTreeItem.getValue());
         result.ifPresent(newName -> {
             if (selectedTreeItem.getValue() instanceof ProjectNode) {
                 ProjectNode selectedProjectNode = (ProjectNode) selectedTreeItem.getValue();
@@ -815,23 +792,19 @@ public class ProjectPane extends Tab {
     private void executionTaskLaunch(ProjectFileExecutionTaskExtension executionTaskExtension, ProjectFile file) {
         ExecutionTaskConfigurator configurator = executionTaskExtension.createConfigurator(file, getContent().getScene(), context);
         if (configurator != null) {
-            Dialog<Boolean> dialog = new Dialog<>();
+            Dialog<Boolean> dialog = null;
             try {
-                dialog.setTitle(configurator.getTitle());
-                dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-                Button button = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
-                button.disableProperty().bind(configurator.configProperty().isNull());
-                dialog.getDialogPane().setContent(configurator.getContent());
-                dialog.setResizable(true);
-                dialog.initOwner(getContent().getScene().getWindow());
-                dialog.setResultConverter(buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE);
+                Callback<ButtonType, Boolean> resultConverter = buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE;
+                dialog = new GseDialog<>(configurator.getTitle(), configurator.getContent(), getContent().getScene().getWindow(), configurator.configProperty().isNull(), resultConverter);
                 dialog.showAndWait().ifPresent(ok -> {
                     if (ok) {
                         GseUtil.execute(context.getExecutor(), () -> executionTaskExtension.execute(file, configurator.configProperty().get()));
                     }
                 });
             } finally {
-                dialog.close();
+                if (dialog != null) {
+                    dialog.close();
+                }
                 configurator.dispose();
             }
         } else {
@@ -942,16 +915,8 @@ public class ProjectPane extends Tab {
     }
 
     private Dialog<Boolean> createProjectItemDialog(String title, BooleanBinding okProperty, javafx.scene.Node content) {
-        Dialog<Boolean> dialog = new Dialog<>();
-        dialog.setTitle(title);
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        Button button = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
-        button.disableProperty().bind(okProperty.not());
-        dialog.getDialogPane().setContent(content);
-        dialog.setResizable(true);
-        dialog.initOwner(getContent().getScene().getWindow());
-        dialog.setResultConverter(buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE);
-        return dialog;
+        Callback<ButtonType, Boolean> resultConverter = buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE;
+        return new GseDialog<>(title, content, getContent().getScene().getWindow(), okProperty.not(), resultConverter);
     }
 
     private ContextMenu createFolderContextMenu(TreeItem<Object> selectedTreeItem) {
