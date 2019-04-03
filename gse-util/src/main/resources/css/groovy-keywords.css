@@ -29,12 +29,11 @@
     -fx-background-color: #f2f9fc;
 }
 
-<<<<<<< HEAD
 .bracket-matches {
-    -fx-effect: dropshadow( one-pass-box , #99CCFF , 12 , 3.8 , 0 , 0 );
-=======
+    -rtfx-background-color: #99CCFF;
+}
+
 .other {
     -fx-fill: #008080;
     -fx-font-weight: bold;
->>>>>>> master
 }
