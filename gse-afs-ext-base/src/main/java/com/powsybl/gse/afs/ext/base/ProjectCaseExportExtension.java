@@ -33,6 +33,7 @@ import java.nio.file.Files;
 import java.text.MessageFormat;
 import java.util.ResourceBundle;
 import java.util.UUID;
+import java.util.prefs.Preferences;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -42,6 +43,8 @@ import java.util.zip.GZIPOutputStream;
 public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExtension<ProjectFile, ProjectCaseExportParameters> {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ProjectCaseExport");
+
+    private final Preferences preferences = Preferences.userNodeForPackage(getClass());
 
     @Override
     public Class<ProjectFile> getProjectFileType() {
@@ -96,7 +99,7 @@ public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExten
                 // Add action events
                 fileButton.setOnAction(event -> {
                     FileChooser fileChooser = new FileChooser();
-                    fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
+                    openLastDirectory(fileChooser);
                     fileChooser.setTitle(RESOURCE_BUNDLE.getString("SelectTargetFile"));
                     fileChooser.setInitialFileName(fileTextField.getText());
                     File file = fileChooser.showSaveDialog(scene.getWindow());
@@ -104,6 +107,7 @@ public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExten
                         fileTextField.setText(file.toString());
                         config.setFilePath(file.toString());
                         configProperty.set(config);
+                        preferences.put("projectCaseLastSelectedExportedPath", file.getParent());
                     }
                 });
 
@@ -130,6 +134,12 @@ public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExten
                 // nothing to dispose
             }
         };
+    }
+
+    private void openLastDirectory(FileChooser fileChooser) {
+        String lastPath = preferences.get("projectCaseLastSelectedExportedPath", "");
+        File lastPathFile = new File(lastPath);
+        fileChooser.setInitialDirectory(!lastPath.isEmpty() && lastPathFile.exists() ? lastPathFile : new File(System.getProperty("user.home")));
     }
 
     private static OutputStream createOutputStream(ProjectCaseExportParameters config) throws IOException {
