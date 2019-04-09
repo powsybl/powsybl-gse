@@ -7,16 +7,22 @@
 package com.powsybl.gse.util;
 
 import com.google.common.base.Stopwatch;
+import com.powsybl.commons.exceptions.UncheckedClassNotFoundException;
 import com.powsybl.commons.util.ServiceLoaderCache;
+import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.KeywordsProvider;
 import groovyjarjarantlr.Token;
 import groovyjarjarantlr.TokenStream;
 import groovyjarjarantlr.TokenStreamException;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
+import javafx.scene.control.*;
 import javafx.scene.input.*;
 import javafx.scene.layout.VBox;
+import javafx.stage.Popup;
 import org.apache.commons.lang3.StringUtils;
 import org.codehaus.groovy.antlr.GroovySourceToken;
 import org.codehaus.groovy.antlr.SourceBuffer;
@@ -38,13 +44,19 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Scanner;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -67,9 +79,21 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private static final ServiceLoaderCache<KeywordsProvider> KEYWORDS_LOADER = new ServiceLoaderCache<>(KeywordsProvider.class);
 
+    private static final ServiceLoaderCache<AutoCompletionWordsProvider> AUTO_COMPLETION_WORDS_LOADER = new ServiceLoaderCache<>(AutoCompletionWordsProvider.class);
+
     private boolean allowedDrag = false;
 
     private int tabSize = DEFAULT_TAB_SIZE;
+
+    private Popup completionPopup;
+
+    private final List<String> completionList = Arrays.asList("as", "assert", "boolean", "break", "byte",
+            "case", "catch", "char", "class", "continue", "def", "default", "double", "else", "enum",
+            "extends", "false", "finally", "float", "for", "if", "implements", "import", "in",
+            "instanceof", "int", "interface", "long", "network", "native", "new", "null", "package", "private",
+            "protected", "public", "return", "short", "static", "super", "switch", "synchronized", "this",
+            "threadsafe", "throw", "throws", "transient", "true", "try", "void", "volatile", "while"
+    );
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
@@ -129,6 +153,200 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.setOnDragOver(this::onDragOver);
         codeArea.setOnDragDropped(this::onDragDropped);
         codeArea.setOnSelectionDrag(p -> allowedDrag = true);
+
+        codeArea.textProperty().addListener((observable, oldCode, newCode) -> {
+            hidePopup();
+            completionPopup = new Popup();
+            completionPopup.setAutoHide(true);
+            int caretPosition = codeArea.getCaretPosition();
+            Matcher matcher = codeArea.getCaretPosition() >= 1 ? Pattern.compile("\\W").matcher(codeArea.getText(caretPosition - 1, caretPosition)) : null;
+            String lastToken = matcher != null && matcher.find() ? matcher.group() : getLastToken(textInProgress());
+            autoComplete(lastToken);
+        });
+    }
+
+    private void hidePopup() {
+        if (completionPopup != null) {
+            completionPopup.hide();
+        }
+    }
+
+    private void autoComplete(String lastToken) {
+        int caretPosition = codeArea.getCaretPosition();
+        Matcher matcher = codeArea.getCaretPosition() >= 2 ? Pattern.compile("\\w").matcher(codeArea.getText(caretPosition - 2, caretPosition - 1)) : null;
+        if (lastToken.equals(".") && matcher != null && matcher.find()) {
+            List<String> methods = completionMethods().get(getLastToken(textInProgress()));
+            if (methods != null) {
+                List<MenuItem> metdodsItems = methods.stream().map(MenuItem::new).collect(Collectors.toList());
+                ListView<MenuItem> menuItemListView = createSuggestionListView(metdodsItems, lastToken.length() - 1);
+                completionPopup.getContent().add(createScrollPane(menuItemListView));
+                showPopup(metdodsItems);
+            }
+        } else if (codeArea.getText(caretPosition - lastToken.length() - 1, caretPosition - lastToken.length()).equals(".")) {
+            String[] tokens = textInProgress().split("\\.");
+            String text = tokens.length >= 2 ? tokens[tokens.length - 2] : " ";
+            String completingMethod = tokens[tokens.length - 1];
+            String wordToComplete = getLastToken(text);
+            List<String> methods = completionMethods().get(wordToComplete);
+            completeWithMethod(completingMethod, methods);
+        } else {
+            List<String> autoSuggestionWords = completionWords();
+            completeWord(lastToken, autoSuggestionWords);
+        }
+    }
+
+    private static ScrollPane createScrollPane(ListView<MenuItem> listView) {
+        VBox vBox = new VBox();
+        vBox.getChildren().addAll(listView);
+        return new ScrollPane(vBox);
+    }
+
+    private ListView<MenuItem> createSuggestionListView(List<MenuItem> menuItems, int tokenLength) {
+        ObservableList<MenuItem> items = FXCollections.observableArrayList(menuItems);
+        ListView<MenuItem> listView = new ListView<>(items);
+        listView.setCellFactory(lv -> listViewCellFactory());
+        listView.getSelectionModel().selectFirst();
+        listView.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.ENTER) {
+                menuItemOnAction(tokenLength, listView);
+            }
+        });
+        listView.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                menuItemOnAction(tokenLength, listView);
+            }
+        });
+
+        /*
+         * Each row in a ListView should be 24px tall.  Also, we have to add an extra
+         * two px to account for the borders of the ListView.
+         * ScrollPane is set to be visible when Items size exceed MAX_ITEMS_SIZE
+         */
+        final int rowHeight = 24;
+        final int maxItemsSize = 13;
+        if (items.size() <= maxItemsSize) {
+            listView.setPrefHeight(items.size() * rowHeight + 2);
+        }
+        listView.setMaxHeight(260);
+        listView.setMinWidth(400);
+        return listView;
+    }
+
+    private void menuItemOnAction(int tokenLength, ListView<MenuItem> listView) {
+        String selectedItemText = listView.getSelectionModel().getSelectedItem().getText();
+        String text = selectedItemText.contains("(") ? selectedItemText.substring(0, selectedItemText.indexOf('(')) + "()" : selectedItemText;
+        codeArea.replaceText(codeArea.getCaretPosition() - tokenLength, codeArea.getCaretPosition(), text);
+
+        if (selectedItemText.contains("(") && !selectedItemText.substring(selectedItemText.lastIndexOf('(')).equals("()")) {
+            codeArea.getCaretSelectionBind().moveTo(codeArea.getCaretPosition() - 1);
+        }
+        completionPopup.hide();
+    }
+
+    private static ListCell<MenuItem> listViewCellFactory() {
+        return new ListCell<MenuItem>() {
+            @Override
+            protected void updateItem(MenuItem item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setText(null);
+                } else {
+                    setText(item.getText());
+                }
+            }
+        };
+    }
+
+    private void completeWord(String lastToken, List<String> autoCompletionWords) {
+        List<MenuItem> menuItems = new ArrayList<>();
+        autoCompletionWords.forEach(str -> {
+            if (!lastToken.isEmpty() && str.startsWith(lastToken) && !str.equals(lastToken)) {
+                MenuItem menuItem = new MenuItem(str);
+                menuItems.add(menuItem);
+            }
+        });
+        ListView<MenuItem> menuItemListView = createSuggestionListView(menuItems, lastToken.length());
+        completionPopup.getContent().add(createScrollPane(menuItemListView));
+        showPopup(menuItems);
+    }
+
+    private void completeWithMethod(String lastToken, List<String> methods) {
+        if (methods != null) {
+            completeWord(lastToken, methods);
+        }
+    }
+
+    private void showPopup(List<MenuItem> menuItems) {
+        if (!menuItems.isEmpty()) {
+            codeArea.getCaretBounds().ifPresent(caretBounds -> {
+                double positionX = caretBounds.getMinX() - 20;
+                double positionY = caretBounds.getMinY() + 20;
+                completionPopup.show(getScene().getWindow(), positionX, positionY);
+            });
+        }
+    }
+
+    private static String getLastToken(String text) {
+        //extract words from text
+        Matcher matcher = Pattern.compile("\\w*\\w").matcher(text);
+        String word = " ";
+        while (matcher.find()) {
+            word = matcher.group();
+        }
+        return word;
+    }
+
+    private String textInProgress() {
+        int currentLine = codeArea.getCaretSelectionBind().getParagraphIndex();
+        String[] tokenArray = codeArea.getText(currentLine, 0, currentLine, codeArea.getCaretColumn()).split(" ");
+        return tokenArray.length >= 1 ? tokenArray[tokenArray.length - 1] : " ";
+    }
+
+    private List<String> completionWords() {
+        List<String> autoCompletionWords = new ArrayList<>(completionList);
+        if (!AUTO_COMPLETION_WORDS_LOADER.getServices().isEmpty()) {
+            for (AutoCompletionWordsProvider services : AUTO_COMPLETION_WORDS_LOADER.getServices()) {
+                autoCompletionWords.addAll(services.completionKeywords());
+            }
+        }
+        return autoCompletionWords;
+    }
+
+    private Map<String, List<String>> completionMethods() {
+        Map<String, List<String>> completionMethods = new HashMap<>();
+        if (!AUTO_COMPLETION_WORDS_LOADER.getServices().isEmpty()) {
+            for (AutoCompletionWordsProvider services : AUTO_COMPLETION_WORDS_LOADER.getServices()) {
+                List<String> paths = new ArrayList<>(services.completionDeclaredMethods());
+                paths.add("com.powsybl.iidm.network.Network");
+                for (String str : paths) {
+                    try {
+                        Class cls = Class.forName(str);
+                        String className = cls.getSimpleName();
+                        String objectName = className.substring(0, 1).toLowerCase() + className.substring(1);
+                        List<Method> methods = Arrays.asList(cls.getMethods());
+                        List<String> methodNames = methodsWithParameters(methods);
+                        completionMethods.put(objectName, methodNames);
+                    } catch (ClassNotFoundException ex) {
+                        throw new UncheckedClassNotFoundException(ex);
+                    }
+                }
+            }
+        }
+        return completionMethods;
+    }
+
+    private static List<String> methodsWithParameters(List<Method> methods) {
+        return methods.stream()
+                .map(method -> {
+                    String parameters = Arrays.stream(method.getParameters())
+                            .map(param -> {
+                                Class<?> type = param.getType();
+                                String typeName = type.getSimpleName();
+                                return !type.isPrimitive() ? typeName + " " + typeName.toLowerCase().replaceAll("\\W", "") : typeName + " " + typeName.substring(0, 1);
+                            })
+                            .collect(Collectors.joining(", "));
+                    return method.getName() + "(" + parameters + ")";
+                }).collect(Collectors.toList());
     }
 
     private void showDetailNode() {
