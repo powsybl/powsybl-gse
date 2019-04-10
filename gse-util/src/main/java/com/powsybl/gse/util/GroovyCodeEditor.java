@@ -86,7 +86,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private final List<String> stantardSuggestions = Arrays.asList("as", "assert", "boolean", "break", "byte",
             "case", "catch", "char", "class", "continue", "def", "default", "double", "else", "enum",
             "extends", "false", "finally", "float", "for", "if", "implements", "import", "in",
-            "instanceof", "int", "interface", "long", "network", "native", "new", "null", "package", "private",
+            "instanceof", "int", "interface", "long", "native", "network", "new", "null", "package", "private",
             "protected", "public", "return", "short", "static", "super", "switch", "synchronized", "this",
             "threadsafe", "throw", "throws", "transient", "true", "try", "void", "volatile", "while"
     );
@@ -154,20 +154,20 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.textProperty().addListener((observable, oldCode, newCode) -> {
             autoCompletion.hidePopup();
             int caretPosition = codeArea.getCaretPosition();
-            Matcher nonWordMatcher = codeArea.getCaretPosition() >= 1 ? Pattern.compile("\\W").matcher(codeArea.getText(caretPosition - 1, caretPosition)) : null;
-            Matcher wordMatcher = codeArea.getCaretPosition() >= 2 ? Pattern.compile("\\w").matcher(codeArea.getText(caretPosition - 2, caretPosition - 1)) : null;
-            Matcher whiteSpaceMatcher = codeArea.getCaretPosition() >= 1 ? Pattern.compile("\\s").matcher(codeArea.getText(caretPosition - 1, caretPosition)) : null;
+            Matcher nonWordMatcher = caretPosition >= 1 ? Pattern.compile("\\W").matcher(codeArea.getText(caretPosition - 1, caretPosition)) : null;
+            Matcher wordMatcher = caretPosition >= 2 ? Pattern.compile("\\w").matcher(codeArea.getText(caretPosition - 2, caretPosition - 1)) : null;
+            Matcher whiteSpaceMatcher = caretPosition >= 1 ? Pattern.compile("\\s").matcher(codeArea.getText(caretPosition - 1, caretPosition)) : null;
             String lastToken = nonWordMatcher != null && nonWordMatcher.find() ? nonWordMatcher.group() : getLastToken(caretLineText());
             autoComplete(caretPosition, wordMatcher, whiteSpaceMatcher, lastToken);
         });
     }
 
-    private void autoComplete(int caretPosition, Matcher wordMatcher, Matcher whiteSpacematcher, String lastToken) {
+    private void autoComplete(int caretPosition, Matcher wordMatcher, Matcher whiteSpaceMatcher, String lastToken) {
         int length = lastToken.length();
         if (lastToken.equals(".") && wordMatcher != null && wordMatcher.find()) {
             List<String> methods = completionMethods().get(getLastToken(caretLineText()));
             showSuggestions("", methods);
-        } else if (codeArea.getText(caretPosition - length - 1, caretPosition - length).equals(".") && whiteSpacematcher != null && !whiteSpacematcher.find()) {
+        } else if ( whiteSpaceMatcher != null && !whiteSpaceMatcher.find() && codeArea.getText(caretPosition - length - 1, caretPosition - length).equals(".")) {
             String[] tokens = caretLineText().split("\\.");
             String text = tokens.length >= 2 ? tokens[tokens.length - 2] : " ";
             String completingMethod = tokens[tokens.length - 1];

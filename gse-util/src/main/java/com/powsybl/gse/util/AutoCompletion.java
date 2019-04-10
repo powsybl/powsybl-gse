@@ -29,7 +29,7 @@ public class AutoCompletion {
 
     private final Popup completionPopup;
 
-    private ListView<MenuItem> listView;
+    private final ListView<MenuItem> listView;
 
     private final CodeArea codeArea;
 
@@ -138,11 +138,7 @@ public class AutoCompletion {
 
     public void showPopup(Window window) {
         if (!listView.getItems().isEmpty()) {
-            codeArea.getCaretBounds().ifPresent(caretBounds -> {
-                double positionX = caretBounds.getMinX() - 20;
-                double positionY = caretBounds.getMinY() + 20;
-                completionPopup.show(window, positionX, positionY);
-            });
+            codeArea.getCaretBounds().ifPresent(caretBounds -> completionPopup.show(window, caretBounds.getMinX() - 20, caretBounds.getMinY() + 20));
         }
     }
 
