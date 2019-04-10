@@ -83,7 +83,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private AutoCompletion autoCompletion;
 
-    private final List<String> completionList = Arrays.asList("as", "assert", "boolean", "break", "byte",
+    private final List<String> stantardSuggestions = Arrays.asList("as", "assert", "boolean", "break", "byte",
             "case", "catch", "char", "class", "continue", "def", "default", "double", "else", "enum",
             "extends", "false", "finally", "float", "for", "if", "implements", "import", "in",
             "instanceof", "int", "interface", "long", "network", "native", "new", "null", "package", "private",
@@ -156,36 +156,43 @@ public class GroovyCodeEditor extends MasterDetailPane {
             int caretPosition = codeArea.getCaretPosition();
             Matcher nonWordMatcher = codeArea.getCaretPosition() >= 1 ? Pattern.compile("\\W").matcher(codeArea.getText(caretPosition - 1, caretPosition)) : null;
             Matcher wordMatcher = codeArea.getCaretPosition() >= 2 ? Pattern.compile("\\w").matcher(codeArea.getText(caretPosition - 2, caretPosition - 1)) : null;
-            Matcher whiteSpacematcher = codeArea.getCaretPosition() >= 1 ? Pattern.compile("\\s").matcher(codeArea.getText(caretPosition - 1, caretPosition)) : null;
-            String lastToken = nonWordMatcher != null && nonWordMatcher.find() ? nonWordMatcher.group() : getLastToken(textInProgress());
-            autoComplete(caretPosition, wordMatcher, whiteSpacematcher, lastToken);
+            Matcher whiteSpaceMatcher = codeArea.getCaretPosition() >= 1 ? Pattern.compile("\\s").matcher(codeArea.getText(caretPosition - 1, caretPosition)) : null;
+            String lastToken = nonWordMatcher != null && nonWordMatcher.find() ? nonWordMatcher.group() : getLastToken(caretLineText());
+            autoComplete(caretPosition, wordMatcher, whiteSpaceMatcher, lastToken);
         });
     }
 
     private void autoComplete(int caretPosition, Matcher wordMatcher, Matcher whiteSpacematcher, String lastToken) {
+        int length = lastToken.length();
         if (lastToken.equals(".") && wordMatcher != null && wordMatcher.find()) {
-            List<String> methods = completionMethods().get(getLastToken(textInProgress()));
-            if (methods != null) {
-                autoCompletion.setSuggestionList(methods);
-                autoCompletion.showMethodsSuggestions(getScene().getWindow());
-            }
-        } else if (codeArea.getText(caretPosition - lastToken.length() - 1, caretPosition - lastToken.length()).equals(".") && whiteSpacematcher != null && !whiteSpacematcher.find()) {
-            String[] tokens = textInProgress().split("\\.");
+            List<String> methods = completionMethods().get(getLastToken(caretLineText()));
+            showSuggestions("", methods);
+        } else if (codeArea.getText(caretPosition - length - 1, caretPosition - length).equals(".") && whiteSpacematcher != null && !whiteSpacematcher.find()) {
+            String[] tokens = caretLineText().split("\\.");
             String text = tokens.length >= 2 ? tokens[tokens.length - 2] : " ";
             String completingMethod = tokens[tokens.length - 1];
             String wordToComplete = getLastToken(text);
             List<String> methods = completionMethods().get(wordToComplete);
-            autoCompletion.setSuggestionList(methods);
-            autoCompletion.showKeyWordsSuggestions(completingMethod, getScene().getWindow());
+            showSuggestions(completingMethod, methods);
         } else {
-            List<String> autoCompletionWords = new ArrayList<>(completionList);
+            List<String> autoCompletionWords = new ArrayList<>(stantardSuggestions);
             if (!AUTO_COMPLETION_WORDS_LOADER.getServices().isEmpty()) {
                 for (AutoCompletionWordsProvider services : AUTO_COMPLETION_WORDS_LOADER.getServices()) {
                     autoCompletionWords.addAll(services.completionKeywords());
                 }
             }
-            autoCompletion.setSuggestionList(autoCompletionWords);
-            autoCompletion.showKeyWordsSuggestions(lastToken, getScene().getWindow());
+            showSuggestions(lastToken, autoCompletionWords);
+        }
+    }
+
+    private void showSuggestions(String completiongWord, List<String> methods) {
+        if (methods != null) {
+            autoCompletion.setSuggestionList(methods);
+            if (completiongWord.equals("")) {
+                autoCompletion.showMethodsSuggestions(getScene().getWindow());
+            } else {
+                autoCompletion.showKeyWordsSuggestions(completiongWord, getScene().getWindow());
+            }
         }
     }
 
@@ -199,7 +206,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         return word;
     }
 
-    private String textInProgress() {
+    private String caretLineText() {
         int currentLine = codeArea.getCaretSelectionBind().getParagraphIndex();
         String[] tokenArray = codeArea.getText(currentLine, 0, currentLine, codeArea.getCaretColumn()).split(" ");
         return tokenArray.length >= 1 ? tokenArray[tokenArray.length - 1] : " ";

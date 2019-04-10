@@ -39,10 +39,12 @@ public class AutoCompletion {
         this.codeArea = Objects.requireNonNull(codeArea);
         suggestionList = new ArrayList<>();
         listView = new ListView<>();
+        listView.setMaxHeight(260);
+        listView.setMinWidth(400);
         listView.setCellFactory(lv -> listViewCellFactory());
 
         completionPopup = new Popup();
-        completionPopup.getContent().add(createScrollPane(listView));
+        completionPopup.getContent().add(new ScrollPane(new VBox(listView)));
         completionPopup.setAutoHide(true);
     }
 
@@ -98,8 +100,6 @@ public class AutoCompletion {
          * two px to account for the borders of the ListView.
          * ScrollPane is set to be visible when Items size exceed MAX_ITEMS_SIZE
          */
-        listView.setMaxHeight(260);
-        listView.setMinWidth(400);
         final int rowHeight = 24;
         final int maxItemsSize = 13;
         listView.setPrefHeight(menuItems.size() <= maxItemsSize ? menuItems.size() * rowHeight + 2 : 260);
@@ -128,10 +128,6 @@ public class AutoCompletion {
             codeArea.getCaretSelectionBind().moveTo(codeArea.getCaretPosition() - 1);
         }
         completionPopup.hide();
-    }
-
-    private static ScrollPane createScrollPane(ListView<MenuItem> listView) {
-        return new ScrollPane(new VBox(listView));
     }
 
     public void hidePopup() {
