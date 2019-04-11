@@ -6,7 +6,9 @@
  */
 package com.powsybl.gse.afs.ext.base;
 
+import com.powsybl.afs.AfsException;
 import com.powsybl.afs.ProjectFile;
+import com.powsybl.afs.ext.base.ReadOnlyScript;
 import com.powsybl.afs.ext.base.ScriptListener;
 import com.powsybl.afs.ext.base.StorableScript;
 import com.powsybl.gse.spi.GseContext;
@@ -47,8 +49,6 @@ public class ModificationScriptEditor extends BorderPane
 
     private final GseContext context;
 
-    private final ToolBar toolBar;
-
     private final ToolBar bottomToolBar;
 
     private final ComboBox<Integer> comboBox;
@@ -67,14 +67,14 @@ public class ModificationScriptEditor extends BorderPane
 
     private final SplitPane splitPane;
 
-    private StorableScript storableScript;
+    private ReadOnlyScript script;
 
     private final SimpleBooleanProperty saved = new SimpleBooleanProperty(true);
 
     private Service<String> scriptUpdateService;
 
-    public ModificationScriptEditor(StorableScript storableScript, Scene scene, GseContext context) {
-        this.storableScript = storableScript;
+    public ModificationScriptEditor(ReadOnlyScript script, Scene scene, GseContext context) {
+        this.script = script;
         this.context = context;
 
         codeEditor = new GroovyCodeEditor(scene);
@@ -92,27 +92,38 @@ public class ModificationScriptEditor extends BorderPane
         codeEditorWithProgressIndicator = new StackPane(codeEditor, new Group(progressIndicator));
         codeEditor.codeProperty().addListener((observable, oldValue, newValue) -> saved.set(false));
         splitPane = new SplitPane(codeEditorWithProgressIndicator);
-        toolBar = new ToolBar(saveButton);
         Pane spacer = new Pane();
         bottomToolBar = new ToolBar(tabSizeLabel, comboBox, spacer, caretPositionDisplay);
         bottomToolBar.widthProperty().addListener((observable, oldvalue, newvalue) -> spacer.setPadding(new Insets(0, (double) newvalue - 280, 0, 0)));
         splitPane.setOrientation(Orientation.VERTICAL);
         splitPane.setDividerPosition(0, 0.8);
+        ToolBar toolBar = new ToolBar();
+        if (script instanceof StorableScript) {
+            toolBar.getItems().add(saveButton);
+            codeEditor.setEditable(true);
+        } else {
+            codeEditor.setEditable(false);
+        }
         setTop(toolBar);
         setBottom(bottomToolBar);
         setCenter(splitPane);
 
         // listen to modifications
-        storableScript.addListener(this);
+        script.addListener(this);
     }
 
     @Override
     public void save() {
+
+        if (!(script instanceof StorableScript)) {
+            throw new AfsException("Script is not of StorableScript kind");
+        }
+
         if (!saved.getValue()) {
             // write script but remove listener before to avoid double update
-            storableScript.removeListener(this);
-            storableScript.writeScript(codeEditor.getCode());
-            storableScript.addListener(this);
+            script.removeListener(this);
+            ((StorableScript) script).writeScript(codeEditor.getCode());
+            script.addListener(this);
             saved.setValue(true);
         }
     }
@@ -126,7 +137,7 @@ public class ModificationScriptEditor extends BorderPane
         scriptUpdateService = GseUtil.createService(new Task<String>() {
             @Override
             protected String call() {
-                return storableScript.readScript();
+                return script.readScript();
             }
         }, context.getExecutor());
         progressIndicator.visibleProperty().bind(scriptUpdateService.runningProperty());
@@ -157,13 +168,13 @@ public class ModificationScriptEditor extends BorderPane
 
     @Override
     public void dispose() {
-        storableScript.removeListener(this);
+        script.removeListener(this);
     }
 
     @Override
     public boolean isClosable() {
-        if (!saved.get()) {
-            return GseAlerts.showSaveDialog(((ProjectFile) storableScript).getName(), this);
+        if (!saved.get() && script instanceof StorableScript) {
+            return GseAlerts.showSaveDialog(((ProjectFile) script).getName(), this);
         }
         return true;
     }

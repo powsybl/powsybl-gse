@@ -112,7 +112,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 setSearchBar(vBox, "search");
                 showDetailNode();
                 searchBar.requestFocus();
-            } else if (replaceWordKeyCombination.match(ke)) {
+            } else if (replaceWordKeyCombination.match(ke) && codeArea.isEditable()) {
                 setShowDetailNode(false);
                 setSearchBar(vBox, "replace");
                 searchBar.setReplaceAllAction(event -> replaceAllOccurences(searchBar.getSearchedText(), codeArea.getText(), searchBar.isCaseSensitiveBoxSelected(), searchBar.isWordSensitiveBoxSelected()));
@@ -144,6 +144,10 @@ public class GroovyCodeEditor extends MasterDetailPane {
         if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
             searchBar.setSearchPattern(codeArea.getSelectedText());
         }
+    }
+
+    public void setEditable(boolean editable) {
+        codeArea.setEditable(editable);
     }
 
     private void replaceAllOccurences(String wordToReplace, String text, boolean caseSensitive, boolean wordSensitive) {
