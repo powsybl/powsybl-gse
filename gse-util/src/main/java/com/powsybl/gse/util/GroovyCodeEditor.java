@@ -11,6 +11,8 @@ import com.powsybl.commons.exceptions.UncheckedClassNotFoundException;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.KeywordsProvider;
+import com.powsybl.iidm.network.Country;
+import com.powsybl.iidm.network.EnergySource;
 import groovyjarjarantlr.Token;
 import groovyjarjarantlr.TokenStream;
 import groovyjarjarantlr.TokenStreamException;
@@ -40,15 +42,9 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -87,8 +83,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
             "case", "catch", "char", "class", "continue", "def", "default", "double", "else", "enum",
             "extends", "false", "finally", "float", "for", "if", "implements", "import", "in",
             "instanceof", "int", "interface", "long", "native", "network", "new", "null", "package", "private",
-            "protected", "public", "return", "short", "static", "super", "switch", "synchronized", "this",
-            "threadsafe", "throw", "throws", "transient", "true", "try", "void", "volatile", "while"
+            "protected", "public", "return", "short", "static", "substation", "super", "switch", "synchronized", "this",
+            "threadsafe", "throw", "throws", "transient", "true", "try", "void", "volatile", "voltageLevel", "while"
     );
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
@@ -176,6 +172,12 @@ public class GroovyCodeEditor extends MasterDetailPane {
             showSuggestions(completingMethod, methods);
         } else {
             List<String> autoCompletionWords = new ArrayList<>(stantardSuggestions);
+            Set<String> energySourceEnums = Arrays.stream(EnergySource.class.getDeclaredFields()).filter(Field::isEnumConstant).map(Field::getName)
+                    .collect(Collectors.toSet());
+            Set<String> countryEnums = Arrays.stream(Country.class.getDeclaredFields()).filter(Field::isEnumConstant).map(Field::getName)
+                    .collect(Collectors.toSet());
+            autoCompletionWords.addAll(energySourceEnums);
+            autoCompletionWords.addAll(countryEnums);
             if (!AUTO_COMPLETION_WORDS_LOADER.getServices().isEmpty()) {
                 for (AutoCompletionWordsProvider services : AUTO_COMPLETION_WORDS_LOADER.getServices()) {
                     autoCompletionWords.addAll(services.completionKeywords());
@@ -217,7 +219,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         if (!AUTO_COMPLETION_WORDS_LOADER.getServices().isEmpty()) {
             for (AutoCompletionWordsProvider services : AUTO_COMPLETION_WORDS_LOADER.getServices()) {
                 List<String> paths = new ArrayList<>(services.completionDeclaredMethods());
-                paths.add("com.powsybl.iidm.network.Network");
+                paths.addAll(Arrays.asList("com.powsybl.iidm.network.Network", "com.powsybl.iidm.network.Substation", "com.powsybl.iidm.network.VoltageLevel"));
                 for (String str : paths) {
                     try {
                         Class cls = Class.forName(str);
