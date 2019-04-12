@@ -66,15 +66,15 @@ public class AutoCompletion {
         suggestionList = suggestions;
     }
 
-    private void completeWord(String lastToken) {
+    private void completeWord(String currentToken) {
         List<MenuItem> menuItems = new ArrayList<>();
         suggestionList.forEach(str -> {
-            if (!lastToken.isEmpty() && str.startsWith(lastToken) && !str.equals(lastToken)) {
+            if (!currentToken.isEmpty() && str.startsWith(currentToken) && !str.equals(currentToken)) {
                 MenuItem menuItem = new MenuItem(str);
                 menuItems.add(menuItem);
             }
         });
-        refreshListView(menuItems, lastToken.length());
+        refreshListView(menuItems, currentToken.length());
     }
 
     private void completeMethod() {

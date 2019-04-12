@@ -167,7 +167,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         if (lastToken.equals(".") && wordMatcher != null && wordMatcher.find()) {
             List<String> methods = completionMethods().get(getLastToken(caretLineText()));
             showSuggestions("", methods);
-        } else if (whiteSpaceMatcher != null && !whiteSpaceMatcher.find() && codeArea.getText(caretPosition - length - 1, caretPosition - length).equals(".")) {
+        } else if (whiteSpaceMatcher != null && !whiteSpaceMatcher.find()  && caretPosition > length + 1 && codeArea.getText(caretPosition - length - 1, caretPosition - length).equals(".")) {
             String[] tokens = caretLineText().split("\\.");
             String text = tokens.length >= 2 ? tokens[tokens.length - 2] : " ";
             String completingMethod = tokens[tokens.length - 1];
