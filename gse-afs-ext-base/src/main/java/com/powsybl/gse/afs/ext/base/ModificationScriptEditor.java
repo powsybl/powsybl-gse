@@ -95,7 +95,7 @@ public class ModificationScriptEditor extends BorderPane
         toolBar = new ToolBar(saveButton);
         Pane spacer = new Pane();
         bottomToolBar = new ToolBar(tabSizeLabel, comboBox, spacer, caretPositionDisplay);
-        bottomToolBar.widthProperty().addListener((observable, oldvalue, newvalue) -> spacer.setPadding(new Insets(0, (double) newvalue - 250, 0, 0)));
+        bottomToolBar.widthProperty().addListener((observable, oldvalue, newvalue) -> spacer.setPadding(new Insets(0, (double) newvalue - 280, 0, 0)));
         splitPane.setOrientation(Orientation.VERTICAL);
         splitPane.setDividerPosition(0, 0.8);
         setTop(toolBar);
