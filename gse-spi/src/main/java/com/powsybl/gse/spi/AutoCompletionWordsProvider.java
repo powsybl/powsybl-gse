@@ -14,7 +14,7 @@ import java.util.List;
  */
 public interface AutoCompletionWordsProvider {
 
-    List<String> completionDeclaredMethods();
+    List<String> completionMethods();
 
     Set<String> completionKeywords();
 

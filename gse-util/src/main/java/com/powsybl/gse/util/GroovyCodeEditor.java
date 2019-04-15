@@ -218,7 +218,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         Map<String, List<String>> completionMethods = new HashMap<>();
         if (!AUTO_COMPLETION_WORDS_LOADER.getServices().isEmpty()) {
             for (AutoCompletionWordsProvider services : AUTO_COMPLETION_WORDS_LOADER.getServices()) {
-                List<String> paths = new ArrayList<>(services.completionDeclaredMethods());
+                List<String> paths = new ArrayList<>(services.completionMethods());
                 paths.addAll(Arrays.asList("com.powsybl.iidm.network.Network", "com.powsybl.iidm.network.Substation", "com.powsybl.iidm.network.VoltageLevel"));
                 for (String str : paths) {
                     try {
