@@ -107,7 +107,6 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     public GroovyCodeEditor(Scene scene) {
         codeArea.setParagraphGraphicFactory(LineNumberFactory.get(codeArea));
-        bracketsMatches.searchingForMatches = false;
         codeArea.richChanges()
                 .filter(ch -> !ch.getInserted().equals(ch.getRemoved()))
                 .subscribe(change -> codeArea.setStyleSpans(0, computeHighlighting(codeArea.getText())));
@@ -148,7 +147,13 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
         codeArea.caretPositionProperty().addListener((observable, oldvalue, newvalue) -> {
             bracketsMatches.searchingForMatches = false;
-            codeArea.setStyleSpans(0, computeHighlighting(codeArea.getText()));
+            try {
+                if (oldvalue != null && oldvalue > 0 && tokenIsBracket(codeArea.getText(oldvalue - 1, oldvalue))) {
+                    codeArea.setStyleSpans(0, computeHighlighting(codeArea.getText()));
+                }
+            } catch (IndexOutOfBoundsException ex) {
+                //ignored if oldvalue doesn't exists anymore
+            }
             if (newvalue > 0) {
                 caretPositonText = codeArea.getText(newvalue - 1, newvalue);
                 if (tokenIsBracket(caretPositonText)) {
