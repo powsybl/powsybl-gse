@@ -35,6 +35,7 @@ import org.controlsfx.control.textfield.TextFields;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.regex.Matcher;
@@ -221,7 +222,8 @@ public final class SearchBar extends HBox {
             if (newValue == null || "".equals(newValue)) {
                 refresh(textArea);
             } else {
-                matcher.find(newValue, searchedArea.getText(), caseSensitiveBox.selectedProperty().get(), wordSensitiveBox.selectedProperty().get());
+                String value = escapeMetaCharacters(newValue);
+                matcher.find(value, searchedArea.getText(), caseSensitiveBox.selectedProperty().get(), wordSensitiveBox.selectedProperty().get());
             }
         });
 
@@ -261,6 +263,17 @@ public final class SearchBar extends HBox {
 
         replaceWordBar.replaceAllButton.disableProperty().bind(validateDisableProperty());
         replaceWordBar.replaceButton.disableProperty().bind(validateDisableProperty());
+    }
+
+    private static String escapeMetaCharacters(String value) {
+        List<Character> metaCharacters = Arrays.asList('.', '*', '\\', '(', ')', '[', ']', '{', '}', '^', '$', '|', '+', '?');
+        String replacement = value;
+        for (Character ch : metaCharacters) {
+            if (value.contains(Character.toString(ch))) {
+                replacement = replacement.replace(Character.toString(ch), "\\" + ch);
+            }
+        }
+        return replacement;
     }
 
     private BooleanBinding validateDisableProperty() {
