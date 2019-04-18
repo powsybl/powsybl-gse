@@ -9,7 +9,7 @@ package com.powsybl.gse.afs.ext.base;
 import com.powsybl.afs.Project;
 import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.ProjectNode;
-import com.powsybl.afs.ext.base.ModificationScript;
+import com.powsybl.afs.ext.base.AbstractModificationScript;
 import com.powsybl.afs.ext.base.ProjectCase;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.util.NameTextField;
@@ -36,7 +36,7 @@ abstract class AbstractVirtualCasePane<T extends ProjectNode> extends GridPane {
     protected final T node;
 
     protected final ProjectNodeSelectionPane<ProjectFile> caseSelectionPane;
-    protected final ProjectNodeSelectionPane<ModificationScript> scriptSelectionPane;
+    protected final ProjectNodeSelectionPane<AbstractModificationScript> scriptSelectionPane;
     protected final NameTextField nameTextField;
 
     protected AbstractVirtualCasePane(T node, Scene scene, GseContext context) {
@@ -49,7 +49,7 @@ abstract class AbstractVirtualCasePane<T extends ProjectNode> extends GridPane {
         caseSelectionPane = new ProjectNodeSelectionPane<>(project, RESOURCE_BUNDLE.getString("Case"), true, scene.getWindow(),
                                                            context, ProjectFile.class, ProjectCase.class);
         scriptSelectionPane = new ProjectNodeSelectionPane<>(project, RESOURCE_BUNDLE.getString("ModificationScript"), true,
-                                                             scene.getWindow(), context, ModificationScript.class);
+                                                             scene.getWindow(), context, AbstractModificationScript.class);
         setVgap(5);
         setHgap(5);
         ColumnConstraints column0 = new ColumnConstraints();

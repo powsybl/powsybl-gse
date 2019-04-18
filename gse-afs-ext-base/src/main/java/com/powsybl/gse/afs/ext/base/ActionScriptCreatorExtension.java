@@ -7,9 +7,9 @@
 package com.powsybl.gse.afs.ext.base;
 
 import com.google.auto.service.AutoService;
+import com.powsybl.action.dsl.afs.ActionScript;
 import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.ProjectFolder;
-import com.powsybl.afs.ext.base.ModificationScript;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileCreator;
 import com.powsybl.gse.spi.ProjectFileCreatorExtension;
@@ -27,7 +27,7 @@ public class ActionScriptCreatorExtension implements ProjectFileCreatorExtension
 
     @Override
     public Class<? extends ProjectFile> getProjectFileType() {
-        return ModificationScript.class;
+        return ActionScript.class;
     }
 
     @Override

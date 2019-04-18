@@ -8,7 +8,7 @@ package com.powsybl.gse.afs.ext.base;
 
 import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.ProjectFolder;
-import com.powsybl.afs.ext.base.ModificationScript;
+import com.powsybl.afs.ext.base.AbstractModificationScript;
 import com.powsybl.afs.ext.base.VirtualCaseBuilder;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectCreationTask;
@@ -32,7 +32,7 @@ public class VirtualCaseCreator extends AbstractVirtualCasePane<ProjectFolder> i
     public ProjectCreationTask createTask() {
         String name = nameTextField.getText();
         ProjectFile aCase = caseSelectionPane.nodeProperty().getValue();
-        ModificationScript script = scriptSelectionPane.nodeProperty().getValue();
+        AbstractModificationScript script = scriptSelectionPane.nodeProperty().getValue();
         return new ProjectCreationTask() {
             @Override
             public String getNamePreview() {

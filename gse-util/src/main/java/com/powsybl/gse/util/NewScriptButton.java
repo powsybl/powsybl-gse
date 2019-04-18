@@ -9,6 +9,7 @@ package com.powsybl.gse.util;
 import com.powsybl.afs.Project;
 import com.powsybl.afs.ProjectFolder;
 import com.powsybl.afs.ProjectNode;
+import com.powsybl.afs.ext.base.AbstractModificationScript;
 import com.powsybl.afs.ext.base.ModificationScript;
 import com.powsybl.afs.ext.base.ModificationScriptBuilder;
 import com.powsybl.afs.ext.base.ScriptType;
@@ -39,9 +40,9 @@ public final class NewScriptButton {
     private final Button button;
     private ProjectNodeSelectionPane<ProjectFolder> folderSelectionPane;
     private NameTextField nameTextField;
-    private ObjectProperty<ModificationScript> scriptProperty;
+    private ObjectProperty<AbstractModificationScript> scriptProperty;
 
-    private NewScriptButton(ProjectFolder folder, Project project, ObjectProperty<ModificationScript> nodeProperty, GseContext context) {
+    private NewScriptButton(ProjectFolder folder, Project project, ObjectProperty<AbstractModificationScript> nodeProperty, GseContext context) {
         Node newGlyph = Glyph.createAwesomeFont('\uf0f6').size("1.3em")
                 .stack(Glyph.createAwesomeFont('\uf055').color("limegreen").size("0.8em"));
         scriptProperty = nodeProperty;
@@ -49,7 +50,7 @@ public final class NewScriptButton {
         button.setOnAction(event -> showAndWaitDialog(folder, project, button.getScene().getWindow(), context));
     }
 
-    public static Button create(ProjectNode node, ObjectProperty<ModificationScript> nodeProperty, GseContext context) {
+    public static Button create(ProjectNode node, ObjectProperty<AbstractModificationScript> nodeProperty, GseContext context) {
         Objects.requireNonNull(node);
         Objects.requireNonNull(context);
 

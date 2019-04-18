@@ -9,7 +9,7 @@ package com.powsybl.gse.afs.ext.base;
 import com.google.auto.service.AutoService;
 import com.powsybl.afs.ext.base.Case;
 import com.powsybl.afs.ext.base.ImportedCase;
-import com.powsybl.afs.ext.base.ModificationScript;
+import com.powsybl.afs.ext.base.AbstractModificationScript;
 import com.powsybl.afs.ext.base.VirtualCase;
 import com.powsybl.gse.spi.NodeGraphicProvider;
 import com.powsybl.gse.util.Glyph;
@@ -61,7 +61,7 @@ public class BaseExtNodeGraphicProvider implements NodeGraphicProvider {
                     .stack(Glyph.createAwesomeFont('\uf14b')
                                 .color("limegreen")
                                 .size("0.9em"));
-        } else if (file instanceof ModificationScript) {
+        } else if (file instanceof AbstractModificationScript) {
             return Glyph.createAwesomeFont('\uf0f6').size("1.2em");
         }
         return null;
