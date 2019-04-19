@@ -21,6 +21,7 @@ import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.input.*;
 import javafx.scene.layout.VBox;
+import javafx.util.Pair;
 import org.apache.commons.lang3.StringUtils;
 import org.codehaus.groovy.antlr.GroovySourceToken;
 import org.codehaus.groovy.antlr.SourceBuffer;
@@ -79,13 +80,15 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private AutoCompletion autoCompletion;
 
-    private final List<String> stantardSuggestions = Arrays.asList("as", "assert", "boolean", "break", "byte",
+    private final List<String> stantardSuggestions = Arrays.asList("as", "assert", "boolean", "break", "breaker", "byte",
             "case", "catch", "char", "class", "continue", "def", "default", "double", "else", "enum",
-            "extends", "false", "finally", "float", "for", "if", "implements", "import", "in",
-            "instanceof", "int", "interface", "long", "native", "network", "new", "null", "package", "private",
+            "extends", "false", "finally", "float", "for", "generator", "if", "implements", "import", "in",
+            "instanceof", "int", "interface", "load", "long", "native", "network", "new", "null", "package", "private",
             "protected", "public", "return", "short", "static", "substation", "super", "switch", "synchronized", "this",
             "threadsafe", "throw", "throws", "transient", "true", "try", "void", "volatile", "voltageLevel", "while"
     );
+
+    private final List<String> optionalSuggestions;
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
@@ -106,7 +109,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
         }
     }
 
-    public GroovyCodeEditor(Scene scene) {
+    public GroovyCodeEditor(Scene scene, List<String> keywordsSuggestions) {
+        optionalSuggestions = keywordsSuggestions;
         codeArea.setParagraphGraphicFactory(LineNumberFactory.get(codeArea));
         codeArea.richChanges()
                 .filter(ch -> !ch.getInserted().equals(ch.getRemoved()))
@@ -163,7 +167,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         if (lastToken.equals(".") && wordMatcher != null && wordMatcher.find()) {
             List<String> methods = completionMethods().get(getLastToken(caretLineText()));
             showSuggestions("", methods);
-        } else if (whiteSpaceMatcher != null && !whiteSpaceMatcher.find()  && caretPosition > length + 1 && codeArea.getText(caretPosition - length - 1, caretPosition - length).equals(".")) {
+        } else if (whiteSpaceMatcher != null && !whiteSpaceMatcher.find() && caretPosition > length + 1 && codeArea.getText(caretPosition - length - 1, caretPosition - length).equals(".")) {
             String[] tokens = caretLineText().split("\\.");
             String text = tokens.length >= 2 ? tokens[tokens.length - 2] : " ";
             String completingMethod = tokens[tokens.length - 1];
@@ -171,29 +175,29 @@ public class GroovyCodeEditor extends MasterDetailPane {
             List<String> methods = completionMethods().get(wordToComplete);
             showSuggestions(completingMethod, methods);
         } else {
-            List<String> autoCompletionWords = new ArrayList<>(stantardSuggestions);
+            List<String> keywordsSuggestions = new ArrayList<>(stantardSuggestions);
             Set<String> energySourceEnums = Arrays.stream(EnergySource.class.getDeclaredFields()).filter(Field::isEnumConstant).map(Field::getName)
                     .collect(Collectors.toSet());
             Set<String> countryEnums = Arrays.stream(Country.class.getDeclaredFields()).filter(Field::isEnumConstant).map(Field::getName)
                     .collect(Collectors.toSet());
-            autoCompletionWords.addAll(energySourceEnums);
-            autoCompletionWords.addAll(countryEnums);
-            if (!AUTO_COMPLETION_WORDS_LOADER.getServices().isEmpty()) {
-                for (AutoCompletionWordsProvider services : AUTO_COMPLETION_WORDS_LOADER.getServices()) {
-                    autoCompletionWords.addAll(services.completionKeywords());
-                }
+            keywordsSuggestions.addAll(energySourceEnums);
+            keywordsSuggestions.addAll(countryEnums);
+            if (optionalSuggestions != null) {
+                keywordsSuggestions.addAll(optionalSuggestions);
             }
-            showSuggestions(lastToken, autoCompletionWords);
+            showSuggestions(lastToken, keywordsSuggestions);
         }
     }
 
-    private void showSuggestions(String completiongWord, List<String> methods) {
-        if (methods != null) {
-            autoCompletion.setSuggestionList(methods);
+    private void showSuggestions(String completiongWord, List<String> suggestions) {
+        if (suggestions != null && completiongWord != null) {
+            autoCompletion.setSuggestionList(suggestions);
             if (completiongWord.equals("")) {
                 autoCompletion.showMethodsSuggestions(getScene().getWindow());
             } else {
-                autoCompletion.showKeyWordsSuggestions(completiongWord, getScene().getWindow());
+                if (getScene() != null) {
+                    autoCompletion.showKeyWordsSuggestions(completiongWord, getScene().getWindow());
+                }
             }
         }
     }
@@ -216,20 +220,26 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private Map<String, List<String>> completionMethods() {
         Map<String, List<String>> completionMethods = new HashMap<>();
-        List<String> paths = Arrays.asList("com.powsybl.iidm.network.Network", "com.powsybl.iidm.network.Substation", "com.powsybl.iidm.network.VoltageLevel");
+
+        Pair<String, String> networkMap = new Pair<>("com.powsybl.iidm.network.Network", "network");
+        Pair<String, String> substationMap = new Pair<>("com.powsybl.iidm.network.Substation", "substation");
+        Pair<String, String> voltageLevelMap = new Pair<>("com.powsybl.iidm.network.VoltageLevel", "voltageLevel");
+        Pair<String, String> loadMap = new Pair<>("com.powsybl.iidm.network.Load", "load");
+        Pair<String, String> generatorMap = new Pair<>("com.powsybl.iidm.network.Generator", "generator");
+        Pair<String, String> switchMap = new Pair<>("com.powsybl.iidm.network.Switch", "breaker");
+
+        List<Pair<String, String>> keywordsMap = Arrays.asList(networkMap, substationMap, voltageLevelMap, loadMap, generatorMap, switchMap);
         if (!AUTO_COMPLETION_WORDS_LOADER.getServices().isEmpty()) {
             for (AutoCompletionWordsProvider services : AUTO_COMPLETION_WORDS_LOADER.getServices()) {
-                paths.addAll(services.completionMethods());
+                keywordsMap.addAll(services.completionMethods());
             }
         }
-        for (String str : paths) {
+        for (Pair<String, String> pair : keywordsMap) {
             try {
-                Class cls = Class.forName(str);
-                String className = cls.getSimpleName();
-                String objectName = className.substring(0, 1).toLowerCase() + className.substring(1);
+                Class cls = Class.forName(pair.getKey());
                 List<Method> methods = Arrays.asList(cls.getMethods());
                 List<String> methodNames = methodsWithParameters(methods);
-                completionMethods.put(objectName, methodNames);
+                completionMethods.put(pair.getValue(), methodNames);
             } catch (ClassNotFoundException ex) {
                 throw new UncheckedClassNotFoundException(ex);
             }

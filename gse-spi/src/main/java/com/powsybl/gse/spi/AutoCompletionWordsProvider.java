@@ -6,6 +6,8 @@
  */
 package com.powsybl.gse.spi;
 
+import javafx.util.Pair;
+
 import java.util.Set;
 import java.util.List;
 
@@ -14,8 +16,10 @@ import java.util.List;
  */
 public interface AutoCompletionWordsProvider {
 
-    List<String> completionMethods();
+    List<Pair<String, String>> completionMethods();
 
-    Set<String> completionKeywords();
+    Set<String> mappingCompletionKeywords();
+
+    Set<String> actionCompletionKeywords();
 
 }
