@@ -216,22 +216,22 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private Map<String, List<String>> completionMethods() {
         Map<String, List<String>> completionMethods = new HashMap<>();
+        List<String> paths = Arrays.asList("com.powsybl.iidm.network.Network", "com.powsybl.iidm.network.Substation", "com.powsybl.iidm.network.VoltageLevel");
         if (!AUTO_COMPLETION_WORDS_LOADER.getServices().isEmpty()) {
             for (AutoCompletionWordsProvider services : AUTO_COMPLETION_WORDS_LOADER.getServices()) {
-                List<String> paths = new ArrayList<>(services.completionMethods());
-                paths.addAll(Arrays.asList("com.powsybl.iidm.network.Network", "com.powsybl.iidm.network.Substation", "com.powsybl.iidm.network.VoltageLevel"));
-                for (String str : paths) {
-                    try {
-                        Class cls = Class.forName(str);
-                        String className = cls.getSimpleName();
-                        String objectName = className.substring(0, 1).toLowerCase() + className.substring(1);
-                        List<Method> methods = Arrays.asList(cls.getMethods());
-                        List<String> methodNames = methodsWithParameters(methods);
-                        completionMethods.put(objectName, methodNames);
-                    } catch (ClassNotFoundException ex) {
-                        throw new UncheckedClassNotFoundException(ex);
-                    }
-                }
+                paths.addAll(services.completionMethods());
+            }
+        }
+        for (String str : paths) {
+            try {
+                Class cls = Class.forName(str);
+                String className = cls.getSimpleName();
+                String objectName = className.substring(0, 1).toLowerCase() + className.substring(1);
+                List<Method> methods = Arrays.asList(cls.getMethods());
+                List<String> methodNames = methodsWithParameters(methods);
+                completionMethods.put(objectName, methodNames);
+            } catch (ClassNotFoundException ex) {
+                throw new UncheckedClassNotFoundException(ex);
             }
         }
         return completionMethods;
