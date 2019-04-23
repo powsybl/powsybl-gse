@@ -152,7 +152,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.setOnSelectionDrag(p -> allowedDrag = true);
 
         codeArea.textProperty().addListener((observable, oldCode, newCode) -> {
-            autoCompletion.hidePopup();
+            autoCompletion.hide();
             int caretPosition = codeArea.getCaretPosition();
             Matcher nonWordMatcher = caretPosition >= 1 ? Pattern.compile("\\W").matcher(codeArea.getText(caretPosition - 1, caretPosition)) : null;
             Matcher wordMatcher = caretPosition >= 2 ? Pattern.compile("\\w").matcher(codeArea.getText(caretPosition - 2, caretPosition - 1)) : null;
@@ -191,7 +191,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private void showSuggestions(String completiongWord, List<String> suggestions) {
         if (suggestions != null && completiongWord != null) {
-            autoCompletion.setSuggestionList(suggestions);
+            autoCompletion.setSuggestions(suggestions);
             if (completiongWord.equals("")) {
                 autoCompletion.showMethodsSuggestions(getScene().getWindow());
             } else {

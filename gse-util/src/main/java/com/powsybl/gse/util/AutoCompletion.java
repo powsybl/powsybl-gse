@@ -33,11 +33,11 @@ public class AutoCompletion {
 
     private final CodeArea codeArea;
 
-    private List<String> suggestionList;
+    private List<String> suggestions;
 
     public AutoCompletion(CodeArea codeArea) {
         this.codeArea = Objects.requireNonNull(codeArea);
-        suggestionList = new ArrayList<>();
+        suggestions = new ArrayList<>();
         listView = new ListView<>();
         listView.setMaxHeight(260);
         listView.setMinWidth(400);
@@ -50,25 +50,25 @@ public class AutoCompletion {
 
     public void showKeyWordsSuggestions(String wordToComplete, Window window) {
         completeWord(wordToComplete);
-        showPopup(window);
+        show(window);
     }
 
     public void showMethodsSuggestions(Window window) {
         completeMethod();
-        showPopup(window);
+        show(window);
     }
 
-    public List<String> getSuggestionList() {
-        return suggestionList;
+    public List<String> getSuggestions() {
+        return suggestions;
     }
 
-    public void setSuggestionList(List<String> suggestions) {
-        suggestionList = suggestions;
+    public void setSuggestions(List<String> suggestions) {
+        this.suggestions = suggestions;
     }
 
     private void completeWord(String currentToken) {
         List<MenuItem> menuItems = new ArrayList<>();
-        suggestionList.forEach(str -> {
+        suggestions.forEach(str -> {
             if (!currentToken.isEmpty() && str.startsWith(currentToken) && !str.equals(currentToken)) {
                 MenuItem menuItem = new MenuItem(str);
                 menuItems.add(menuItem);
@@ -78,7 +78,7 @@ public class AutoCompletion {
     }
 
     private void completeMethod() {
-        List<MenuItem> metdodsItems = suggestionList.stream().map(MenuItem::new).collect(Collectors.toList());
+        List<MenuItem> metdodsItems = suggestions.stream().map(MenuItem::new).collect(Collectors.toList());
         refreshListView(metdodsItems, 0);
     }
 
@@ -102,7 +102,8 @@ public class AutoCompletion {
          */
         final int rowHeight = 24;
         final int maxItemsSize = 13;
-        listView.setPrefHeight(menuItems.size() <= maxItemsSize ? menuItems.size() * rowHeight + 2 : 260);
+        final int maxHeight = 260;
+        listView.setPrefHeight(menuItems.size() <= maxItemsSize ? menuItems.size() * rowHeight + 2 : maxHeight);
     }
 
     private static ListCell<MenuItem> listViewCellFactory() {
@@ -130,13 +131,13 @@ public class AutoCompletion {
         completionPopup.hide();
     }
 
-    public void hidePopup() {
+    public void hide() {
         if (completionPopup != null) {
             completionPopup.hide();
         }
     }
 
-    public void showPopup(Window window) {
+    public void show(Window window) {
         if (!listView.getItems().isEmpty()) {
             codeArea.getCaretBounds().ifPresent(caretBounds -> completionPopup.show(window, caretBounds.getMinX() - 20, caretBounds.getMinY() + 20));
         }
