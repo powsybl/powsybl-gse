@@ -31,7 +31,7 @@
                 </os>
             </activation>
             <properties>
-                <jpackage.archive>openjdk-13-jpackage+30_windows-x64_bin.zip</jpackage.archive>
+                <jpackage.archive>openjdk-13-jpackage+49_windows-x64_bin.zip</jpackage.archive>
                 <jpackage.zip>true</jpackage.zip>
                 <powsybl-logo>logo.ico</powsybl-logo>
                 <gtk2-linux-jvm-arg/>
@@ -45,7 +45,7 @@
                 </os>
             </activation>
             <properties>
-                <jpackage.archive>openjdk-13-jpackage+30_osx-x64_bin.tar.gz</jpackage.archive>
+                <jpackage.archive>openjdk-13-jpackage+49_osx-x64_bin.tar.gz</jpackage.archive>
                 <jpackage.tar>true</jpackage.tar>
                 <powsybl-logo>logo.png</powsybl-logo>
                 <gtk2-linux-jvm-arg/>
@@ -59,7 +59,7 @@
                 </os>
             </activation>
             <properties>
-                <jpackage.archive>openjdk-13-jpackage+30_linux-x64_bin.tar.gz</jpackage.archive>
+                <jpackage.archive>openjdk-13-jpackage+49_linux-x64_bin.tar.gz</jpackage.archive>
                 <jpackage.tar>true</jpackage.tar>
                 <powsybl-logo>logo.png</powsybl-logo>
                 <gtk2-linux-jvm-arg>-Djdk.gtk.version=2</gtk2-linux-jvm-arg>
@@ -144,7 +144,7 @@
                                     <goal>wget</goal>
                                 </goals>
                                 <configuration>
-                                    <url>https://download.java.net/java/early_access/jpackage/30/${jpackage.archive}</url>
+                                    <url>https://download.java.net/java/early_access/jpackage/49/${jpackage.archive}</url>
                                 </configuration>
                             </execution>
                         </executions>
@@ -270,7 +270,7 @@
                                     <workingDirectory>${project.build.directory}</workingDirectory>
                                     <arguments>
                                         <!-- packager arguments -->
-                                        <argument>create-image</argument>
+                                        <argument>create-app-image</argument>
                                         <argument>--verbose</argument>
                                         <argument>--input</argument>
                                         <argument>jpackage-input</argument>
@@ -288,7 +288,7 @@
                                         <argument>gse</argument>
                                         <argument>--app-version</argument>
                                         <argument>${project.version}</argument>
-                                        <argument>--jvm-args</argument>
+                                        <argument>--java-options</argument>
                                         <argument>-Dapp.root=$APPDIR -Dpowsybl.config.dirs=${user_home}/.powsybl:${app.root}/app -Djavafx.preloader=com.powsybl.gse.app.GsePreloader ${gtk2-linux-jvm-arg}</argument>
                                         <argument>--vendor</argument>
                                         <argument>PowSyBl</argument>
