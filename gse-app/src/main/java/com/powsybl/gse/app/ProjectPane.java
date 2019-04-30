@@ -13,6 +13,7 @@ import com.powsybl.afs.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.*;
 import com.powsybl.gse.util.*;
+import com.powsybl.gse.cop_past.CopyService;
 import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
@@ -34,6 +35,7 @@ import javafx.util.Callback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -57,6 +59,8 @@ public class ProjectPane extends Tab {
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
 
     private final KeyCombination saveKeyCombination = new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
+
+    private String iconSize = "1.1em";
 
     private static class TabKey {
 
@@ -650,6 +654,58 @@ public class ProjectPane extends Tab {
         });
     }
 
+    private MenuItem createCopyProjectNodeItem(TreeItem selectedTreeItem) {
+        MenuItem copyMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Copy"), Glyph.createAwesomeFont('\uf0c5').size(iconSize));
+        copyMenuItem.setOnAction(event -> {
+            ProjectNode projectNode = (ProjectNode) selectedTreeItem.getValue();
+            if (projectNode instanceof ProjectFile) {
+                ProjectFile projectFile = (ProjectFile) projectNode;
+                projectFile.findService(CopyService.class).copy(projectNode);
+
+            }
+            //AppFileSystem fileSystem = projectNode.getFileSystem();
+       /* String idName = projectNode.getName() + projectNode.getId();
+        String path = "/home/nassnamb/Documents/ArchiveFolder2/" + idName;
+        java.io.File f = new java.io.File(path);
+        if (!f.exists()) {
+            f.mkdir();
+        }
+        java.io.File file = new java.io.File(path + "/" + projectNode.getId());
+        if (!file.exists()) {
+            projectNode.archive(Paths.get(path));
+        }
+        final Clipboard clipboard = Clipboard.getSystemClipboard();
+        final ClipboardContent content = new ClipboardContent();
+        content.putString(path + "/" + projectNode.getId());
+        clipboard.setContent(content);*/
+        });
+        return copyMenuItem;
+    }
+
+    private MenuItem createCutProjectNodeItem(TreeItem selectedTreeItem) {
+        MenuItem cutMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Cut"), Glyph.createAwesomeFont('\uf0c4').size(iconSize));
+        cutMenuItem.setOnAction(event -> {
+
+        });
+        return cutMenuItem;
+    }
+
+    private MenuItem createPasteProjectNodeItem(TreeItem selectedTreeItem) {
+        MenuItem pasteMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Paste"), Glyph.createAwesomeFont('\uf0ea').size(iconSize));
+        pasteMenuItem.setOnAction(event -> {
+            if (selectedTreeItem.getValue() instanceof ProjectFolder) {
+                ProjectFolder projectFolder = (ProjectFolder) selectedTreeItem.getValue();
+                final Clipboard clipboard = Clipboard.getSystemClipboard();
+                if (clipboard.hasString()) {
+                    projectFolder.unarchive(Paths.get(clipboard.getString()));
+                    refresh(selectedTreeItem);
+                }
+                event.consume();
+            }
+        });
+        return pasteMenuItem;
+    }
+
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
         menuItem.setOnAction(event -> renameProjectNode(selectedTreeItem));
@@ -851,6 +907,8 @@ public class ProjectPane extends Tab {
         contextMenu.getItems().add(menu);
         contextMenu.getItems().add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         contextMenu.getItems().add(createRenameProjectNodeItem(selectedTreeItem));
+        contextMenu.getItems().add(createCopyProjectNodeItem(selectedTreeItem));
+        contextMenu.getItems().add(createCutProjectNodeItem(selectedTreeItem));
         return contextMenu;
     }
 
@@ -936,6 +994,9 @@ public class ProjectPane extends Tab {
         if (selectedTreeItem != treeView.getRoot()) {
             items.add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
             items.add(createRenameProjectNodeItem(selectedTreeItem));
+            items.add(createCopyProjectNodeItem(selectedTreeItem));
+            items.add(createCutProjectNodeItem(selectedTreeItem));
+            items.add(createPasteProjectNodeItem(selectedTreeItem));
         }
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
