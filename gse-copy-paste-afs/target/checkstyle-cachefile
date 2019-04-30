@@ -1,0 +1,12 @@
+#Tue Nov 19 17:51:03 CET 2019
+/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/exceptions/CopyDifferentFileSystemNameException.java=1574166863000
+/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/CopyService.java=1574166863000
+/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/CopyServiceConstants.java=1574166863000
+/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/exceptions/CopyFailedException.java=1574166863000
+/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/exceptions/CopyPasteInvalidArchiveException.java=1574179670000
+/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/exceptions/CopyPasteException.java=1574166863000
+/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/exceptions/CopyNotEmptyArchiveDirectoryException.java=1574179702000
+/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/exceptions/CopyNotFinishedException.java=1574166863000
+/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/CopyManager.java=1574180836000
+/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/exceptions/CopyPasteFileAlreadyExistException.java=1574166863000
+configuration*?=2F0B68D32AFA0F05B85DCFB22DE068C7AD045C64

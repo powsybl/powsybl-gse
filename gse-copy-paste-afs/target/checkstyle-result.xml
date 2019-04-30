@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="6.18">
+<file name="/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/CopyServiceConstants.java">
+</file>
+<file name="/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/CopyManager.java">
+</file>
+<file name="/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/CopyService.java">
+</file>
+<file name="/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/exceptions/CopyNotEmptyArchiveDirectoryException.java">
+</file>
+<file name="/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/exceptions/CopyDifferentFileSystemNameException.java">
+</file>
+<file name="/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/exceptions/CopyNotFinishedException.java">
+</file>
+<file name="/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/exceptions/CopyFailedException.java">
+</file>
+<file name="/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/exceptions/CopyPasteException.java">
+</file>
+<file name="/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/exceptions/CopyPasteFileAlreadyExistException.java">
+</file>
+<file name="/home/buiquangpau/projects/imagrid-powsybl/powsybl-gse/gse-copy-paste-afs/src/main/java/com/powsybl/gse/copy_paste/afs/exceptions/CopyPasteInvalidArchiveException.java">
+</file>
+</checkstyle>
