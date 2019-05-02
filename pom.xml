@@ -58,6 +58,7 @@
         <module>gse-network-explorer</module>
         <module>gse-security-analysis</module>
         <module>gse-cop-past</module>
+        <module>gse-copypaste</module>
     </modules>
 
     <properties>

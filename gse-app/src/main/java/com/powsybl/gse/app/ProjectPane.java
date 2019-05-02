@@ -13,10 +13,12 @@ import com.powsybl.afs.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.*;
 import com.powsybl.gse.util.*;
-import com.powsybl.gse.cop_past.CopyService;
+import com.powsybl.gse.copypaste.afs.CopyService;
 import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -60,7 +62,7 @@ public class ProjectPane extends Tab {
 
     private final KeyCombination saveKeyCombination = new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
 
-    private String iconSize = "1.1em";
+    private BooleanProperty copied = new SimpleBooleanProperty(false);
 
     private static class TabKey {
 
@@ -495,6 +497,16 @@ public class ProjectPane extends Tab {
                         });
             }
         });
+
+        final Clipboard systemClipboard = Clipboard.getSystemClipboard();
+        new com.sun.glass.ui.ClipboardAssistance(com.sun.glass.ui.Clipboard.SYSTEM) {
+            @Override
+            public void contentChanged() {
+                if (systemClipboard != null && systemClipboard.hasString() && systemClipboard.getString() != null) {
+                    copied.set(systemClipboard.getString().contains(CopyService.LOCAL_DIR));
+                }
+            }
+        };
     }
 
     public Project getProject() {
@@ -627,9 +639,8 @@ public class ProjectPane extends Tab {
     // contextual menu
 
     private MenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
-        MenuItem deleteMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.1em"));
+        MenuItem deleteMenuItem = GseMenuItem.createDeleteMenuItem();
         deleteMenuItem.setOnAction(event -> deleteNodesAlert(selectedTreeItems));
-        deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
         return deleteMenuItem;
     }
 
@@ -655,43 +666,24 @@ public class ProjectPane extends Tab {
     }
 
     private MenuItem createCopyProjectNodeItem(TreeItem selectedTreeItem) {
-        MenuItem copyMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Copy"), Glyph.createAwesomeFont('\uf0c5').size(iconSize));
-        copyMenuItem.setOnAction(event -> {
-            ProjectNode projectNode = (ProjectNode) selectedTreeItem.getValue();
-            if (projectNode instanceof ProjectFile) {
-                ProjectFile projectFile = (ProjectFile) projectNode;
-                projectFile.findService(CopyService.class).copy(projectNode);
-
-            }
-            //AppFileSystem fileSystem = projectNode.getFileSystem();
-       /* String idName = projectNode.getName() + projectNode.getId();
-        String path = "/home/nassnamb/Documents/ArchiveFolder2/" + idName;
-        java.io.File f = new java.io.File(path);
-        if (!f.exists()) {
-            f.mkdir();
-        }
-        java.io.File file = new java.io.File(path + "/" + projectNode.getId());
-        if (!file.exists()) {
-            projectNode.archive(Paths.get(path));
-        }
-        final Clipboard clipboard = Clipboard.getSystemClipboard();
-        final ClipboardContent content = new ClipboardContent();
-        content.putString(path + "/" + projectNode.getId());
-        clipboard.setContent(content);*/
-        });
+        MenuItem copyMenuItem = GseMenuItem.createCopyMenuItem();
+        copyMenuItem.setOnAction(event ->  findCopyService(selectedTreeItem));
         return copyMenuItem;
     }
 
     private MenuItem createCutProjectNodeItem(TreeItem selectedTreeItem) {
-        MenuItem cutMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Cut"), Glyph.createAwesomeFont('\uf0c4').size(iconSize));
+        MenuItem cutMenuItem = GseMenuItem.createCutMenuItem();
         cutMenuItem.setOnAction(event -> {
+            findCopyService(selectedTreeItem);
+            //projectNode.delete();
+            event.consume();
 
         });
         return cutMenuItem;
     }
 
     private MenuItem createPasteProjectNodeItem(TreeItem selectedTreeItem) {
-        MenuItem pasteMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Paste"), Glyph.createAwesomeFont('\uf0ea').size(iconSize));
+        MenuItem pasteMenuItem = GseMenuItem.createPasteMenuItem();
         pasteMenuItem.setOnAction(event -> {
             if (selectedTreeItem.getValue() instanceof ProjectFolder) {
                 ProjectFolder projectFolder = (ProjectFolder) selectedTreeItem.getValue();
@@ -703,7 +695,13 @@ public class ProjectPane extends Tab {
                 event.consume();
             }
         });
+        pasteMenuItem.disableProperty().bind(copied.not());
         return pasteMenuItem;
+    }
+
+    private void findCopyService(TreeItem selectedTreeItem) {
+        ProjectNode projectNode = (ProjectNode) selectedTreeItem.getValue();
+        projectNode.findService(CopyService.class).copy(projectNode);
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
