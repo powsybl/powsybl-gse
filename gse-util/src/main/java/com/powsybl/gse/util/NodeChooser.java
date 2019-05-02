@@ -8,6 +8,7 @@ package com.powsybl.gse.util;
 
 import com.powsybl.afs.*;
 import com.powsybl.gse.spi.GseContext;
+import com.powsybl.gse.copypaste.afs.CopyService;
 import impl.org.controlsfx.skin.BreadCrumbBarSkin;
 import javafx.application.Platform;
 import javafx.beans.property.*;
@@ -28,6 +29,7 @@ import org.controlsfx.control.BreadCrumbBar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.prefs.Preferences;
@@ -571,6 +573,9 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         List<MenuItem> items = new ArrayList<>();
         items.add(createRenameProjectMenuItem());
         items.add(createCreateFolderMenuItem());
+        items.add(createCopyProjectNodeItem(selectedTreeItem));
+        items.add(createCutProjectNodeItem(selectedTreeItem));
+        items.add(createPasteProjectNodeItem(selectedTreeItem));
         items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
@@ -582,6 +587,8 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         ContextMenu contextMenu = new ContextMenu();
         List<MenuItem> items = new ArrayList<>();
         items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
+        items.add(createCopyProjectNodeItem(selectedTreeItem));
+        items.add(createCutProjectNodeItem(selectedTreeItem));
         items.add(createRenameProjectMenuItem());
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
@@ -620,8 +627,44 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         });
     }
 
+    private MenuItem createCopyProjectNodeItem(TreeItem<N> selectedTreeItem) {
+        MenuItem copyMenuItem = GseMenuItem.createCopyMenuItem();
+        copyMenuItem.setOnAction(event -> findCopyService(selectedTreeItem));
+        return copyMenuItem;
+    }
+
+
+    private MenuItem createCutProjectNodeItem(TreeItem selectedTreeItem) {
+        MenuItem cutMenuItem = GseMenuItem.createCutMenuItem();
+        cutMenuItem.setOnAction(event -> {
+
+        });
+        return cutMenuItem;
+    }
+
+    private MenuItem createPasteProjectNodeItem(TreeItem<N> selectedTreeItem) {
+        MenuItem pasteMenuItem = GseMenuItem.createPasteMenuItem();
+        pasteMenuItem.setOnAction(event -> {
+            if (selectedTreeItem.getValue() instanceof Folder) {
+                Folder folder = (Folder) selectedTreeItem.getValue();
+                final Clipboard clipboard = Clipboard.getSystemClipboard();
+                if (clipboard.hasString()) {
+                    folder.unarchive(Paths.get(clipboard.getString()));
+                    refresh(selectedTreeItem);
+                }
+                event.consume();
+            }
+        });
+        return pasteMenuItem;
+    }
+
+    private void findCopyService(TreeItem<N> selectedTreeItem) {
+        Node node = (Node) selectedTreeItem.getValue();
+        node.findService(CopyService.class).copy(node);
+    }
+
     private MenuItem createDeleteNodeMenuItem(List<? extends TreeItem<N>> selectedTreeItems) {
-        MenuItem deleteMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size(ICON_SIZE));
+        MenuItem deleteMenuItem = GseMenuItem.createDeleteMenuItem();
         if (selectedTreeItems.size() == 1) {
             TreeItem<N> selectedTreeItem = selectedTreeItems.get(0);
             N selectedTreeItemValue = selectedTreeItem.getValue();
@@ -640,7 +683,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             selectionContainsOpenedProjects(selectedTreeItems, deleteMenuItem);
         }
         deleteMenuItem.setOnAction(event -> createDeleteAlert(selectedTreeItems));
-        deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
         return deleteMenuItem;
 
     }
