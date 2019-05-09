@@ -8,14 +8,13 @@ package com.powsybl.gse.copypaste.afs;
 
 import com.powsybl.afs.AbstractNodeBase;
 
+import java.util.List;
+
 /**
  * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
  */
 public interface CopyService {
-    String PATH_SEPARATOR = "/";
-    String LOCAL_DIR = System.getProperty("user.home") + "/Documents/ArchiveFolder2/";
-    String REMOTE_DIR = "";
 
-    void copy(AbstractNodeBase projectNode);
+    void copy(List<? extends AbstractNodeBase> nodes);
 
 }
