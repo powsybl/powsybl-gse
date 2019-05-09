@@ -9,6 +9,8 @@ package com.powsybl.gse.copypasyte.afs.remote;
 import com.powsybl.afs.AbstractNodeBase;
 import com.powsybl.gse.copypaste.afs.CopyService;
 
+import java.util.List;
+
 
 /**
  * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
@@ -16,7 +18,6 @@ import com.powsybl.gse.copypaste.afs.CopyService;
 public class RemoteCopyService implements CopyService {
 
     @Override
-    public void copy(AbstractNodeBase node) {
-
+    public void copy(List<? extends AbstractNodeBase> nodes) {
     }
 }

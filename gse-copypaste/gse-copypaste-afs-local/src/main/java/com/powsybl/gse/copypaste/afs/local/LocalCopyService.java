@@ -10,11 +10,13 @@ import com.powsybl.afs.AbstractNodeBase;
 import com.powsybl.afs.Node;
 import com.powsybl.afs.ProjectNode;
 import com.powsybl.gse.copypaste.afs.CopyService;
+import com.powsybl.gse.copypaste.afs.CopyServiceConstants;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.List;
 
 
 /**
@@ -23,11 +25,30 @@ import java.nio.file.Paths;
 public class LocalCopyService implements CopyService {
 
     @Override
-    public void copy(AbstractNodeBase node) {
-        String nodeId = node.getId();
-        String nodeName = node.getName();
-        String parentPath = LOCAL_DIR + nodeName + nodeId;
+    public void copy(List<? extends AbstractNodeBase> nodes) {
+        final Clipboard clipboard = Clipboard.getSystemClipboard();
+        final ClipboardContent content = new ClipboardContent();
 
+        if (nodes.size() == 1) {
+            AbstractNodeBase node = nodes.get(0);
+            String nodeId = node.getId();
+            String archiveDirectory = nodeArchiveDirectory(node);
+            archiveNode(node, nodeId, archiveDirectory);
+            content.putString(archiveDirectory + CopyServiceConstants.PATH_SEPARATOR + nodeId);
+        } else {
+            StringBuilder localPaths = new StringBuilder();
+            for (AbstractNodeBase node : nodes) {
+                String nodeId = node.getId();
+                String archiveDirectory = nodeArchiveDirectory(node);
+                archiveNode(node, nodeId, archiveDirectory);
+                localPaths.append(archiveDirectory).append(CopyServiceConstants.PATH_SEPARATOR).append(nodeId).append(CopyServiceConstants.PATH_LIST_SEPARATOR);
+            }
+            content.putString(localPaths.toString());
+        }
+        clipboard.setContent(content);
+    }
+
+    private static void archiveNode(AbstractNodeBase node, String nodeId, String parentPath) {
         File archiveParentFolder = new File(parentPath);
         if (!archiveParentFolder.exists()) {
             archiveParentFolder.mkdir();
@@ -40,10 +61,9 @@ public class LocalCopyService implements CopyService {
                 ((Node) node).archive(Paths.get(parentPath));
             }
         }
+    }
 
-        final Clipboard clipboard = Clipboard.getSystemClipboard();
-        final ClipboardContent content = new ClipboardContent();
-        content.putString(parentPath + PATH_SEPARATOR + nodeId);
-        clipboard.setContent(content);
+    private static String nodeArchiveDirectory(AbstractNodeBase node) {
+        return CopyServiceConstants.LOCAL_DIR + node.getName() + node.getId();
     }
 }
