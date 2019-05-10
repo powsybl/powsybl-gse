@@ -407,8 +407,8 @@ public class ProjectPane extends Tab {
         if (dragNodeNameAlreadyExists(projectFolder)) {
             GseAlerts.showDraggingError();
         } else {
-            ProjectNode monfichier = (ProjectNode) dragAndDropMove.getSource();
-            monfichier.moveTo(projectFolder);
+            ProjectNode projectNode = (ProjectNode) dragAndDropMove.getSource();
+            projectNode.moveTo(projectFolder);
             success = true;
         }
     }
