@@ -22,4 +22,6 @@ public interface AutoCompletionWordsProvider {
 
     Set<String> actionCompletionKeywords();
 
+    Set<String> metrixCompletionWords();
+
 }

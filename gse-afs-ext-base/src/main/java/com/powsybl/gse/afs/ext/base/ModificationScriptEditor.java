@@ -91,6 +91,7 @@ public class ModificationScriptEditor extends BorderPane
             for (AutoCompletionWordsProvider services : AUTO_COMPLETION_WORDS_LOADER.getServices()) {
                 if (storableScript instanceof ModificationScript) {
                     suggestions.addAll(services.mappingCompletionKeywords());
+                    suggestions.addAll(services.metrixCompletionWords());
                 } else if (storableScript instanceof ActionScript) {
                     suggestions.addAll(services.actionCompletionKeywords());
                 }
