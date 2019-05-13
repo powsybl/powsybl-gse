@@ -9,7 +9,6 @@ package com.powsybl.gse.util;
 import com.google.common.base.Stopwatch;
 import com.powsybl.commons.exceptions.UncheckedClassNotFoundException;
 import com.powsybl.commons.util.ServiceLoaderCache;
-import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.KeywordsProvider;
 import com.powsybl.iidm.network.Country;
 import com.powsybl.iidm.network.EnergySource;
@@ -45,7 +44,15 @@ import java.io.StringReader;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Set;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -72,8 +79,6 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private static final ServiceLoaderCache<KeywordsProvider> KEYWORDS_LOADER = new ServiceLoaderCache<>(KeywordsProvider.class);
 
-    private static final ServiceLoaderCache<AutoCompletionWordsProvider> AUTO_COMPLETION_WORDS_LOADER = new ServiceLoaderCache<>(AutoCompletionWordsProvider.class);
-
     private boolean allowedDrag = false;
 
     private int tabSize = DEFAULT_TAB_SIZE;
@@ -88,7 +93,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
             "threadsafe", "throw", "throws", "transient", "true", "try", "void", "volatile", "voltageLevel", "while"
     );
 
-    private final List<String> optionalSuggestions;
+    private List<String> optionalSuggestions;
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
@@ -109,8 +114,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         }
     }
 
-    public GroovyCodeEditor(Scene scene, List<String> keywordsSuggestions) {
-        optionalSuggestions = keywordsSuggestions;
+    public GroovyCodeEditor(Scene scene) {
         codeArea.setParagraphGraphicFactory(LineNumberFactory.get(codeArea));
         codeArea.richChanges()
                 .filter(ch -> !ch.getInserted().equals(ch.getRemoved()))
@@ -126,7 +130,6 @@ public class GroovyCodeEditor extends MasterDetailPane {
         setDetailNode(vBox);
         setDetailSide(Side.TOP);
         setShowDetailNode(false);
-        autoCompletion = new AutoCompletion(codeArea);
 
         setOnKeyPressed((KeyEvent ke) -> {
             if (searchKeyCombination.match(ke)) {
@@ -150,7 +153,12 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.setOnDragOver(this::onDragOver);
         codeArea.setOnDragDropped(this::onDragDropped);
         codeArea.setOnSelectionDrag(p -> allowedDrag = true);
+    }
 
+    public GroovyCodeEditor(Scene scene, List<String> keywordsSuggestions) {
+        this(scene);
+        optionalSuggestions = keywordsSuggestions;
+        autoCompletion = new AutoCompletion(codeArea);
         codeArea.textProperty().addListener((observable, oldCode, newCode) -> {
             autoCompletion.hide();
             int caretPosition = codeArea.getCaretPosition();
@@ -229,11 +237,6 @@ public class GroovyCodeEditor extends MasterDetailPane {
         Pair<String, String> switchMap = new Pair<>("com.powsybl.iidm.network.Switch", "breaker");
 
         List<Pair<String, String>> keywordsMap = Arrays.asList(networkMap, substationMap, voltageLevelMap, loadMap, generatorMap, switchMap);
-        if (!AUTO_COMPLETION_WORDS_LOADER.getServices().isEmpty()) {
-            for (AutoCompletionWordsProvider services : AUTO_COMPLETION_WORDS_LOADER.getServices()) {
-                keywordsMap.addAll(services.completionMethods());
-            }
-        }
         for (Pair<String, String> pair : keywordsMap) {
             try {
                 Class cls = Class.forName(pair.getKey());

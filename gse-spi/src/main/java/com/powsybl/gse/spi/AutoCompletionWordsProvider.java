@@ -6,22 +6,17 @@
  */
 package com.powsybl.gse.spi;
 
-import javafx.util.Pair;
+import com.powsybl.afs.ProjectFile;
 
 import java.util.Set;
-import java.util.List;
 
 /**
  * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
  */
-public interface AutoCompletionWordsProvider {
+public interface AutoCompletionWordsProvider<T extends ProjectFile> {
 
-    List<Pair<String, String>> completionMethods();
+    Class<T> getProjectFileType();
 
-    Set<String> mappingCompletionKeywords();
-
-    Set<String> actionCompletionKeywords();
-
-    Set<String> metrixCompletionWords();
+    Set<String> completionKeyWords();
 
 }

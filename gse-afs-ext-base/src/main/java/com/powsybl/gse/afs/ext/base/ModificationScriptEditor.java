@@ -6,9 +6,7 @@
  */
 package com.powsybl.gse.afs.ext.base;
 
-import com.powsybl.action.dsl.afs.ActionScript;
 import com.powsybl.afs.ProjectFile;
-import com.powsybl.afs.ext.base.ModificationScript;
 import com.powsybl.afs.ext.base.ScriptListener;
 import com.powsybl.afs.ext.base.StorableScript;
 import com.powsybl.commons.util.ServiceLoaderCache;
@@ -40,6 +38,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.stream.Collectors;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -87,16 +86,9 @@ public class ModificationScriptEditor extends BorderPane
 
         //Adding  autocompletion keywords suggestions depending the context
         List<String> suggestions = new ArrayList<>();
-        if (!AUTO_COMPLETION_WORDS_LOADER.getServices().isEmpty()) {
-            for (AutoCompletionWordsProvider services : AUTO_COMPLETION_WORDS_LOADER.getServices()) {
-                if (storableScript instanceof ModificationScript) {
-                    suggestions.addAll(services.mappingCompletionKeywords());
-                    suggestions.addAll(services.metrixCompletionWords());
-                } else if (storableScript instanceof ActionScript) {
-                    suggestions.addAll(services.actionCompletionKeywords());
-                }
-            }
-        }
+        List<AutoCompletionWordsProvider> completionWordsProviderExtensions = findCompletionWordsProviderExtensions(storableScript);
+        completionWordsProviderExtensions.forEach(extension -> suggestions.addAll(extension.completionKeyWords()));
+
         codeEditor = new GroovyCodeEditor(scene, suggestions);
         Text saveGlyph = Glyph.createAwesomeFont('\uf0c7').size("1.3em");
         saveButton = new Button("", saveGlyph);
@@ -124,6 +116,12 @@ public class ModificationScriptEditor extends BorderPane
 
         // listen to modifications
         storableScript.addListener(this);
+    }
+
+    private static List<AutoCompletionWordsProvider> findCompletionWordsProviderExtensions(StorableScript storableScript) {
+        return AUTO_COMPLETION_WORDS_LOADER.getServices().stream()
+                .filter(extension -> extension.getProjectFileType().isAssignableFrom(storableScript.getClass()))
+                .collect(Collectors.toList());
     }
 
     @Override
