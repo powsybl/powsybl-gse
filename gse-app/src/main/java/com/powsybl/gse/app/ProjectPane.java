@@ -407,8 +407,8 @@ public class ProjectPane extends Tab {
         if (dragNodeNameAlreadyExists(projectFolder)) {
             GseAlerts.showDraggingError();
         } else {
-            ProjectNode monfichier = (ProjectNode) dragAndDropMove.getSource();
-            monfichier.moveTo(projectFolder);
+            ProjectNode projectNode = (ProjectNode) dragAndDropMove.getSource();
+            projectNode.moveTo(projectFolder);
             success = true;
         }
     }
@@ -626,6 +626,8 @@ public class ProjectPane extends Tab {
         MenuItem deleteMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.1em"));
         deleteMenuItem.setOnAction(event -> deleteNodesAlert(selectedTreeItems));
         deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
+        List<TreeItem<Object>> selectedItems = new ArrayList<>(selectedTreeItems);
+        deleteMenuItem.setDisable(ancestorsExistIn(selectedItems) || selectedItems.contains(treeView.getRoot()));
         return deleteMenuItem;
     }
 
@@ -648,6 +650,20 @@ public class ProjectPane extends Tab {
                 }
             }
         });
+    }
+
+    private boolean ancestorsExistIn(List<? extends TreeItem<Object>> treeItems) {
+        boolean found = false;
+        for (TreeItem<Object> treeItem : treeItems) {
+            if (treeItem != treeView.getRoot()) {
+                AbstractNodeBase value = (AbstractNodeBase) treeItem.getValue();
+                found = treeItems.stream().filter(it -> it != treeItem).anyMatch(item -> ((AbstractNodeBase) item.getValue()).isAncestorOf(value));
+                if (found) {
+                    break;
+                }
+            }
+        }
+        return found;
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {

@@ -35,6 +35,7 @@ import org.controlsfx.control.textfield.TextFields;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.regex.Matcher;
@@ -131,13 +132,14 @@ public final class SearchBar extends HBox {
         }
 
         void find(String searchPattern, String searchedTxt, boolean caseSensitive, boolean wordSensitive) {
+            String value = escapeMetaCharacters(searchPattern);
             reset();
             try {
                 Matcher sensitiveMatcher;
                 if (!wordSensitive) {
-                    sensitiveMatcher = caseSensitive ? Pattern.compile(searchPattern).matcher(searchedTxt) : Pattern.compile(searchPattern, Pattern.CASE_INSENSITIVE).matcher(searchedTxt);
+                    sensitiveMatcher = caseSensitive ? Pattern.compile(value).matcher(searchedTxt) : Pattern.compile(value, Pattern.CASE_INSENSITIVE).matcher(searchedTxt);
                 } else {
-                    sensitiveMatcher = caseSensitive ? Pattern.compile("\\W" + searchPattern + "\\W").matcher(searchedTxt) : Pattern.compile("\\W" + searchPattern + "\\W", Pattern.CASE_INSENSITIVE).matcher(searchedTxt);
+                    sensitiveMatcher = caseSensitive ? Pattern.compile("\\W" + value + "\\W").matcher(searchedTxt) : Pattern.compile("\\W" + value + "\\W", Pattern.CASE_INSENSITIVE).matcher(searchedTxt);
                 }
                 while (sensitiveMatcher.find()) {
                     positions.add(wordSensitive ? new SearchTuple(sensitiveMatcher.start() + 1, sensitiveMatcher.end() - 1) : new SearchTuple(sensitiveMatcher.start(), sensitiveMatcher.end()));
@@ -261,6 +263,17 @@ public final class SearchBar extends HBox {
 
         replaceWordBar.replaceAllButton.disableProperty().bind(validateDisableProperty());
         replaceWordBar.replaceButton.disableProperty().bind(validateDisableProperty());
+    }
+
+    public static String escapeMetaCharacters(String value) {
+        List<Character> metaCharacters = Arrays.asList('.', '*', '\\', '(', ')', '[', ']', '{', '}', '^', '$', '|', '+', '?');
+        String replacement = value;
+        for (Character ch : metaCharacters) {
+            if (value.contains(Character.toString(ch))) {
+                replacement = replacement.replace(Character.toString(ch), "\\" + ch);
+            }
+        }
+        return replacement;
     }
 
     private BooleanBinding validateDisableProperty() {

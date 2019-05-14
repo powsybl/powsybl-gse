@@ -78,7 +78,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private boolean searchingForMatches = false;
 
-    private Direction direction ;
+    private Direction direction;
 
     private static final String MATCHED_BRACKET_STYLE = "bracket-matches";
 
@@ -192,15 +192,16 @@ public class GroovyCodeEditor extends MasterDetailPane {
         String replaceText = searchBar.getReplaceText();
         int ci = Pattern.CASE_INSENSITIVE;
         String code;
+        String value = SearchBar.escapeMetaCharacters(wordToReplace);
         if (!wordSensitive) {
-            code = caseSensitive ? StringUtils.replacePattern(text, wordToReplace, replaceText) : Pattern.compile(wordToReplace, ci).matcher(text).replaceAll(replaceText);
+            code = caseSensitive ? StringUtils.replacePattern(text, value, replaceText) : Pattern.compile(value, ci).matcher(text).replaceAll(replaceText);
         } else {
-            Matcher matcher = caseSensitive ? Pattern.compile("\\W" + wordToReplace + "\\W").matcher(text) : Pattern.compile("\\W" + wordToReplace + "\\W", ci).matcher(text);
+            Matcher matcher = caseSensitive ? Pattern.compile("\\W" + value + "\\W").matcher(text) : Pattern.compile("\\W" + value + "\\W", ci).matcher(text);
             String txt = text;
             while (matcher.find()) {
                 int length = txt.length();
                 txt = txt.substring(0, matcher.start() + 1) + replaceText + txt.substring(matcher.end() - 1, length);
-                matcher = caseSensitive ? Pattern.compile("\\W" + wordToReplace + "\\W").matcher(txt) : Pattern.compile("\\W" + wordToReplace + "\\W", ci).matcher(txt);
+                matcher = caseSensitive ? Pattern.compile("\\W" + value + "\\W").matcher(txt) : Pattern.compile("\\W" + value + "\\W", ci).matcher(txt);
             }
             code = txt;
         }
