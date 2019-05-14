@@ -78,11 +78,16 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private boolean searchingForMatches = false;
 
-    private int direction; //1 for forward and -1 for backward
+    private Direction direction ;
 
     private static final String MATCHED_BRACKET_STYLE = "bracket-matches";
 
     private Set<Integer> tokensPositions = new HashSet<>();
+
+    private enum Direction {
+        BACKWARD,
+        FORWARD;
+    }
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
@@ -279,22 +284,22 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private void findBracketsMatches(String text, String token) {
         if (token.equals(Character.toString(')'))) {
-            direction = -1;
+            direction = Direction.BACKWARD;
             highlightBracket(text, ')', '(');
         } else if (token.equals(Character.toString('}'))) {
-            direction = -1;
+            direction = Direction.BACKWARD;
             highlightBracket(text, '}', '{');
         } else if (token.equals(Character.toString(']'))) {
-            direction = -1;
+            direction = Direction.BACKWARD;
             highlightBracket(text, ']', '[');
         } else if (token.equals(Character.toString('('))) {
-            direction = 1;
+            direction = Direction.FORWARD;
             highlightBracket(text, '(', ')');
         } else if (token.equals(Character.toString('{'))) {
-            direction = 1;
+            direction = Direction.FORWARD;
             highlightBracket(text, '{', '}');
         } else if (token.equals(Character.toString('['))) {
-            direction = 1;
+            direction = Direction.FORWARD;
             highlightBracket(text, '[', ']');
         }
     }
@@ -304,7 +309,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         int start;
         boolean condition;
         if (tokensPositions.contains(caretPosition - 1)) {
-            if (direction == -1) {
+            if (direction == Direction.BACKWARD) {
                 start = caretPosition - 2;
                 condition = start >= 0;
             } else {
@@ -330,7 +335,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
                     counter--;
                 }
             }
-            if (direction == -1) {
+            if (direction == Direction.BACKWARD) {
                 pos--;
                 noMatchFound = pos >= 0;
             } else {
