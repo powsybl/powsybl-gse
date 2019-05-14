@@ -7,7 +7,9 @@
 package com.powsybl.gse.spi;
 
 import com.powsybl.afs.ProjectFile;
+import javafx.util.Pair;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -18,5 +20,7 @@ public interface AutoCompletionWordsProvider<T extends ProjectFile> {
     Class<T> getProjectFileType();
 
     Set<String> completionKeyWords();
+
+    List<Pair<String, String>> completionMethods();
 
 }

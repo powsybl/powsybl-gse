@@ -9,6 +9,7 @@ package com.powsybl.gse.util;
 import com.google.common.base.Stopwatch;
 import com.powsybl.commons.exceptions.UncheckedClassNotFoundException;
 import com.powsybl.commons.util.ServiceLoaderCache;
+import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.KeywordsProvider;
 import com.powsybl.iidm.network.Country;
 import com.powsybl.iidm.network.EnergySource;
@@ -78,6 +79,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private final KeyCombination pasteKeyCombination = new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN);
 
     private static final ServiceLoaderCache<KeywordsProvider> KEYWORDS_LOADER = new ServiceLoaderCache<>(KeywordsProvider.class);
+
+    private static final ServiceLoaderCache<AutoCompletionWordsProvider> AUTO_COMPLETION_WORDS_LOADER = new ServiceLoaderCache<>(AutoCompletionWordsProvider.class);
 
     private boolean allowedDrag = false;
 
@@ -229,14 +232,12 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private Map<String, List<String>> completionMethods() {
         Map<String, List<String>> completionMethods = new HashMap<>();
 
-        Pair<String, String> networkMap = new Pair<>("com.powsybl.iidm.network.Network", "network");
-        Pair<String, String> substationMap = new Pair<>("com.powsybl.iidm.network.Substation", "substation");
-        Pair<String, String> voltageLevelMap = new Pair<>("com.powsybl.iidm.network.VoltageLevel", "voltageLevel");
-        Pair<String, String> loadMap = new Pair<>("com.powsybl.iidm.network.Load", "load");
-        Pair<String, String> generatorMap = new Pair<>("com.powsybl.iidm.network.Generator", "generator");
-        Pair<String, String> switchMap = new Pair<>("com.powsybl.iidm.network.Switch", "breaker");
-
-        List<Pair<String, String>> keywordsMap = Arrays.asList(networkMap, substationMap, voltageLevelMap, loadMap, generatorMap, switchMap);
+        List<Pair<String, String>> keywordsMap = new ArrayList<>();
+        if (!AUTO_COMPLETION_WORDS_LOADER.getServices().isEmpty()) {
+            for (AutoCompletionWordsProvider service : AUTO_COMPLETION_WORDS_LOADER.getServices()) {
+                keywordsMap.addAll(service.completionMethods());
+            }
+        }
         for (Pair<String, String> pair : keywordsMap) {
             try {
                 Class cls = Class.forName(pair.getKey());

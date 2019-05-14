@@ -9,10 +9,9 @@ package com.powsybl.gse.afs.ext.base;
 import com.google.auto.service.AutoService;
 import com.powsybl.action.dsl.afs.ActionScript;
 import com.powsybl.gse.spi.AutoCompletionWordsProvider;
+import javafx.util.Pair;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
@@ -28,5 +27,10 @@ public class ActionScriptKeywordsExtension implements AutoCompletionWordsProvide
     @Override
     public Set<String> completionKeyWords() {
         return new HashSet<>(Arrays.asList("action", "apply", "contingency", "description", "equipments", "life", "rule", "tasks", "test", "when"));
+    }
+
+    @Override
+    public List<Pair<String, String>> completionMethods() {
+        return Collections.emptyList();
     }
 }
