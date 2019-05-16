@@ -139,7 +139,7 @@
         <!-- Converters -->
         <dependency>
             <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-cgmes-conversion</artifactId>
+            <artifactId>powsybl-cgmes-converter</artifactId>
             <version>${powsyblcore.version}</version>
             <scope>runtime</scope>
         </dependency>

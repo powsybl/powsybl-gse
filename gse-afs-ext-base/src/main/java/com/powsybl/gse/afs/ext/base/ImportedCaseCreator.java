@@ -13,7 +13,7 @@ import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectCreationTask;
 import com.powsybl.gse.spi.ProjectFileCreator;
 import com.powsybl.gse.util.NodeSelectionPane;
-import com.powsybl.iidm.parameters.Parameter;
+import com.powsybl.iidm.api.converter.Parameter;
 import javafx.beans.binding.BooleanBinding;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
