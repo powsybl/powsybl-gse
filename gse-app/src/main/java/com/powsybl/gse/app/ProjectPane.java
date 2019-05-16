@@ -65,6 +65,8 @@ public class ProjectPane extends Tab {
 
     private BooleanProperty copied = new SimpleBooleanProperty(false);
 
+    private static List<AbstractNodeBase> copyNodes;
+
     private static class TabKey {
 
         private final String nodeId;
@@ -434,6 +436,7 @@ public class ProjectPane extends Tab {
     public ProjectPane(Scene scene, Project project, GseContext context) {
         this.project = Objects.requireNonNull(project);
         this.context = Objects.requireNonNull(context);
+        copyNodes = new ArrayList<>();
 
         taskItems = new TaskItemList(project, context);
         taskMonitorPane = new TaskMonitorPane(taskItems);
@@ -682,7 +685,11 @@ public class ProjectPane extends Tab {
 
     private MenuItem createCopyProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
         MenuItem copyMenuItem = GseMenuItem.createCopyMenuItem();
-        copyMenuItem.setOnAction(event -> findCopyService(selectedTreeItems));
+        copyMenuItem.setOnAction(event -> {
+            findCopyService(selectedTreeItems);
+            copyNodes.clear();
+            selectedTreeItems.forEach(item -> copyNodes.add((AbstractNodeBase) item.getValue()));
+        });
         List<TreeItem<Object>> selectedItems = new ArrayList<>(selectedTreeItems);
         copyMenuItem.setDisable(ancestorsExistIn(selectedItems) || selectedItems.contains(treeView.getRoot()));
         return copyMenuItem;
@@ -701,13 +708,21 @@ public class ProjectPane extends Tab {
         pasteMenuItem.setOnAction(event -> {
             if (selectedTreeItem.getValue() instanceof ProjectFolder) {
                 ProjectFolder projectFolder = (ProjectFolder) selectedTreeItem.getValue();
-                final Clipboard clipboard = Clipboard.getSystemClipboard();
-                if (clipboard.hasString()) {
-                    String[] array = clipboard.getString().split(CopyServiceConstants.PATH_LIST_SEPARATOR);
-                    for(String path : array) {
-                        projectFolder.unarchive(Paths.get(path));
+                List<ProjectNode> children = projectFolder.getChildren();
+                boolean sameName = copyNodes.stream().anyMatch(node -> {
+                    return children.stream().anyMatch(child -> child.getName().equals(node.getName())) ;
+                });
+                if(sameName) {
+                    GseAlerts.showDraggingError();
+                } else {
+                    final Clipboard clipboard = Clipboard.getSystemClipboard();
+                    if (clipboard.hasString()) {
+                        String[] array = clipboard.getString().split(CopyServiceConstants.PATH_LIST_SEPARATOR);
+                        for (String path : array) {
+                            projectFolder.unarchive(Paths.get(path));
+                        }
+                        refresh(selectedTreeItem);
                     }
-                    refresh(selectedTreeItem);
                 }
                 event.consume();
             }

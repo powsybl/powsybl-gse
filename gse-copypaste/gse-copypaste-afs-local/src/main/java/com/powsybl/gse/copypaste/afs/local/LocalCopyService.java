@@ -49,12 +49,12 @@ public class LocalCopyService implements CopyService {
     }
 
     private static void archiveNode(AbstractNodeBase node, String nodeId, String parentPath) {
-        File archiveParentFolder = new File(parentPath);
-        if (!archiveParentFolder.exists()) {
-            archiveParentFolder.mkdir();
+        File archiveRootFolder = new File(parentPath);
+        if (!archiveRootFolder.exists()) {
+            archiveRootFolder.mkdir();
         }
-        File archiveFolder = new File(parentPath, nodeId);
-        if (!archiveFolder.exists()) {
+        File archiveDestinationFolder = new File(parentPath, nodeId);
+        if (!archiveDestinationFolder.exists()) {
             if (node instanceof ProjectNode) {
                 ((ProjectNode) node).archive(Paths.get(parentPath));
             } else if (node instanceof Node) {
