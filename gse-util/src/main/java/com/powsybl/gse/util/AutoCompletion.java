@@ -17,9 +17,7 @@ import javafx.stage.Popup;
 import javafx.stage.Window;
 import org.fxmisc.richtext.CodeArea;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -33,11 +31,11 @@ public class AutoCompletion {
 
     private final CodeArea codeArea;
 
-    private List<String> suggestions;
+    private Set<String> suggestions;
 
     public AutoCompletion(CodeArea codeArea) {
         this.codeArea = Objects.requireNonNull(codeArea);
-        suggestions = new ArrayList<>();
+        suggestions = new HashSet<>();
         listView = new ListView<>();
         listView.setMaxHeight(260);
         listView.setMinWidth(400);
@@ -58,12 +56,12 @@ public class AutoCompletion {
         show(window);
     }
 
-    public List<String> getSuggestions() {
+    public Set<String> getSuggestions() {
         return suggestions;
     }
 
     public void setSuggestions(List<String> suggestions) {
-        this.suggestions = suggestions;
+        this.suggestions = new HashSet<>(suggestions);
     }
 
     private void completeWord(String currentToken) {
