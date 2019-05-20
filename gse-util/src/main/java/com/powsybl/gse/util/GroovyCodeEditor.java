@@ -80,6 +80,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private Direction direction;
 
+    private static final List<Character> BRACKETS = Arrays.asList('{', '}', '(', ')', '[', ']');
+
     private static final String MATCHED_BRACKET_STYLE = "bracket-matches";
 
     private Set<Integer> tokensPositions = new HashSet<>();
@@ -150,12 +152,9 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
         codeArea.caretPositionProperty().addListener((observable, oldvalue, newvalue) -> {
             searchingForMatches = false;
-            try {
-                if (oldvalue != null && oldvalue > 0 && tokenIsBracket(codeArea.getText(oldvalue - 1, oldvalue))) {
-                    codeArea.setStyleSpans(0, computeHighlighting(codeArea.getText()));
-                }
-            } catch (IndexOutOfBoundsException ex) {
-                //ignored if oldvalue doesn't exists anymore
+            final int codeLength = codeArea.getText().length();
+            if (oldvalue != null && oldvalue > 0 && codeLength >= oldvalue && tokenIsBracket(codeArea.getText(oldvalue - 1, oldvalue))) {
+                codeArea.setStyleSpans(0, computeHighlighting(codeArea.getText()));
             }
             if (newvalue > 0) {
                 String caretPositonText = codeArea.getText(newvalue - 1, newvalue);
@@ -169,8 +168,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
     }
 
     private static boolean tokenIsBracket(String token) {
-        List<Character> brackets = Arrays.asList('{', '}', '(', ')', '[', ']');
-        return brackets.contains(token.charAt(0));
+        return BRACKETS.contains(token.charAt(0));
     }
 
     private void showDetailNode() {
