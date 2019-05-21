@@ -7,6 +7,7 @@
 package com.powsybl.gse.util;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableList;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.KeywordsProvider;
 import groovyjarjarantlr.Token;
@@ -41,7 +42,6 @@ import java.io.UncheckedIOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Arrays;
 import java.util.Scanner;
 import java.util.HashSet;
 import java.util.Set;
@@ -74,13 +74,13 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private int tabSize = DEFAULT_TAB_SIZE;
 
-    private int matchPosition;
+    private int matchedBracketPosition;
 
     private boolean searchingForMatches = false;
 
-    private Direction direction;
+    private Direction searchDirection;
 
-    private static final List<Character> BRACKETS = Arrays.asList('{', '}', '(', ')', '[', ']');
+    private static final List<Character> BRACKETS = ImmutableList.of('{', '}', '(', ')', '[', ']');
 
     private static final String MATCHED_BRACKET_STYLE = "bracket-matches";
 
@@ -283,22 +283,22 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private void findBracketsMatches(String text, String token) {
         if (token.equals(Character.toString(')'))) {
-            direction = Direction.BACKWARD;
+            searchDirection = Direction.BACKWARD;
             highlightBracket(text, ')', '(');
         } else if (token.equals(Character.toString('}'))) {
-            direction = Direction.BACKWARD;
+            searchDirection = Direction.BACKWARD;
             highlightBracket(text, '}', '{');
         } else if (token.equals(Character.toString(']'))) {
-            direction = Direction.BACKWARD;
+            searchDirection = Direction.BACKWARD;
             highlightBracket(text, ']', '[');
         } else if (token.equals(Character.toString('('))) {
-            direction = Direction.FORWARD;
+            searchDirection = Direction.FORWARD;
             highlightBracket(text, '(', ')');
         } else if (token.equals(Character.toString('{'))) {
-            direction = Direction.FORWARD;
+            searchDirection = Direction.FORWARD;
             highlightBracket(text, '{', '}');
         } else if (token.equals(Character.toString('['))) {
-            direction = Direction.FORWARD;
+            searchDirection = Direction.FORWARD;
             highlightBracket(text, '[', ']');
         }
     }
@@ -308,7 +308,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         int start;
         boolean condition;
         if (tokensPositions.contains(caretPosition - 1)) {
-            if (direction == Direction.BACKWARD) {
+            if (searchDirection == Direction.BACKWARD) {
                 start = caretPosition - 2;
                 condition = start >= 0;
             } else {
@@ -334,7 +334,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
                     counter--;
                 }
             }
-            if (direction == Direction.BACKWARD) {
+            if (searchDirection == Direction.BACKWARD) {
                 pos--;
                 noMatchFound = pos >= 0;
             } else {
@@ -346,7 +346,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private void setHighlightBracketStyle(int position) {
         searchingForMatches = true;
-        matchPosition = position;
+        matchedBracketPosition = position;
         codeArea.setStyleSpans(0, computeHighlighting(codeArea.getText()));
     }
 
@@ -544,7 +544,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private void bracketStyleBuilder(String styleClass, StyleSpansBuilder<Collection<String>> spansBuilder, int length, int tokenPostion) {
         int value = codeArea.caretPositionProperty().getValue();
-        if (searchingForMatches && (tokenPostion == value - 1 || tokenPostion == matchPosition)) {
+        if (searchingForMatches && (tokenPostion == value - 1 || tokenPostion == matchedBracketPosition)) {
             spansBuilder.add(Collections.singleton(MATCHED_BRACKET_STYLE), length);
         } else {
             spansBuilder.add(Collections.singleton(styleClass), length);
