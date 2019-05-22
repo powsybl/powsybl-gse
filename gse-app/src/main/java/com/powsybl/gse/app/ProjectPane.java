@@ -61,7 +61,7 @@ public class ProjectPane extends Tab {
 
     private BooleanProperty copied = new SimpleBooleanProperty(false);
 
-    private static List<AbstractNodeBase> copyNodes;
+    private List<AbstractNodeBase> copyNodes;
 
     private static class TabKey {
 
@@ -736,20 +736,22 @@ public class ProjectPane extends Tab {
             if (selectedTreeItem.getValue() instanceof ProjectFolder) {
                 ProjectFolder projectFolder = (ProjectFolder) selectedTreeItem.getValue();
                 List<ProjectNode> children = projectFolder.getChildren();
-                boolean sameName = copyNodes.stream().anyMatch(node -> {
-                    return children.stream().anyMatch(child -> child.getName().equals(node.getName()));
-                });
-                if (sameName) {
-                    GseAlerts.showDraggingError();
-                } else {
-                    final Clipboard clipboard = Clipboard.getSystemClipboard();
-                    if (clipboard.hasString()) {
-                        String[] array = clipboard.getString().split(CopyServiceConstants.PATH_LIST_SEPARATOR);
-                        for (String path : array) {
+
+                final Clipboard clipboard = Clipboard.getSystemClipboard();
+                if (clipboard.hasString()) {
+                    String[] array = clipboard.getString().split(CopyServiceConstants.PATH_LIST_SEPARATOR);
+                    for (String path : array) {
+                        String[] pathArray = path.split("/");
+                        String archiveParentPath = pathArray[pathArray.length - 2];
+                        boolean nameAlreadyExists = children.stream().anyMatch(child -> archiveParentPath.contains(child.getName()));
+                        if (nameAlreadyExists) {
+                            GseAlerts.showDraggingError();
+                            break;
+                        } else {
                             projectFolder.unarchive(Paths.get(path));
                         }
-                        refresh(selectedTreeItem);
                     }
+                    refresh(selectedTreeItem);
                 }
                 event.consume();
             }
