@@ -12,12 +12,11 @@
     <artifactId>gse-copypaste-afs-server</artifactId>
 
     <dependencies>
-        <dependency>
+        <!--<dependency>
             <groupId>javax</groupId>
             <artifactId>javaee-api</artifactId>
-            <version>${javaeeapi.version}</version>
             <scope>provided</scope>
-        </dependency>
+        </dependency>-->
 
         <dependency>
             <groupId>com.powsybl</groupId>

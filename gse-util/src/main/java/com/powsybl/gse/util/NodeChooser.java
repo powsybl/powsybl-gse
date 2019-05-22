@@ -30,11 +30,14 @@ import org.controlsfx.control.BreadCrumbBar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.file.Paths;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.*;
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -576,7 +579,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         items.add(createRenameProjectMenuItem());
         items.add(createCreateFolderMenuItem());
         items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
-        items.add(createCutProjectNodeItem(selectedTreeItem));
+        items.add(createCutProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         items.add(createPasteProjectNodeItem(selectedTreeItem));
         items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
         contextMenu.getItems().addAll(items.stream()
@@ -590,7 +593,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         List<MenuItem> items = new ArrayList<>();
         items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
         items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
-        items.add(createCutProjectNodeItem(selectedTreeItem));
+        items.add(createCutProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         items.add(createRenameProjectMenuItem());
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
@@ -635,8 +638,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         return copyMenuItem;
     }
 
-
-    private MenuItem createCutProjectNodeItem(TreeItem selectedTreeItem) {
+    private MenuItem createCutProjectNodeItem(List<? extends TreeItem<N>> selectedTreeItems) {
         MenuItem cutMenuItem = GseMenuItem.createCutMenuItem();
         cutMenuItem.setOnAction(event -> {
         });
@@ -647,33 +649,66 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         MenuItem pasteMenuItem = GseMenuItem.createPasteMenuItem();
         pasteMenuItem.setOnAction(event -> {
             if (selectedTreeItem.getValue() instanceof Folder) {
-                Folder folder = (Folder) selectedTreeItem.getValue();
-                final Clipboard clipboard = Clipboard.getSystemClipboard();
-                if (clipboard.hasString()) {
-                    String[] array = clipboard.getString().split(CopyServiceConstants.PATH_LIST_SEPARATOR);
-                    for (String str : array) {
-                        folder.unarchive(Paths.get(str));
-                    }
-                    refresh(selectedTreeItem);
-                }
+                Folder destinationFolder = (Folder) selectedTreeItem.getValue();
+                unarchiveNode(destinationFolder);
+                refresh(selectedTreeItem);
                 event.consume();
             }
         });
         return pasteMenuItem;
     }
 
-    private void findCopyService(List<? extends TreeItem<N>> selectedTreeItems) {
-        if(selectedTreeItems.size() == 1) {
-            Node node = (Node) selectedTreeItems.get(0).getValue();
-            node.findService(CopyService.class).copy(Collections.singletonList(node));
-        } else {
-            List<Node> nodes = selectedTreeItems.stream()
-                    .map(item -> (Node) item.getValue())
-                    .collect(Collectors.toList());
-            nodes.get(0).findService(CopyService.class).copy(nodes);
+    private void unarchiveNode(Folder destinationFolder) {
+        final Clipboard clipboard = Clipboard.getSystemClipboard();
+        if (clipboard.hasString()) {
+            String[] array = clipboard.getString().split(CopyServiceConstants.PATH_LIST_SEPARATOR);
+            if (destinationFolder.isLocal()) {
+                for (String str : array) {
+                    copyArchive(str, destinationFolder);
+                }
+            } else {
+                for (String str : array) {
+                    destinationFolder.unarchive(Paths.get(str));
+                }
+            }
         }
     }
 
+    private void copyArchive(String str, Folder destFolder) {
+        String file = str.substring(str.lastIndexOf('/'));
+        String st = destFolder.getPath().toString();
+        String destFolderPath = st.substring(st.indexOf(':') + 1);
+        Path source = Paths.get(str);
+        Path dest = Paths.get(destFolderPath + file);
+        Stream<Path> walk = null;
+        try {
+            walk = Files.walk(source);
+            walk.forEach(src -> copy(src, dest.resolve(source.relativize(src))));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        } finally {
+            if (walk != null) {
+                walk.close();
+            }
+        }
+    }
+
+    private void findCopyService(List<? extends TreeItem<N>> selectedTreeItems) {
+        List<Node> nodes = selectedTreeItems.stream()
+                .map(item -> (Node) item.getValue())
+                .collect(Collectors.toList());
+        nodes.get(0).findService(CopyService.class).copy(nodes);
+    }
+
+    private static void copy(Path source, Path dest) {
+        try {
+            Files.copy(source, dest, StandardCopyOption.REPLACE_EXISTING);
+        } catch (DirectoryNotEmptyException ex) {
+            //GseAlerts.showDraggingError();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
 
     private MenuItem createDeleteNodeMenuItem(List<? extends TreeItem<N>> selectedTreeItems) {
         MenuItem deleteMenuItem = GseMenuItem.createDeleteMenuItem();
@@ -696,7 +731,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         }
         deleteMenuItem.setOnAction(event -> createDeleteAlert(selectedTreeItems));
         return deleteMenuItem;
-
     }
 
     private void selectionContainsOpenedProjects(List<? extends TreeItem<N>> selectedTreeItems, MenuItem menuItem) {

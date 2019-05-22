@@ -697,7 +697,8 @@ public class ProjectPane extends Tab {
 
     private MenuItem createCutProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
         MenuItem cutMenuItem = GseMenuItem.createCutMenuItem();
-        cutMenuItem.setOnAction(event -> {});
+        cutMenuItem.setOnAction(event -> {
+        });
         List<TreeItem<Object>> selectedItems = new ArrayList<>(selectedTreeItems);
         cutMenuItem.setDisable(ancestorsExistIn(selectedItems) || selectedItems.contains(treeView.getRoot()));
         return cutMenuItem;
@@ -710,9 +711,9 @@ public class ProjectPane extends Tab {
                 ProjectFolder projectFolder = (ProjectFolder) selectedTreeItem.getValue();
                 List<ProjectNode> children = projectFolder.getChildren();
                 boolean sameName = copyNodes.stream().anyMatch(node -> {
-                    return children.stream().anyMatch(child -> child.getName().equals(node.getName())) ;
+                    return children.stream().anyMatch(child -> child.getName().equals(node.getName()));
                 });
-                if(sameName) {
+                if (sameName) {
                     GseAlerts.showDraggingError();
                 } else {
                     final Clipboard clipboard = Clipboard.getSystemClipboard();
@@ -732,15 +733,10 @@ public class ProjectPane extends Tab {
     }
 
     private void findCopyService(List<? extends TreeItem<Object>> selectedTreeItems) {
-        if(selectedTreeItems.size() == 1) {
-            ProjectNode projectNode = (ProjectNode) selectedTreeItems.get(0).getValue();
-            projectNode.findService(CopyService.class).copy(Collections.singletonList(projectNode));
-        } else {
-            List<ProjectNode> projectNodes = selectedTreeItems.stream()
-                    .map(item -> (ProjectNode) item.getValue())
-                    .collect(Collectors.toList());
-            projectNodes.get(0).findService(CopyService.class).copy(projectNodes);
-        }
+        List<ProjectNode> projectNodes = selectedTreeItems.stream()
+                .map(item -> (ProjectNode) item.getValue())
+                .collect(Collectors.toList());
+        projectNodes.get(0).findService(CopyService.class).copy(projectNodes);
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
