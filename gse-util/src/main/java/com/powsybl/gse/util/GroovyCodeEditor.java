@@ -7,6 +7,7 @@
 package com.powsybl.gse.util;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableList;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.KeywordsProvider;
 import groovyjarjarantlr.Token;
@@ -42,6 +43,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -70,6 +73,23 @@ public class GroovyCodeEditor extends MasterDetailPane {
     private boolean allowedDrag = false;
 
     private int tabSize = DEFAULT_TAB_SIZE;
+
+    private int matchedBracketPosition;
+
+    private boolean searchingForMatches = false;
+
+    private Direction searchDirection;
+
+    private static final List<Character> BRACKETS = ImmutableList.of('{', '}', '(', ')', '[', ']');
+
+    private static final String MATCHED_BRACKET_STYLE = "bracket-matches";
+
+    private Set<Integer> tokensPositions = new HashSet<>();
+
+    private enum Direction {
+        BACKWARD,
+        FORWARD;
+    }
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
@@ -129,6 +149,26 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeArea.setOnDragOver(this::onDragOver);
         codeArea.setOnDragDropped(this::onDragDropped);
         codeArea.setOnSelectionDrag(p -> allowedDrag = true);
+
+        codeArea.caretPositionProperty().addListener((observable, oldvalue, newvalue) -> {
+            searchingForMatches = false;
+            final int codeLength = codeArea.getText().length();
+            if (oldvalue != null && oldvalue > 0 && codeLength >= oldvalue && tokenIsBracket(codeArea.getText(oldvalue - 1, oldvalue))) {
+                codeArea.setStyleSpans(0, computeHighlighting(codeArea.getText()));
+            }
+            if (newvalue > 0) {
+                String caretPositonText = codeArea.getText(newvalue - 1, newvalue);
+                if (tokenIsBracket(caretPositonText)) {
+                    findBracketsMatches(codeArea.getText(), caretPositonText);
+                }
+            }
+        });
+
+        codeProperty().addListener((observable, oldvalue, newvalue) -> searchingForMatches = false);
+    }
+
+    private static boolean tokenIsBracket(String token) {
+        return BRACKETS.contains(token.charAt(0));
     }
 
     private void showDetailNode() {
@@ -239,6 +279,75 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private int tabSpacesToAdd(int currentPosition) {
         return getTabSize() - (currentPosition % getTabSize());
+    }
+
+    private void findBracketsMatches(String text, String token) {
+        if (token.equals(Character.toString(')'))) {
+            searchDirection = Direction.BACKWARD;
+            highlightBracket(text, ')', '(');
+        } else if (token.equals(Character.toString('}'))) {
+            searchDirection = Direction.BACKWARD;
+            highlightBracket(text, '}', '{');
+        } else if (token.equals(Character.toString(']'))) {
+            searchDirection = Direction.BACKWARD;
+            highlightBracket(text, ']', '[');
+        } else if (token.equals(Character.toString('('))) {
+            searchDirection = Direction.FORWARD;
+            highlightBracket(text, '(', ')');
+        } else if (token.equals(Character.toString('{'))) {
+            searchDirection = Direction.FORWARD;
+            highlightBracket(text, '{', '}');
+        } else if (token.equals(Character.toString('['))) {
+            searchDirection = Direction.FORWARD;
+            highlightBracket(text, '[', ']');
+        }
+    }
+
+    private void highlightBracket(String text, char c1, char c2) {
+        int caretPosition = codeArea.caretPositionProperty().getValue();
+        int start;
+        boolean condition;
+        if (tokensPositions.contains(caretPosition - 1)) {
+            if (searchDirection == Direction.BACKWARD) {
+                start = caretPosition - 2;
+                condition = start >= 0;
+            } else {
+                start = caretPosition;
+                condition = start < text.length();
+            }
+            findBracketPosition(text, condition, c1, c2, start);
+        }
+    }
+
+    private void findBracketPosition(String text, boolean cond, char c1, char c2, int start) {
+        boolean noMatchFound = cond;
+        int counter = 0;
+        int pos = start;
+        while (noMatchFound) {
+            if (text.charAt(pos) == c1 && tokensPositions.contains(pos)) {
+                counter++;
+            } else if (text.charAt(pos) == c2 && tokensPositions.contains(pos)) {
+                if (counter == 0) {
+                    setHighlightBracketStyle(pos);
+                    break;
+                } else {
+                    counter--;
+                }
+            }
+            if (searchDirection == Direction.BACKWARD) {
+                pos--;
+                noMatchFound = pos >= 0;
+            } else {
+                pos++;
+                noMatchFound = pos < text.length();
+            }
+        }
+    }
+
+    private void setHighlightBracketStyle(int position) {
+        searchingForMatches = true;
+        matchedBracketPosition = position;
+        codeArea.setStyleSpans(0, computeHighlighting(codeArea.getText()));
     }
 
     private void onDragDetected(MouseEvent event) {
@@ -414,7 +523,11 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private void buildStyle(String styleClass, StyleSpansBuilder<Collection<String>> spansBuilder, int length, Token token) {
         if (styleClass != null) {
-            spansBuilder.add(Collections.singleton(styleClass), length);
+            int tokenPostion = codeArea.getDocument().position(token.getLine() - 1, token.getColumn() - 1).toOffset();
+            bracketStyleBuilder(styleClass, spansBuilder, length, tokenPostion);
+            if (!searchingForMatches && (styleClass.equals("brace") || styleClass.equals("bracket") || styleClass.equals("paren"))) {
+                tokensPositions.add(tokenPostion);
+            }
         } else if (!KEYWORDS_LOADER.getServices().isEmpty()) {
             for (KeywordsProvider styleExtension : KEYWORDS_LOADER.getServices()) {
                 String style = styleExtension.styleClass(token.getText());
@@ -429,8 +542,18 @@ public class GroovyCodeEditor extends MasterDetailPane {
         }
     }
 
+    private void bracketStyleBuilder(String styleClass, StyleSpansBuilder<Collection<String>> spansBuilder, int length, int tokenPostion) {
+        int value = codeArea.caretPositionProperty().getValue();
+        if (searchingForMatches && (tokenPostion == value - 1 || tokenPostion == matchedBracketPosition)) {
+            spansBuilder.add(Collections.singleton(MATCHED_BRACKET_STYLE), length);
+        } else {
+            spansBuilder.add(Collections.singleton(styleClass), length);
+        }
+    }
+
     private StyleSpans<Collection<String>> computeHighlighting(String text) {
         Stopwatch stopwatch = Stopwatch.createStarted();
+        tokensPositions.clear();
 
         boolean added = false;
         StyleSpansBuilder<Collection<String>> spansBuilder = new StyleSpansBuilder<>();
