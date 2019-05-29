@@ -7,7 +7,9 @@
 package com.powsybl.gse.util;
 
 import com.powsybl.afs.*;
+import com.powsybl.gse.copypaste.afs.CopyServiceConstants;
 import com.powsybl.gse.spi.GseContext;
+import com.powsybl.gse.copypaste.afs.CopyService;
 import impl.org.controlsfx.skin.BreadCrumbBarSkin;
 import javafx.application.Platform;
 import javafx.beans.property.*;
@@ -28,10 +30,14 @@ import org.controlsfx.control.BreadCrumbBar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.*;
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -563,6 +569,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private ContextMenu createMultipleContextMenu(List<? extends TreeItem<N>> selectedTreeItems) {
         ContextMenu contextMenu = new ContextMenu();
         contextMenu.getItems().add(createDeleteNodeMenuItem(selectedTreeItems));
+        contextMenu.getItems().add(createCopyProjectNodeItem(selectedTreeItems));
         return contextMenu;
     }
 
@@ -571,6 +578,9 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         List<MenuItem> items = new ArrayList<>();
         items.add(createRenameProjectMenuItem());
         items.add(createCreateFolderMenuItem());
+        items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+        items.add(createCutProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+        items.add(createPasteProjectNodeItem(selectedTreeItem));
         items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
@@ -582,6 +592,8 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         ContextMenu contextMenu = new ContextMenu();
         List<MenuItem> items = new ArrayList<>();
         items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
+        items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+        items.add(createCutProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         items.add(createRenameProjectMenuItem());
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
@@ -620,8 +632,86 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         });
     }
 
+    private MenuItem createCopyProjectNodeItem(List<? extends TreeItem<N>> selectedTreeItems) {
+        MenuItem copyMenuItem = GseMenuItem.createCopyMenuItem();
+        copyMenuItem.setOnAction(event -> findCopyService(selectedTreeItems));
+        return copyMenuItem;
+    }
+
+    private MenuItem createCutProjectNodeItem(List<? extends TreeItem<N>> selectedTreeItems) {
+        MenuItem cutMenuItem = GseMenuItem.createCutMenuItem();
+        cutMenuItem.setOnAction(event -> {
+        });
+        return cutMenuItem;
+    }
+
+    private MenuItem createPasteProjectNodeItem(TreeItem<N> selectedTreeItem) {
+        MenuItem pasteMenuItem = GseMenuItem.createPasteMenuItem();
+        pasteMenuItem.setOnAction(event -> {
+            if (selectedTreeItem.getValue() instanceof Folder) {
+                Folder destinationFolder = (Folder) selectedTreeItem.getValue();
+                unarchiveNode(destinationFolder);
+                refresh(selectedTreeItem);
+                event.consume();
+            }
+        });
+        return pasteMenuItem;
+    }
+
+    private void unarchiveNode(Folder destinationFolder) {
+        final Clipboard clipboard = Clipboard.getSystemClipboard();
+        if (clipboard.hasString()) {
+            String[] array = clipboard.getString().split(CopyServiceConstants.PATH_LIST_SEPARATOR);
+            if (destinationFolder.isLocal()) {
+                for (String str : array) {
+                    copyArchive(str, destinationFolder);
+                }
+            } else {
+                for (String str : array) {
+                    destinationFolder.unarchive(Paths.get(str));
+                }
+            }
+        }
+    }
+
+    private void copyArchive(String str, Folder destFolder) {
+        String file = str.substring(str.lastIndexOf('/'));
+        String st = destFolder.getPath().toString();
+        String destFolderPath = st.substring(st.indexOf(':') + 1);
+        Path source = Paths.get(str);
+        Path dest = Paths.get(destFolderPath + file);
+        Stream<Path> walk = null;
+        try {
+            walk = Files.walk(source);
+            walk.forEach(src -> copy(src, dest.resolve(source.relativize(src))));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        } finally {
+            if (walk != null) {
+                walk.close();
+            }
+        }
+    }
+
+    private void findCopyService(List<? extends TreeItem<N>> selectedTreeItems) {
+        List<Node> nodes = selectedTreeItems.stream()
+                .map(item -> (Node) item.getValue())
+                .collect(Collectors.toList());
+        nodes.get(0).findService(CopyService.class).copy(nodes);
+    }
+
+    private static void copy(Path source, Path dest) {
+        try {
+            Files.copy(source, dest, StandardCopyOption.REPLACE_EXISTING);
+        } catch (DirectoryNotEmptyException ex) {
+            //GseAlerts.showDraggingError();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     private MenuItem createDeleteNodeMenuItem(List<? extends TreeItem<N>> selectedTreeItems) {
-        MenuItem deleteMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size(ICON_SIZE));
+        MenuItem deleteMenuItem = GseMenuItem.createDeleteMenuItem();
         if (selectedTreeItems.size() == 1) {
             TreeItem<N> selectedTreeItem = selectedTreeItems.get(0);
             N selectedTreeItemValue = selectedTreeItem.getValue();
@@ -640,9 +730,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             selectionContainsOpenedProjects(selectedTreeItems, deleteMenuItem);
         }
         deleteMenuItem.setOnAction(event -> createDeleteAlert(selectedTreeItems));
-        deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
         return deleteMenuItem;
-
     }
 
     private void selectionContainsOpenedProjects(List<? extends TreeItem<N>> selectedTreeItems, MenuItem menuItem) {

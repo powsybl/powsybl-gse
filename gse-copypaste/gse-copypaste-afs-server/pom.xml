@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>gse-copypaste</artifactId>
+        <groupId>com.powsybl</groupId>
+        <version>1.6.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>gse-copypaste-afs-server</artifactId>
+
+    <dependencies>
+        <!--<dependency>
+            <groupId>javax</groupId>
+            <artifactId>javaee-api</artifactId>
+            <scope>provided</scope>
+        </dependency>-->
+
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-afs-ws-server-utils</artifactId>
+            <version>${powsyblcore.version}</version>
+        </dependency>
+    </dependencies>
+
+
+</project>
