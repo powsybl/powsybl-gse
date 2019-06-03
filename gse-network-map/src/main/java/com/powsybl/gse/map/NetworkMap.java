@@ -125,6 +125,9 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
         Network network = projectCase.getNetwork();
         for (Substation substation : network.getSubstations()) {
             SubstationGraphic graphic = substations.get(substation.getId());
+            if (graphic == null && !substation.getId().equals(substation.getName())) {
+                graphic = substations.get(substation.getName());
+            }
             if (graphic != null) {
                 graphic.setModel(substation);
                 mappedSubstations++;
@@ -135,6 +138,9 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
         int mappedLines = 0;
         for (Line line : network.getLines()) {
             LineGraphic graphic = lines.get(line.getId());
+            if (graphic == null && !line.getId().equals(line.getName())) {
+                graphic = lines.get(line.getName());
+            }
             if (graphic != null) {
                 graphic.setModel(line);
                 mappedLines++;
