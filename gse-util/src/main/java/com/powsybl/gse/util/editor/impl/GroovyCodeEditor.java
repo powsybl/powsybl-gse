@@ -13,10 +13,6 @@ import com.powsybl.commons.exceptions.UncheckedClassNotFoundException;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.KeywordsProvider;
-import com.powsybl.gse.util.EquipmentInfo;
-import com.powsybl.gse.util.editor.AbstractCodeEditor;
-import com.powsybl.gse.util.editor.SearchBar;
-import com.powsybl.gse.util.editor.Searchable;
 import com.powsybl.iidm.network.Country;
 import com.powsybl.iidm.network.EnergySource;
 import groovyjarjarantlr.Token;
@@ -51,7 +47,16 @@ import java.io.StringReader;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Scanner;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -213,6 +218,21 @@ public class GroovyCodeEditor extends AbstractCodeEditor {
 
     private static boolean tokenIsBracket(String token) {
         return BRACKETS.contains(token.charAt(0));
+    }
+
+    public GroovyCodeEditor(Scene scene, List<String> keywordsSuggestions) {
+        this(scene);
+        optionalSuggestions = keywordsSuggestions;
+        autoCompletion = new AutoCompletion(codeArea);
+        codeArea.textProperty().addListener((observable, oldCode, newCode) -> {
+            autoCompletion.hide();
+            int caretPosition = codeArea.getCaretPosition();
+            Matcher nonWordMatcher = caretPosition >= 1 ? Pattern.compile("\\W").matcher(codeArea.getText(caretPosition - 1, caretPosition)) : null;
+            Matcher wordMatcher = caretPosition >= 2 ? Pattern.compile("\\w").matcher(codeArea.getText(caretPosition - 2, caretPosition - 1)) : null;
+            Matcher whiteSpaceMatcher = caretPosition >= 1 ? Pattern.compile("\\s").matcher(codeArea.getText(caretPosition - 1, caretPosition)) : null;
+            String lastToken = nonWordMatcher != null && nonWordMatcher.find() ? nonWordMatcher.group() : getLastToken(caretLineText());
+            autoComplete(caretPosition, wordMatcher, whiteSpaceMatcher, lastToken);
+        });
     }
 
     private void autoComplete(int caretPosition, Matcher wordMatcher, Matcher whiteSpaceMatcher, String lastToken) {

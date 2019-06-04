@@ -27,10 +27,7 @@ public class ActionScriptKeywordsExtension implements AutoCompletionWordsProvide
 
     @Override
     public Set<String> completionKeyWords() {
-        Set<String> keyWords = new HashSet<>();
-        keyWords.addAll(Constants.STANDARD_SUGGESTIONS);
-        keyWords.addAll(ImmutableSet.of("action", "apply", "contingency", "description", "equipments", "life", "rule", "tasks", "test", "when"));
-        return keyWords;
+        return ImmutableSet.of("action", "apply", "contingency", "description", "equipments", "life", "rule", "tasks", "test", "when");
     }
 
     @Override
