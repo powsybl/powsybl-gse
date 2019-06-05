@@ -61,8 +61,6 @@ public class ProjectPane extends Tab {
 
     private BooleanProperty copied = new SimpleBooleanProperty(false);
 
-    private List<AbstractNodeBase> copyNodes;
-
     private static class TabKey {
 
         private final String nodeId;
@@ -465,7 +463,6 @@ public class ProjectPane extends Tab {
     public ProjectPane(Scene scene, Project project, GseContext context) {
         this.project = Objects.requireNonNull(project);
         this.context = Objects.requireNonNull(context);
-        copyNodes = new ArrayList<>();
 
         taskItems = new TaskItemList(project, context);
         taskMonitorPane = new TaskMonitorPane(taskItems);
@@ -711,11 +708,7 @@ public class ProjectPane extends Tab {
 
     private MenuItem createCopyProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
         MenuItem copyMenuItem = GseMenuItem.createCopyMenuItem();
-        copyMenuItem.setOnAction(event -> {
-            findCopyService(selectedTreeItems);
-            copyNodes.clear();
-            selectedTreeItems.forEach(item -> copyNodes.add((AbstractNodeBase) item.getValue()));
-        });
+        copyMenuItem.setOnAction(event -> findCopyService(selectedTreeItems));
         List<TreeItem<Object>> selectedItems = new ArrayList<>(selectedTreeItems);
         copyMenuItem.setDisable(ancestorsExistIn(selectedItems) || selectedItems.contains(treeView.getRoot()));
         return copyMenuItem;
@@ -742,13 +735,14 @@ public class ProjectPane extends Tab {
                     String[] array = clipboard.getString().split(CopyServiceConstants.PATH_LIST_SEPARATOR);
                     for (String path : array) {
                         String[] pathArray = path.split("/");
+                        String fileId = pathArray[pathArray.length - 1];
                         String archiveParentPath = pathArray[pathArray.length - 2];
-                        boolean nameAlreadyExists = children.stream().anyMatch(child -> archiveParentPath.contains(child.getName()));
-                        if (nameAlreadyExists) {
-                            GseAlerts.showDraggingError();
-                            break;
-                        } else {
+                        String fileName = archiveParentPath.substring(0, archiveParentPath.length() - fileId.length());
+                        boolean nameAlreadyExists = children.stream().anyMatch(child -> fileName.equals(child.getName()));
+                        if (!nameAlreadyExists) {
                             projectFolder.unarchive(Paths.get(path));
+                        } else {
+                            pasteAndRename(projectFolder, children, path, fileName);
                         }
                     }
                     refresh(selectedTreeItem);
@@ -758,6 +752,49 @@ public class ProjectPane extends Tab {
         });
         pasteMenuItem.disableProperty().bind(copied.not());
         return pasteMenuItem;
+    }
+
+    private void pasteAndRename(ProjectFolder projectFolder, List<ProjectNode> children, String path, String fileName) {
+        String copyName = " - copie";
+        for (ProjectNode child : children) {
+            if (fileName.equals(child.getName())) {
+                String name = child.getName();
+                child.rename("temporaryName");
+                projectFolder.unarchive(Paths.get(path));
+                projectFolder.getChild(name).ifPresent(pNode -> {
+                    if (!name.contains(copyName) && !projectFolder.getChild(name + copyName).isPresent()) {
+                        pNode.rename(name + copyName);
+                        child.rename(name);
+                    } else {
+                        if (!name.contains(copyName)) {
+                            createCopyName(projectFolder, copyName, child, name, pNode);
+                        } else {
+                            createCopyName(projectFolder, "", child, name, pNode);
+                        }
+                    }
+                });
+                break;
+            }
+        }
+    }
+
+    private void createCopyName(ProjectFolder projectFolder, String copyName, ProjectNode child, String name, ProjectNode pNode) {
+        String lastCopyNode = projectFolder.getChildren().stream()
+                .map(ProjectNode::getName)
+                .filter(n -> n.startsWith(name + copyName))
+                .sorted(Comparator.reverseOrder())
+                .collect(Collectors.toList())
+                .get(0);
+
+        String substring = lastCopyNode.substring(lastCopyNode.indexOf(name + copyName) + name.length() + copyName.length());
+        if (substring.isEmpty()) {
+            pNode.rename(name + copyName + 2);
+            child.rename(name);
+        } else {
+            int i = Integer.parseInt(substring) + 1;
+            pNode.rename(name + copyName + i);
+            child.rename(name);
+        }
     }
 
     private void findCopyService(List<? extends TreeItem<Object>> selectedTreeItems) {
