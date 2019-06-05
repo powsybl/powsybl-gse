@@ -29,22 +29,14 @@ public class LocalCopyService implements CopyService {
         final Clipboard clipboard = Clipboard.getSystemClipboard();
         final ClipboardContent content = new ClipboardContent();
 
-    /*    if (nodes.size() == 1) {
-            AbstractNodeBase node = nodes.get(0);
+        StringBuilder localPaths = new StringBuilder();
+        for (AbstractNodeBase node : nodes) {
             String nodeId = node.getId();
             String archiveDirectory = nodeArchiveDirectory(node);
             archiveNode(node, nodeId, archiveDirectory);
-            content.putString(archiveDirectory + CopyServiceConstants.PATH_SEPARATOR + nodeId);
-        } else {*/
-            StringBuilder localPaths = new StringBuilder();
-            for (AbstractNodeBase node : nodes) {
-                String nodeId = node.getId();
-                String archiveDirectory = nodeArchiveDirectory(node);
-                archiveNode(node, nodeId, archiveDirectory);
-                localPaths.append(archiveDirectory).append(CopyServiceConstants.PATH_SEPARATOR).append(nodeId).append(CopyServiceConstants.PATH_LIST_SEPARATOR);
-            }
-            content.putString(localPaths.toString());
-      //  }
+            localPaths.append(archiveDirectory).append(CopyServiceConstants.PATH_SEPARATOR).append(nodeId).append(CopyServiceConstants.PATH_LIST_SEPARATOR);
+        }
+        content.putString(localPaths.toString());
         clipboard.setContent(content);
     }
 
