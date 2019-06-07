@@ -9,7 +9,6 @@ package com.powsybl.gse.afs.ext.base;
 import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.ext.base.ScriptListener;
 import com.powsybl.afs.ext.base.StorableScript;
-import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileViewer;
@@ -48,8 +47,6 @@ public class ModificationScriptEditor extends BorderPane
     private static final Logger LOGGER = LoggerFactory.getLogger(ModificationScriptEditor.class);
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ModificationScript");
-
-    private static final ServiceLoaderCache<AutoCompletionWordsProvider> AUTO_COMPLETION_WORDS_LOADER = new ServiceLoaderCache<>(AutoCompletionWordsProvider.class);
 
     private final GseContext context;
 
