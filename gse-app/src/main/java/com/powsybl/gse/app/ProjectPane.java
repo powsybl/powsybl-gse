@@ -732,19 +732,19 @@ public class ProjectPane extends Tab {
     }
 
     private void pasteAndRename(ProjectFolder projectFolder, List<ProjectNode> children, String path, String fileName) {
-        String copyName = " - copie";
+        String copy = " - " + RESOURCE_BUNDLE.getString("Copy");
         for (ProjectNode child : children) {
             if (fileName.equals(child.getName())) {
                 String name = child.getName();
                 child.rename("temporaryName");
                 projectFolder.unarchive(Paths.get(path));
                 projectFolder.getChild(name).ifPresent(pNode -> {
-                    if (!name.contains(copyName) && !projectFolder.getChild(name + copyName).isPresent()) {
-                        pNode.rename(name + copyName);
+                    if (!name.contains(copy) && !projectFolder.getChild(name + copy).isPresent()) {
+                        pNode.rename(name + copy);
                         child.rename(name);
                     } else {
-                        if (!name.contains(copyName)) {
-                            createCopyName(projectFolder, copyName, child, name, pNode);
+                        if (!name.contains(copy)) {
+                            createCopyName(projectFolder, copy, child, name, pNode);
                         } else {
                             createCopyName(projectFolder, "", child, name, pNode);
                         }
@@ -755,21 +755,21 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private void createCopyName(ProjectFolder projectFolder, String copyName, ProjectNode child, String name, ProjectNode pNode) {
+    private static void createCopyName(ProjectFolder projectFolder, String copy, ProjectNode child, String name, ProjectNode pNode) {
         String lastCopyNode = projectFolder.getChildren().stream()
                 .map(ProjectNode::getName)
-                .filter(n -> n.startsWith(name + copyName))
+                .filter(n -> n.startsWith(name + copy))
                 .sorted(Comparator.reverseOrder())
                 .collect(Collectors.toList())
                 .get(0);
 
-        String substring = lastCopyNode.substring(lastCopyNode.indexOf(name + copyName) + name.length() + copyName.length());
+        String substring = lastCopyNode.substring(lastCopyNode.indexOf(name + copy) + name.length() + copy.length());
         if (substring.isEmpty()) {
-            pNode.rename(name + copyName + 2);
+            pNode.rename(name + copy + 2);
             child.rename(name);
         } else {
             int i = Integer.parseInt(substring) + 1;
-            pNode.rename(name + copyName + i);
+            pNode.rename(name + copy + i);
             child.rename(name);
         }
     }
@@ -1072,8 +1072,8 @@ public class ProjectPane extends Tab {
             items.add(createRenameProjectNodeItem(selectedTreeItem));
             items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
             items.add(createCutProjectNodeItem(Collections.singletonList(selectedTreeItem)));
-            items.add(createPasteProjectNodeItem(selectedTreeItem));
         }
+        items.add(createPasteProjectNodeItem(selectedTreeItem));
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
                 .collect(Collectors.toList()));
