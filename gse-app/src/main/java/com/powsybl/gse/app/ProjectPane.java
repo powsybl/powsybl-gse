@@ -35,6 +35,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Callback;
+import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +59,8 @@ public class ProjectPane extends Tab {
     private static final ServiceLoaderCache<ProjectFileEditorExtension> EDITOR_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileEditorExtension.class);
 
     private static final ServiceLoaderCache<ProjectFileViewerExtension> VIEWER_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileViewerExtension.class);
+
+    private static final ServiceLoaderCache<ProjectFileBuilderExtension> BUILDER_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileBuilderExtension.class);
 
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
 
@@ -637,6 +640,12 @@ public class ProjectPane extends Tab {
                 .collect(Collectors.toList());
     }
 
+    private static List<ProjectFileBuilderExtension> findBuilderExtension(Class<?> type) {
+        return BUILDER_EXTENSION_LOADER.getServices().stream()
+                .filter(extension -> extension.getProjectFileBuilderType().isAssignableFrom(type))
+                .collect(Collectors.toList());
+    }
+
     // contextual menu
 
     private MenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
@@ -709,17 +718,47 @@ public class ProjectPane extends Tab {
 
                 final Clipboard clipboard = Clipboard.getSystemClipboard();
                 if (clipboard.hasString()) {
-                    String[] array = clipboard.getString().split(CopyServiceConstants.PATH_LIST_SEPARATOR);
-                    for (String path : array) {
-                        String[] pathArray = path.split("/");
-                        String fileId = pathArray[pathArray.length - 1];
-                        String archiveParentPath = pathArray[pathArray.length - 2];
-                        String fileName = archiveParentPath.substring(0, archiveParentPath.length() - fileId.length());
-                        boolean nameAlreadyExists = children.stream().anyMatch(child -> fileName.equals(child.getName()));
-                        if (!nameAlreadyExists) {
-                            projectFolder.unarchive(Paths.get(path));
+                    String copyInfos = clipboard.getString();
+                    String[] array = copyInfos.split(CopyServiceConstants.PATH_LIST_SEPARATOR);
+                    String rootFolderId = array[0];
+                    String[] copyArray = ArrayUtils.remove(array, 0);
+
+                    for (String path : copyArray) {
+                        if (!path.contains(CopyServiceConstants.DEPENDENCY_SEPARATOR)) {
+                            //simple node
+                            unarchiveAndRename(projectFolder, children, path);
                         } else {
-                            pasteAndRename(projectFolder, children, path, fileName);
+                            //node with dependencies
+
+                            String[] dependencyArray = path.split(CopyServiceConstants.DEPENDENCY_SEPARATOR);
+                            String nodeArchiveDirectory = dependencyArray[0];
+                            String nodeDependenciesNames = dependencyArray[1];
+                            String[] dependenciesNamesArray = nodeDependenciesNames.split(CopyServiceConstants.PATH_SEPARATOR);
+                            //node informations
+                            String nodeName = dependenciesNamesArray[0];
+                            String nodeType = dependenciesNamesArray[1];
+                            //node dependencies
+                            String primaryStorePath = dependenciesNamesArray[2];
+                            String secondaryStorePath = dependenciesNamesArray[3];
+                            List<String> dependenciesNames = new ArrayList<>();
+                            for (int i = 3; i < dependenciesNamesArray.length; i++) {
+                                dependenciesNames.add(dependenciesNamesArray[i]);
+
+                            }
+
+                            if(rootFolderId.equals(projectFolder.getProject().getRootFolder().getId())) {
+                                //copy paste in the same project
+                                Optional<ProjectNode> dependency1 = projectFolder.getChild(primaryStorePath);
+                                Optional<ProjectNode> dependency2 = projectFolder.getChild(secondaryStorePath);
+                                if(dependency1.isPresent() && dependency2.isPresent()) {
+                                    buildFileWithDependencies(projectFolder, nodeName, nodeType, primaryStorePath, secondaryStorePath);
+                                } else {
+                                    unarchiveAndRename(projectFolder, children, nodeArchiveDirectory);
+                                }
+                            } else {
+                                //copy paste in two projects
+                                buildFileWithDependencies(projectFolder, nodeName, nodeType, primaryStorePath, secondaryStorePath);
+                            }
                         }
                     }
                     refresh(selectedTreeItem);
@@ -729,6 +768,38 @@ public class ProjectPane extends Tab {
         });
         pasteMenuItem.disableProperty().bind(copied.not());
         return pasteMenuItem;
+    }
+
+    private void buildFileWithDependencies(ProjectFolder projectFolder, String nodeName, String nodeType, String primaryStorePath, String secondaryStorePath) {
+        Class<?> aClass = null;
+        try {
+            aClass = Class.forName(nodeType);
+            String nodePath = projectFolder == treeView.getRoot().getValue() ? "" : projectFolder.getPath().toString() + CopyServiceConstants.PATH_SEPARATOR;
+            for (ProjectFileBuilderExtension creatorExtension : findBuilderExtension(aClass)) {
+                if (creatorExtension != null) {
+                    try {
+                        creatorExtension.buildFile(projectFolder, nodeName, nodePath + primaryStorePath, nodePath + secondaryStorePath);
+                    } catch (AfsException ex) {
+                        // to implement
+                    }
+                }
+            }
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void unarchiveAndRename(ProjectFolder projectFolder, List<ProjectNode> children, String path) {
+        String[] pathArray = path.split("/");
+        String fileId = pathArray[pathArray.length - 1];
+        String archiveParentPath = pathArray[pathArray.length - 2];
+        String fileName = archiveParentPath.substring(0, archiveParentPath.length() - fileId.length());
+        boolean nameAlreadyExists = children.stream().anyMatch(child -> fileName.equals(child.getName()));
+        if (!nameAlreadyExists) {
+            projectFolder.unarchive(Paths.get(path));
+        } else {
+            pasteAndRename(projectFolder, children, path, fileName);
+        }
     }
 
     private void pasteAndRename(ProjectFolder projectFolder, List<ProjectNode> children, String path, String fileName) {
