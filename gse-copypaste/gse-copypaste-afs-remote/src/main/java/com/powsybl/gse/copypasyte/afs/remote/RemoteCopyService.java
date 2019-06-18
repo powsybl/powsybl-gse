@@ -21,4 +21,10 @@ public class RemoteCopyService implements CopyService {
     public void copy(List<? extends AbstractNodeBase> nodes) {
         System.out.println("RemoteCopyService.copy");
     }
+
+    @Override
+    public void deepCopy(List<? extends AbstractNodeBase> nodes) {
+        System.out.println("RemoteCopyService.deepCopy");
+    }
+
 }
