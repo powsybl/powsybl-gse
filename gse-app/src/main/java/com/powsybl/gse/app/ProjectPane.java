@@ -710,7 +710,12 @@ public class ProjectPane extends Tab {
                 final Clipboard clipboard = Clipboard.getSystemClipboard();
                 if (clipboard.hasString()) {
                     String copyInfos = clipboard.getString();
+
+                    //the PATH_LIST_SEPARATOR delimiter separates the copied nodes paths
                     String[] array = copyInfos.split(CopyServiceConstants.PATH_LIST_SEPARATOR);
+
+                    // the first index represents the root folder's id, the second one represents the copy signature
+                    //the last indexes represents the copied nodes archive directory paths
                     String rootFolderId = array[0];
                     String[] copyArray = ArrayUtils.remove(ArrayUtils.remove(array, 0), 0);
                     pasteNode(projectFolder, children, rootFolderId, copyArray);
@@ -725,6 +730,7 @@ public class ProjectPane extends Tab {
 
     private void pasteNode(ProjectFolder projectFolder, List<ProjectNode> children, String rootFolderId, String[] copyArray) {
         for (String path : copyArray) {
+            // the DEPENDENCY_SEPARATOR delimiter only concerns nodes with dependencies
             if (!path.contains(CopyServiceConstants.DEPENDENCY_SEPARATOR)) {
                 //simple node
                 unarchiveAndRename(projectFolder, children, path);
@@ -757,7 +763,7 @@ public class ProjectPane extends Tab {
         }
 
         if (rootFolderId.equals(projectFolder.getProject().getRootFolder().getId())) {
-            //copy paste in the same project
+            //copy and paste in the same project
             Optional<ProjectNode> dependency1 = projectFolder.getChild(primaryStorePath);
             if (dependency1.isPresent() && !dependenciesAreMissingIn(projectFolder, additionalStores)) {
                 buildFileWithDependencies(projectFolder, nodeName, nodeType, primaryStorePath, secondaryStorePath, additionalStores);
@@ -765,7 +771,7 @@ public class ProjectPane extends Tab {
                 unarchiveAndRename(projectFolder, children, nodeArchiveDirectory);
             }
         } else {
-            //copy paste in two projects
+            //copy and paste in two projects
             buildFileWithDependencies(projectFolder, nodeName, nodeType, primaryStorePath, secondaryStorePath, additionalStores);
         }
     }
@@ -798,7 +804,7 @@ public class ProjectPane extends Tab {
     }
 
     private void unarchiveAndRename(ProjectFolder projectFolder, List<ProjectNode> children, String path) {
-        String[] pathArray = path.split("/");
+        String[] pathArray = path.split(CopyServiceConstants.PATH_SEPARATOR);
         String fileId = pathArray[pathArray.length - 1];
         String archiveParentPath = pathArray[pathArray.length - 2];
         String fileName = archiveParentPath.substring(0, archiveParentPath.length() - fileId.length());
@@ -823,9 +829,9 @@ public class ProjectPane extends Tab {
                         child.rename(name);
                     } else {
                         if (!name.contains(copy)) {
-                            createCopyName(projectFolder, copy, child, name, pNode);
+                            renameCopiedNode(projectFolder, copy, child, name, pNode);
                         } else {
-                            createCopyName(projectFolder, "", child, name, pNode);
+                            renameCopiedNode(projectFolder, "", child, name, pNode);
                         }
                     }
                 });
@@ -834,7 +840,7 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private static void createCopyName(ProjectFolder projectFolder, String copy, ProjectNode child, String name, ProjectNode pNode) {
+    private static void renameCopiedNode(ProjectFolder projectFolder, String copy, ProjectNode child, String name, ProjectNode pNode) {
         String lastCopyNode = projectFolder.getChildren().stream()
                 .map(ProjectNode::getName)
                 .filter(n -> n.startsWith(name + copy))
