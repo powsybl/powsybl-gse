@@ -507,7 +507,7 @@ public class ProjectPane extends Tab {
             @Override
             public void contentChanged() {
                 if (systemClipboard != null && systemClipboard.hasString() && systemClipboard.getString() != null) {
-                    copied.set(systemClipboard.getString().contains(CopyServiceConstants.LOCAL_DIR));
+                    copied.set(systemClipboard.getString().contains(CopyServiceConstants.COPY_SIGNATURE));
                 }
             }
         };
@@ -700,15 +700,6 @@ public class ProjectPane extends Tab {
         return copyMenuItem;
     }
 
-    private MenuItem createCutProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
-        MenuItem cutMenuItem = GseMenuItem.createCutMenuItem();
-        cutMenuItem.setOnAction(event -> {
-        });
-        List<TreeItem<Object>> selectedItems = new ArrayList<>(selectedTreeItems);
-        cutMenuItem.setDisable(ancestorsExistIn(selectedItems) || selectedItems.contains(treeView.getRoot()));
-        return cutMenuItem;
-    }
-
     private MenuItem createPasteProjectNodeItem(TreeItem<Object> selectedTreeItem) {
         MenuItem pasteMenuItem = GseMenuItem.createPasteMenuItem();
         pasteMenuItem.setOnAction(event -> {
@@ -721,46 +712,8 @@ public class ProjectPane extends Tab {
                     String copyInfos = clipboard.getString();
                     String[] array = copyInfos.split(CopyServiceConstants.PATH_LIST_SEPARATOR);
                     String rootFolderId = array[0];
-                    String[] copyArray = ArrayUtils.remove(array, 0);
-
-                    for (String path : copyArray) {
-                        if (!path.contains(CopyServiceConstants.DEPENDENCY_SEPARATOR)) {
-                            //simple node
-                            unarchiveAndRename(projectFolder, children, path);
-                        } else {
-                            //node with dependencies
-
-                            String[] dependencyArray = path.split(CopyServiceConstants.DEPENDENCY_SEPARATOR);
-                            String nodeArchiveDirectory = dependencyArray[0];
-                            String nodeDependenciesNames = dependencyArray[1];
-                            String[] dependenciesNamesArray = nodeDependenciesNames.split(CopyServiceConstants.PATH_SEPARATOR);
-                            //node informations
-                            String nodeName = dependenciesNamesArray[0];
-                            String nodeType = dependenciesNamesArray[1];
-                            //node dependencies
-                            String primaryStorePath = dependenciesNamesArray[2];
-                            String secondaryStorePath = dependenciesNamesArray[3];
-                            List<String> dependenciesNames = new ArrayList<>();
-                            for (int i = 3; i < dependenciesNamesArray.length; i++) {
-                                dependenciesNames.add(dependenciesNamesArray[i]);
-
-                            }
-
-                            if(rootFolderId.equals(projectFolder.getProject().getRootFolder().getId())) {
-                                //copy paste in the same project
-                                Optional<ProjectNode> dependency1 = projectFolder.getChild(primaryStorePath);
-                                Optional<ProjectNode> dependency2 = projectFolder.getChild(secondaryStorePath);
-                                if(dependency1.isPresent() && dependency2.isPresent()) {
-                                    buildFileWithDependencies(projectFolder, nodeName, nodeType, primaryStorePath, secondaryStorePath);
-                                } else {
-                                    unarchiveAndRename(projectFolder, children, nodeArchiveDirectory);
-                                }
-                            } else {
-                                //copy paste in two projects
-                                buildFileWithDependencies(projectFolder, nodeName, nodeType, primaryStorePath, secondaryStorePath);
-                            }
-                        }
-                    }
+                    String[] copyArray = ArrayUtils.remove(ArrayUtils.remove(array, 0), 0);
+                    pasteNode(projectFolder, children, rootFolderId, copyArray);
                     refresh(selectedTreeItem);
                 }
                 event.consume();
@@ -770,22 +723,77 @@ public class ProjectPane extends Tab {
         return pasteMenuItem;
     }
 
-    private void buildFileWithDependencies(ProjectFolder projectFolder, String nodeName, String nodeType, String primaryStorePath, String secondaryStorePath) {
-        Class<?> aClass = null;
+    private void pasteNode(ProjectFolder projectFolder, List<ProjectNode> children, String rootFolderId, String[] copyArray) {
+        for (String path : copyArray) {
+            if (!path.contains(CopyServiceConstants.DEPENDENCY_SEPARATOR)) {
+                //simple node
+                unarchiveAndRename(projectFolder, children, path);
+            } else {
+                //node with dependencies
+                rebuildNode(projectFolder, children, rootFolderId, path);
+            }
+        }
+    }
+
+    private void rebuildNode(ProjectFolder projectFolder, List<ProjectNode> children, String rootFolderId, String path) {
+        String[] dependencyArray = path.split(CopyServiceConstants.DEPENDENCY_SEPARATOR);
+        String nodeArchiveDirectory = dependencyArray[0];
+        String nodeDependenciesNames = dependencyArray[1];
+        String[] dependenciesNamesArray = nodeDependenciesNames.split(CopyServiceConstants.PATH_SEPARATOR);
+        //node informations
+        String nodeName = dependenciesNamesArray[0];
+        String nodeType = dependenciesNamesArray[1];
+        //node dependencies
+        String primaryStorePath = dependenciesNamesArray[2];
+        String secondaryStorePath = "";
+        if (dependenciesNamesArray.length >= 4) {
+            secondaryStorePath = dependenciesNamesArray[3];
+        }
+        List<String> additionalStores = new ArrayList<>();
+        if (dependenciesNamesArray.length > 4) {
+            for (int i = 4; i < dependenciesNamesArray.length; i++) {
+                additionalStores.add(dependenciesNamesArray[i]);
+            }
+        }
+
+        if (rootFolderId.equals(projectFolder.getProject().getRootFolder().getId())) {
+            //copy paste in the same project
+            Optional<ProjectNode> dependency1 = projectFolder.getChild(primaryStorePath);
+            if (dependency1.isPresent() && !dependenciesAreMissingIn(projectFolder, additionalStores)) {
+                buildFileWithDependencies(projectFolder, nodeName, nodeType, primaryStorePath, secondaryStorePath, additionalStores);
+            } else {
+                unarchiveAndRename(projectFolder, children, nodeArchiveDirectory);
+            }
+        } else {
+            //copy paste in two projects
+            buildFileWithDependencies(projectFolder, nodeName, nodeType, primaryStorePath, secondaryStorePath, additionalStores);
+        }
+    }
+
+    private static boolean dependenciesAreMissingIn(ProjectFolder projectFolder, List<String> dependencies) {
+        return dependencies.stream().anyMatch(dependence -> !projectFolder.getChild(dependence).isPresent());
+    }
+
+    private void buildFileWithDependencies(ProjectFolder projectFolder, String nodeName, String nodeType, String primaryStorePath, String secondaryStorePath, List<String> additionalStores) {
+        Class<?> cls = null;
         try {
-            aClass = Class.forName(nodeType);
-            String nodePath = projectFolder == treeView.getRoot().getValue() ? "" : projectFolder.getPath().toString() + CopyServiceConstants.PATH_SEPARATOR;
-            for (ProjectFileBuilderExtension creatorExtension : findBuilderExtension(aClass)) {
-                if (creatorExtension != null) {
-                    try {
-                        creatorExtension.buildFile(projectFolder, nodeName, nodePath + primaryStorePath, nodePath + secondaryStorePath);
-                    } catch (AfsException ex) {
-                        // to implement
-                    }
+            cls = Class.forName(nodeType);
+            for (ProjectFileBuilderExtension builderExtension : findBuilderExtension(cls)) {
+                if (builderExtension != null) {
+                    buildFile(projectFolder, nodeName, primaryStorePath, secondaryStorePath, additionalStores, builderExtension);
                 }
             }
         } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+            throw new IllegalArgumentException("Invalid class name");
+        }
+    }
+
+    private void buildFile(ProjectFolder projectFolder, String nodeName, String primaryStorePath, String secondaryStorePath, List<String> additionalStores, ProjectFileBuilderExtension builderExtension) {
+        try {
+            builderExtension.buildFile(projectFolder, nodeName, primaryStorePath, secondaryStorePath, additionalStores);
+        } catch (AfsException ex) {
+            // to implement
+            LOGGER.warn("To implement");
         }
     }
 
@@ -1054,7 +1062,6 @@ public class ProjectPane extends Tab {
         contextMenu.getItems().add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         contextMenu.getItems().add(createRenameProjectNodeItem(selectedTreeItem));
         contextMenu.getItems().add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
-        contextMenu.getItems().add(createCutProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         return contextMenu;
     }
 
@@ -1142,7 +1149,6 @@ public class ProjectPane extends Tab {
             items.add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
             items.add(createRenameProjectNodeItem(selectedTreeItem));
             items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
-            items.add(createCutProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         }
         items.add(createPasteProjectNodeItem(selectedTreeItem));
         contextMenu.getItems().addAll(items.stream()
