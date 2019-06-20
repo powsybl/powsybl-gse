@@ -7,6 +7,7 @@
 package com.powsybl.gse.copypaste.afs.local;
 
 import com.powsybl.afs.*;
+import com.powsybl.gse.copypaste.afs.CopyModel;
 import com.powsybl.gse.copypaste.afs.CopyService;
 import com.powsybl.gse.copypaste.afs.CopyServiceConstants;
 import javafx.scene.input.Clipboard;
@@ -29,14 +30,22 @@ public class LocalCopyService implements CopyService {
     public void copy(List<? extends AbstractNodeBase> nodes) {
         StringBuilder copyPaths = new StringBuilder();
         addRootId(nodes, copyPaths);
+        copyPaths.append(CopyServiceConstants.COPY_SIGNATURE).append(CopyServiceConstants.PATH_LIST_SEPARATOR);
+
+        //single nodes
         for (AbstractNodeBase node : nodes) {
-            if(!isDependent(node)) {
+            if (node instanceof Folder && node.isInLocalFileSystem()) {
+                String path = node.getPath().toString().replace("/:", "");
+                copyPaths.append(path).append(CopyServiceConstants.PATH_LIST_SEPARATOR);
+            } else if (!isDependent(node)) {
                 archiveAndCopy(copyPaths, node);
                 copyPaths.append(CopyServiceConstants.PATH_LIST_SEPARATOR);
             }
         }
+
+        //nodes with dependencies
         for (AbstractNodeBase node : nodes) {
-            if(isDependent(node)) {
+            if (isDependent(node)) {
                 List<ProjectDependency<ProjectNode>> dependencies = ((ProjectFile) node).getDependencies();
                 archiveAndCopy(copyPaths, node);
 
@@ -50,7 +59,11 @@ public class LocalCopyService implements CopyService {
     }
 
 
-
+    /**
+     * copy specified nodes with their dependencies
+     *
+     * @param nodes
+     */
     @Override
     public void deepCopy(List<? extends AbstractNodeBase> nodes) {
         StringBuilder copyPaths = new StringBuilder();
@@ -75,19 +88,18 @@ public class LocalCopyService implements CopyService {
     }
 
     private static void addRootId(List<? extends AbstractNodeBase> nodes, StringBuilder copyPaths) {
-        AbstractNodeBase abstractNodeBase = nodes.get(0);
-        if(abstractNodeBase instanceof ProjectNode) {
-            ProjectFolder rootFolder = ((ProjectNode) abstractNodeBase).getProject().getRootFolder();
+        AbstractNodeBase absNode = nodes.get(0);
+        if (absNode instanceof ProjectNode) {
+            ProjectFolder rootFolder = ((ProjectNode) absNode).getProject().getRootFolder();
             copyPaths.append(rootFolder.getId()).append(CopyServiceConstants.PATH_LIST_SEPARATOR);
         } else {
-            Folder rootFolder = ((Node) abstractNodeBase).getFileSystem().getRootFolder();
+            Folder rootFolder = ((Node) absNode).getFileSystem().getRootFolder();
             copyPaths.append(rootFolder.getId()).append(CopyServiceConstants.PATH_LIST_SEPARATOR);
         }
     }
 
-
     private static boolean isDependent(AbstractNodeBase node) {
-        return node instanceof ProjectFile && !((ProjectFile)node).getDependencies().isEmpty();
+        return node instanceof ProjectFile && !((ProjectFile) node).getDependencies().isEmpty();
     }
 
     private static void archiveAndCopy(StringBuilder copyPaths, AbstractNodeBase node) {

@@ -4,19 +4,21 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.gse.spi;
-
-import com.powsybl.afs.ProjectFolder;
-
-import java.util.List;
+package com.powsybl.gse.copypaste.afs;
 
 /**
  * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
  */
-public interface ProjectFileBuilderExtension {
+public class CopyModel {
 
-    Class<?> getProjectFileBuilderType();
+    private final StringBuilder copyPaths ;
 
-    void buildFile(ProjectFolder foldr, String name, String primaryStorePath, String secondaryStorePath, List<String> additionalPaths);
+    public CopyModel() {
+        copyPaths = new StringBuilder();
+    }
+
+    public void add(String value) {
+        copyPaths.append(value);
+    }
 
 }
