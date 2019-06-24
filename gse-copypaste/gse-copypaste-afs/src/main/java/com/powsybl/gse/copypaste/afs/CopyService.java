@@ -17,6 +17,4 @@ public interface CopyService {
 
     void copy(List<? extends AbstractNodeBase> nodes);
 
-    void deepCopy(List<? extends AbstractNodeBase> nodes);
-
 }

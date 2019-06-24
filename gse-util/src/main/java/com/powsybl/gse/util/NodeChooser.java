@@ -633,13 +633,16 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private MenuItem createCopyProjectNodeItem(List<? extends TreeItem<N>> selectedTreeItems) {
         MenuItem copyMenuItem = GseMenuItem.createCopyMenuItem();
-        boolean atLeastOneIsNotAnArchiveFolder = selectedTreeItems.stream().map(treeItem -> (N) treeItem.getValue())
-                .filter(val -> val instanceof Folder && ((AbstractNodeBase) val).isInLocalFileSystem())
-                .map(folder -> new java.io.File(((Folder) folder).getPath().toString().replace("/:", "")))
-                .anyMatch(this::isNotAnArchiveFolder);
-        copyMenuItem.setDisable(atLeastOneIsNotAnArchiveFolder);
+        copyMenuItem.setDisable(selectionContainsNonArchiveFolder(selectedTreeItems));
         copyMenuItem.setOnAction(event -> findCopyService(selectedTreeItems));
         return copyMenuItem;
+    }
+
+    private  boolean selectionContainsNonArchiveFolder(List<? extends TreeItem<N>> selectedTreeItems) {
+        return selectedTreeItems.stream().map(treeItem -> (N) treeItem.getValue())
+                    .filter(val -> val instanceof Folder && ((AbstractNodeBase) val).isInLocalFileSystem())
+                    .map(folder -> new java.io.File(((Folder) folder).getPath().toString().replace("/:", "")))
+                    .anyMatch(this::isNotAnArchiveFolder);
     }
 
     private boolean isNotAnArchiveFolder(java.io.File file) {
@@ -658,7 +661,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             }
         });
         final Clipboard systemClipboard = Clipboard.getSystemClipboard();
-        if (systemClipboard != null && systemClipboard.hasString()) {
+        if (systemClipboard != null && systemClipboard.hasString() && systemClipboard.getString() != null) {
             pasteMenuItem.setDisable(!systemClipboard.getString().contains(CopyServiceConstants.COPY_SIGNATURE));
         }
         return pasteMenuItem;
@@ -669,15 +672,13 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         if (clipboard.hasString()) {
             String copyInfos = clipboard.getString();
             String[] array = copyInfos.split(CopyServiceConstants.PATH_LIST_SEPARATOR);
-            String[] copyArray = ArrayUtils.remove(ArrayUtils.remove(array, 0), 0);
+            String[] copyArray = ArrayUtils.remove(array, 0);
 
             for (String str : copyArray) {
-                if (!str.contains(CopyServiceConstants.DEPENDENCY_SEPARATOR)) {
-                    if (destinationFolder.isInLocalFileSystem()) {
-                        copyArchive(str, destinationFolder);
-                    } else {
-                        destinationFolder.unarchive(Paths.get(str));
-                    }
+                if (destinationFolder.isInLocalFileSystem()) {
+                    copyArchive(str, destinationFolder);
+                } else {
+                    destinationFolder.unarchive(Paths.get(str));
                 }
             }
         }

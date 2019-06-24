@@ -26,10 +26,4 @@ public class LocalCopyService implements CopyService {
         copyModel.copy(nodes);
     }
 
-    @Override
-    public void deepCopy(List<? extends AbstractNodeBase> nodes) {
-        copyModel.deepCopy(nodes);
-    }
-
-
 }

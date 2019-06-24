@@ -30,14 +30,11 @@ public final class CopyModel {
     }
 
     /**
-     *
      * @param nodes the nodes to copy
      */
     public void copy(List<? extends AbstractNodeBase> nodes) {
         StringBuilder copyParameters = new StringBuilder();
 
-        //add the copy informations
-        addRootId(nodes, copyParameters);
         copyParameters.append(CopyServiceConstants.COPY_SIGNATURE).append(CopyServiceConstants.PATH_LIST_SEPARATOR);
 
         //copy single nodes
@@ -45,68 +42,12 @@ public final class CopyModel {
             if (node instanceof Folder && node.isInLocalFileSystem()) {
                 String path = node.getPath().toString().replace("/:", "");
                 copyParameters.append(path).append(CopyServiceConstants.PATH_LIST_SEPARATOR);
-            } else if (!isAdependent(node)) {
-                archiveAndCopy(copyParameters, node);
-                copyParameters.append(CopyServiceConstants.PATH_LIST_SEPARATOR);
-            }
-        }
-
-        //copy nodes with dependencies
-        for (AbstractNodeBase node : nodes) {
-            if (isAdependent(node)) {
-                List<ProjectDependency<ProjectNode>> dependencies = ((ProjectFile) node).getDependencies();
-                archiveAndCopy(copyParameters, node);
-
-                copyParameters.append(CopyServiceConstants.DEPENDENCY_SEPARATOR);
-                copyParameters.append(node.getName()).append(CopyServiceConstants.PATH_SEPARATOR).append(node.getClass().getName());
-                dependencies.forEach(dependence -> copyParameters.append(CopyServiceConstants.PATH_SEPARATOR).append(dependence.getProjectNode().getName()));
-                copyParameters.append(CopyServiceConstants.PATH_LIST_SEPARATOR);
-            }
-        }
-        setClipboardContent(copyParameters);
-    }
-
-    /**
-     * copy specified nodes with their dependencies
-     *
-     * @param nodes the nodes to copy
-     */
-    public void deepCopy(List<? extends AbstractNodeBase> nodes) {
-        StringBuilder copyParameters = new StringBuilder();
-        for (AbstractNodeBase node : nodes) {
-            if (isAdependent(node)) {
-
-                List<ProjectDependency<ProjectNode>> dependencies = ((ProjectFile) node).getDependencies();
-                dependencies.forEach(dependence -> {
-                    ProjectNode projectNode = dependence.getProjectNode();
-                    archiveAndCopy(copyParameters, projectNode);
-                    copyParameters.append(CopyServiceConstants.PATH_LIST_SEPARATOR);
-                });
-
-                copyParameters.append(node.getName()).append(CopyServiceConstants.DEPENDENCY_SEPARATOR).append(node.getClass().getName());
-                dependencies.forEach(dep -> copyParameters.append(CopyServiceConstants.DEPENDENCY_SEPARATOR).append(dep.getProjectNode().getName()));
-                copyParameters.append(CopyServiceConstants.PATH_LIST_SEPARATOR);
             } else {
                 archiveAndCopy(copyParameters, node);
+                copyParameters.append(CopyServiceConstants.PATH_LIST_SEPARATOR);
             }
-
         }
         setClipboardContent(copyParameters);
-    }
-
-    private static void addRootId(List<? extends AbstractNodeBase> nodes, StringBuilder copyPaths) {
-        AbstractNodeBase absNode = nodes.get(0);
-        if (absNode instanceof ProjectNode) {
-            ProjectFolder rootFolder = ((ProjectNode) absNode).getProject().getRootFolder();
-            copyPaths.append(rootFolder.getId()).append(CopyServiceConstants.PATH_LIST_SEPARATOR);
-        } else {
-            Folder rootFolder = ((Node) absNode).getFileSystem().getRootFolder();
-            copyPaths.append(rootFolder.getId()).append(CopyServiceConstants.PATH_LIST_SEPARATOR);
-        }
-    }
-
-    private static boolean isAdependent(AbstractNodeBase node) {
-        return node instanceof ProjectFile && !((ProjectFile) node).getDependencies().isEmpty();
     }
 
     private void archiveAndCopy(StringBuilder copyPaths, AbstractNodeBase node) {
