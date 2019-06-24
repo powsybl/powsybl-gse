@@ -60,8 +60,6 @@ public class ProjectPane extends Tab {
 
     private static final ServiceLoaderCache<ProjectFileViewerExtension> VIEWER_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileViewerExtension.class);
 
-    private static final ServiceLoaderCache<ProjectFileBuilderExtension> BUILDER_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileBuilderExtension.class);
-
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
 
     private final KeyCombination saveKeyCombination = new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
@@ -640,12 +638,6 @@ public class ProjectPane extends Tab {
                 .collect(Collectors.toList());
     }
 
-    private static List<ProjectFileBuilderExtension> findBuilderExtension(Class<?> type) {
-        return BUILDER_EXTENSION_LOADER.getServices().stream()
-                .filter(extension -> extension.getProjectFileBuilderType().isAssignableFrom(type))
-                .collect(Collectors.toList());
-    }
-
     // contextual menu
 
     private MenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
@@ -696,8 +688,15 @@ public class ProjectPane extends Tab {
         MenuItem copyMenuItem = GseMenuItem.createCopyMenuItem();
         copyMenuItem.setOnAction(event -> findCopyService(selectedTreeItems));
         List<TreeItem<Object>> selectedItems = new ArrayList<>(selectedTreeItems);
-        copyMenuItem.setDisable(ancestorsExistIn(selectedItems) || selectedItems.contains(treeView.getRoot()));
+        copyMenuItem.setDisable(ancestorsExistIn(selectedItems) || selectedItems.contains(treeView.getRoot()) || selectedNodesHaveDependencies(selectedTreeItems));
         return copyMenuItem;
+    }
+
+    private boolean selectedNodesHaveDependencies(List<? extends TreeItem<Object>> selectedTreeItems) {
+        return selectedTreeItems.stream()
+                .map(item -> (ProjectNode) item.getValue())
+                .filter(projectNode -> !projectNode.isFolder())
+                .anyMatch(projectFile -> !((ProjectFile) projectFile).getDependencies().isEmpty());
     }
 
     private MenuItem createPasteProjectNodeItem(TreeItem<Object> selectedTreeItem) {
@@ -714,11 +713,14 @@ public class ProjectPane extends Tab {
                     //the PATH_LIST_SEPARATOR delimiter separates the copied nodes paths
                     String[] array = copyInfos.split(CopyServiceConstants.PATH_LIST_SEPARATOR);
 
-                    // the first index represents the root folder's id, the second one represents the copy signature
+                    // the first index  represents the copy signature
                     //the last indexes represents the copied nodes archive directory paths
-                    String rootFolderId = array[0];
-                    String[] copyArray = ArrayUtils.remove(ArrayUtils.remove(array, 0), 0);
-                    pasteNode(projectFolder, children, rootFolderId, copyArray);
+                    String[] copyArray = ArrayUtils.remove(array, 0);
+
+                    for (String path : copyArray) {
+                        unarchiveAndRename(projectFolder, children, path);
+                    }
+
                     refresh(selectedTreeItem);
                 }
                 event.consume();
@@ -726,81 +728,6 @@ public class ProjectPane extends Tab {
         });
         pasteMenuItem.disableProperty().bind(copied.not());
         return pasteMenuItem;
-    }
-
-    private void pasteNode(ProjectFolder projectFolder, List<ProjectNode> children, String rootFolderId, String[] copyArray) {
-        for (String path : copyArray) {
-            // the DEPENDENCY_SEPARATOR delimiter only concerns nodes with dependencies
-            if (!path.contains(CopyServiceConstants.DEPENDENCY_SEPARATOR)) {
-                //simple node
-                unarchiveAndRename(projectFolder, children, path);
-            } else {
-                //node with dependencies
-                rebuildNode(projectFolder, children, rootFolderId, path);
-            }
-        }
-    }
-
-    private void rebuildNode(ProjectFolder projectFolder, List<ProjectNode> children, String rootFolderId, String path) {
-        String[] dependencyArray = path.split(CopyServiceConstants.DEPENDENCY_SEPARATOR);
-        String nodeArchiveDirectory = dependencyArray[0];
-        String nodeDependenciesNames = dependencyArray[1];
-        String[] dependenciesNamesArray = nodeDependenciesNames.split(CopyServiceConstants.PATH_SEPARATOR);
-        //node informations
-        String nodeName = dependenciesNamesArray[0];
-        String nodeType = dependenciesNamesArray[1];
-        //node dependencies
-        String primaryStorePath = dependenciesNamesArray[2];
-        String secondaryStorePath = "";
-        if (dependenciesNamesArray.length >= 4) {
-            secondaryStorePath = dependenciesNamesArray[3];
-        }
-        List<String> additionalStores = new ArrayList<>();
-        if (dependenciesNamesArray.length > 4) {
-            for (int i = 4; i < dependenciesNamesArray.length; i++) {
-                additionalStores.add(dependenciesNamesArray[i]);
-            }
-        }
-
-        if (rootFolderId.equals(projectFolder.getProject().getRootFolder().getId())) {
-            //copy and paste in the same project
-            Optional<ProjectNode> dependency1 = projectFolder.getChild(primaryStorePath);
-            if (dependency1.isPresent() && !dependenciesAreMissingIn(projectFolder, additionalStores)) {
-                buildFileWithDependencies(projectFolder, nodeName, nodeType, primaryStorePath, secondaryStorePath, additionalStores);
-            } else {
-                unarchiveAndRename(projectFolder, children, nodeArchiveDirectory);
-            }
-        } else {
-            //copy and paste in two projects
-            buildFileWithDependencies(projectFolder, nodeName, nodeType, primaryStorePath, secondaryStorePath, additionalStores);
-        }
-    }
-
-    private static boolean dependenciesAreMissingIn(ProjectFolder projectFolder, List<String> dependencies) {
-        return dependencies.stream().anyMatch(dependence -> !projectFolder.getChild(dependence).isPresent());
-    }
-
-    private void buildFileWithDependencies(ProjectFolder projectFolder, String nodeName, String nodeType, String primaryStorePath, String secondaryStorePath, List<String> additionalStores) {
-        Class<?> cls = null;
-        try {
-            cls = Class.forName(nodeType);
-            for (ProjectFileBuilderExtension builderExtension : findBuilderExtension(cls)) {
-                if (builderExtension != null) {
-                    buildFile(projectFolder, nodeName, primaryStorePath, secondaryStorePath, additionalStores, builderExtension);
-                }
-            }
-        } catch (ClassNotFoundException e) {
-            throw new IllegalArgumentException("Invalid class name");
-        }
-    }
-
-    private void buildFile(ProjectFolder projectFolder, String nodeName, String primaryStorePath, String secondaryStorePath, List<String> additionalStores, ProjectFileBuilderExtension builderExtension) {
-        try {
-            builderExtension.buildFile(projectFolder, nodeName, primaryStorePath, secondaryStorePath, additionalStores);
-        } catch (AfsException ex) {
-            // to implement
-            LOGGER.warn("To implement");
-        }
     }
 
     private void unarchiveAndRename(ProjectFolder projectFolder, List<ProjectNode> children, String path) {

@@ -19,15 +19,11 @@ import java.util.List;
  */
 public class RemoteCopyService implements CopyService {
 
-    private CopyModel copyModel = new CopyModel( CopyServiceConstants.REMOTE_DIR);
+    private CopyModel copyModel = new CopyModel(CopyServiceConstants.REMOTE_DIR);
 
     @Override
     public void copy(List<? extends AbstractNodeBase> nodes) {
-       copyModel.copy(nodes);
+        copyModel.copy(nodes);
     }
 
-    @Override
-    public void deepCopy(List<? extends AbstractNodeBase> nodes) {
-        // To implement
-    }
 }
