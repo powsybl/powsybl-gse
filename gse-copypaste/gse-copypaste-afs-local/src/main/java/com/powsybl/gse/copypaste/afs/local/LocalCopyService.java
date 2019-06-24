@@ -9,7 +9,6 @@ package com.powsybl.gse.copypaste.afs.local;
 import com.powsybl.afs.*;
 import com.powsybl.gse.copypaste.afs.CopyModel;
 import com.powsybl.gse.copypaste.afs.CopyService;
-import com.powsybl.gse.copypaste.afs.CopyServiceConstants;
 
 import java.util.List;
 
@@ -19,7 +18,7 @@ import java.util.List;
  */
 public class LocalCopyService implements CopyService {
 
-    private CopyModel copyModel = new CopyModel(CopyServiceConstants.LOCAL_DIR);
+    private final CopyModel copyModel = new CopyModel();
 
     @Override
     public void copy(List<? extends AbstractNodeBase> nodes) {

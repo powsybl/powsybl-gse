@@ -6,16 +6,16 @@
  */
 package com.powsybl.gse.copypaste.afs;
 
+import java.nio.file.FileSystems;
+
 /**
  * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
  */
 public final class CopyServiceConstants {
 
-    public static final String PATH_SEPARATOR = "/";
+    public static final String PATH_SEPARATOR = FileSystems.getDefault().getSeparator();
     public static final String PATH_LIST_SEPARATOR = "@PATH_LIST_SEPARATOR@";
-    public static final String LOCAL_DIR = System.getProperty("user.home") + "/.itools/";
     public static final String COPY_SIGNATURE = "@info.json@";
-    public static final String REMOTE_DIR = "";
 
     private CopyServiceConstants() {
     }
