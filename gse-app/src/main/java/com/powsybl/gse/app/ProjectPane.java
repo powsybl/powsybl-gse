@@ -711,15 +711,8 @@ public class ProjectPane extends Tab {
         MenuItem copyMenuItem = GseMenuItem.createCopyMenuItem();
         copyMenuItem.setOnAction(event -> findCopyService(selectedTreeItems));
         List<TreeItem<Object>> selectedItems = new ArrayList<>(selectedTreeItems);
-        copyMenuItem.setDisable(ancestorsExistIn(selectedItems) || selectedItems.contains(treeView.getRoot()) || selectedNodesHaveDependencies(selectedTreeItems));
+        copyMenuItem.setDisable(ancestorsExistIn(selectedItems) || selectedItems.contains(treeView.getRoot()));
         return copyMenuItem;
-    }
-
-    private boolean selectedNodesHaveDependencies(List<? extends TreeItem<Object>> selectedTreeItems) {
-        return selectedTreeItems.stream()
-                .map(item -> (ProjectNode) item.getValue())
-                .filter(projectNode -> !projectNode.isFolder())
-                .anyMatch(projectFile -> !((ProjectFile) projectFile).getDependencies().isEmpty());
     }
 
     private MenuItem createPasteProjectNodeItem(TreeItem<Object> selectedTreeItem) {

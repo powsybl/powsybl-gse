@@ -7,6 +7,7 @@
 package com.powsybl.gse.copypaste.afs;
 
 import com.powsybl.afs.*;
+import com.powsybl.computation.local.LocalComputationConfig;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import org.apache.commons.io.FileUtils;
@@ -16,7 +17,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
@@ -25,8 +25,12 @@ public final class CopyModel {
 
     private final String storageDirectory;
 
-    public CopyModel(String storageDirectory) {
-        this.storageDirectory = Objects.requireNonNull(storageDirectory);
+    public CopyModel() {
+        storageDirectory = getStorageDirectory();
+    }
+
+    private String getStorageDirectory() {
+        return LocalComputationConfig.load().getLocalDir() + CopyServiceConstants.PATH_SEPARATOR;
     }
 
     /**
