@@ -8,8 +8,12 @@ package com.powsybl.gse.util;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
+import com.powsybl.commons.exceptions.UncheckedClassNotFoundException;
 import com.powsybl.commons.util.ServiceLoaderCache;
+import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.KeywordsProvider;
+import com.powsybl.iidm.network.Country;
+import com.powsybl.iidm.network.EnergySource;
 import groovyjarjarantlr.Token;
 import groovyjarjarantlr.TokenStream;
 import groovyjarjarantlr.TokenStreamException;
@@ -18,6 +22,7 @@ import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.input.*;
 import javafx.scene.layout.VBox;
+import javafx.util.Pair;
 import org.apache.commons.lang3.StringUtils;
 import org.codehaus.groovy.antlr.GroovySourceToken;
 import org.codehaus.groovy.antlr.SourceBuffer;
@@ -39,15 +44,22 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -70,6 +82,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private static final ServiceLoaderCache<KeywordsProvider> KEYWORDS_LOADER = new ServiceLoaderCache<>(KeywordsProvider.class);
 
+    private static final ServiceLoaderCache<AutoCompletionWordsProvider> AUTO_COMPLETION_WORDS_LOADER = new ServiceLoaderCache<>(AutoCompletionWordsProvider.class);
+
     private boolean allowedDrag = false;
 
     private int tabSize = DEFAULT_TAB_SIZE;
@@ -90,6 +104,18 @@ public class GroovyCodeEditor extends MasterDetailPane {
         BACKWARD,
         FORWARD;
     }
+
+    private AutoCompletion autoCompletion;
+
+    private static final List<String> STANDARD_SUGGESTIONS = ImmutableList.of("as", "assert", "boolean", "break", "breaker", "byte",
+            "case", "catch", "char", "class", "continue", "def", "default", "double", "else", "enum",
+            "extends", "false", "finally", "float", "for", "generator", "if", "implements", "import", "in",
+            "instanceof", "int", "interface", "load", "long", "native", "network", "new", "null", "package", "private",
+            "protected", "public", "return", "short", "static", "substation", "super", "switch", "synchronized", "this",
+            "threadsafe", "throw", "throws", "transient", "true", "try", "void", "volatile", "voltageLevel", "while"
+    );
+
+    private List<String> optionalSuggestions;
 
     private static final class SearchableCodeArea extends CodeArea implements Searchable {
 
@@ -167,8 +193,121 @@ public class GroovyCodeEditor extends MasterDetailPane {
         codeProperty().addListener((observable, oldvalue, newvalue) -> searchingForMatches = false);
     }
 
+    public static List<AutoCompletionWordsProvider> findAutoCompletionWordProviderExtensions(Class<?> cls) {
+        return AUTO_COMPLETION_WORDS_LOADER.getServices().stream()
+                .filter(extension -> extension.getProjectFileType().isAssignableFrom(cls))
+                .collect(Collectors.toList());
+    }
+
     private static boolean tokenIsBracket(String token) {
         return BRACKETS.contains(token.charAt(0));
+    }
+
+    public GroovyCodeEditor(Scene scene, List<String> keywordsSuggestions) {
+        this(scene);
+        optionalSuggestions = keywordsSuggestions;
+        autoCompletion = new AutoCompletion(codeArea);
+        codeArea.textProperty().addListener((observable, oldCode, newCode) -> {
+            autoCompletion.hide();
+            int caretPosition = codeArea.getCaretPosition();
+            Matcher nonWordMatcher = caretPosition >= 1 ? Pattern.compile("\\W").matcher(codeArea.getText(caretPosition - 1, caretPosition)) : null;
+            Matcher wordMatcher = caretPosition >= 2 ? Pattern.compile("\\w").matcher(codeArea.getText(caretPosition - 2, caretPosition - 1)) : null;
+            Matcher whiteSpaceMatcher = caretPosition >= 1 ? Pattern.compile("\\s").matcher(codeArea.getText(caretPosition - 1, caretPosition)) : null;
+            String lastToken = nonWordMatcher != null && nonWordMatcher.find() ? nonWordMatcher.group() : getLastToken(caretLineText());
+            autoComplete(caretPosition, wordMatcher, whiteSpaceMatcher, lastToken);
+        });
+    }
+
+    private void autoComplete(int caretPosition, Matcher wordMatcher, Matcher whiteSpaceMatcher, String lastToken) {
+        int length = lastToken.length();
+        if (lastToken.equals(".") && wordMatcher != null && wordMatcher.find()) {
+            List<String> methods = completionMethods().get(getLastToken(caretLineText()));
+            showSuggestions("", methods);
+        } else if (whiteSpaceMatcher != null && !whiteSpaceMatcher.find() && caretPosition > length + 1 && codeArea.getText(caretPosition - length - 1, caretPosition - length).equals(".")) {
+            String[] tokens = caretLineText().split("\\.");
+            String text = tokens.length >= 2 ? tokens[tokens.length - 2] : " ";
+            String completingMethod = tokens[tokens.length - 1];
+            String wordToComplete = getLastToken(text);
+            List<String> methods = completionMethods().get(wordToComplete);
+            showSuggestions(completingMethod, methods);
+        } else {
+            List<String> keywordsSuggestions = new ArrayList<>(STANDARD_SUGGESTIONS);
+            Set<String> energySourceEnums = Arrays.stream(EnergySource.class.getDeclaredFields()).filter(Field::isEnumConstant).map(Field::getName)
+                    .collect(Collectors.toSet());
+            Set<String> countryEnums = Arrays.stream(Country.class.getDeclaredFields()).filter(Field::isEnumConstant).map(Field::getName)
+                    .collect(Collectors.toSet());
+            keywordsSuggestions.addAll(energySourceEnums);
+            keywordsSuggestions.addAll(countryEnums);
+            if (optionalSuggestions != null) {
+                keywordsSuggestions.addAll(optionalSuggestions);
+            }
+            showSuggestions(lastToken, keywordsSuggestions);
+        }
+    }
+
+    private void showSuggestions(String completiongWord, List<String> suggestions) {
+        if (suggestions != null && completiongWord != null) {
+            autoCompletion.setSuggestions(suggestions);
+            if (completiongWord.equals("")) {
+                autoCompletion.showMethodsSuggestions(getScene().getWindow());
+            } else {
+                if (getScene() != null) {
+                    autoCompletion.showKeyWordsSuggestions(completiongWord, getScene().getWindow());
+                }
+            }
+        }
+    }
+
+    private static String getLastToken(String text) {
+        //extract words from text
+        Matcher matcher = Pattern.compile("\\w*\\w").matcher(text);
+        String word = " ";
+        while (matcher.find()) {
+            word = matcher.group();
+        }
+        return word;
+    }
+
+    private String caretLineText() {
+        int currentLine = codeArea.getCaretSelectionBind().getParagraphIndex();
+        String[] tokenArray = codeArea.getText(currentLine, 0, currentLine, codeArea.getCaretColumn()).split(" ");
+        return tokenArray.length >= 1 ? tokenArray[tokenArray.length - 1] : " ";
+    }
+
+    private Map<String, List<String>> completionMethods() {
+        Map<String, List<String>> completionMethods = new HashMap<>();
+
+        List<Pair<String, String>> keywordsMap = new ArrayList<>();
+        if (!AUTO_COMPLETION_WORDS_LOADER.getServices().isEmpty()) {
+            for (AutoCompletionWordsProvider service : AUTO_COMPLETION_WORDS_LOADER.getServices()) {
+                keywordsMap.addAll(service.completionMethods());
+            }
+        }
+        for (Pair<String, String> pair : keywordsMap) {
+            try {
+                Class cls = Class.forName(pair.getKey());
+                List<Method> methods = Arrays.asList(cls.getMethods());
+                List<String> methodNames = methodsWithParameters(methods);
+                completionMethods.put(pair.getValue(), methodNames);
+            } catch (ClassNotFoundException ex) {
+                throw new UncheckedClassNotFoundException(ex);
+            }
+        }
+        return completionMethods;
+    }
+
+    private static List<String> methodsWithParameters(List<Method> methods) {
+        return methods.stream()
+                .map(method -> {
+                    String parameters = Arrays.stream(method.getParameters())
+                            .map(param -> {
+                                Class<?> type = param.getType();
+                                String typeName = type.getSimpleName();
+                                return !type.isPrimitive() ? typeName + " " + typeName.toLowerCase().replaceAll("\\W", "") : typeName + " " + typeName.substring(0, 1);
+                            })
+                            .collect(Collectors.joining(", "));
+                    return method.getName() + "(" + parameters + ")";
+                }).collect(Collectors.toList());
     }
 
     private void showDetailNode() {
