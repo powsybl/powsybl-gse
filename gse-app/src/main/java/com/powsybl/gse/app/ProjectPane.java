@@ -43,6 +43,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -747,7 +748,7 @@ public class ProjectPane extends Tab {
     }
 
     private void unarchiveAndRename(ProjectFolder projectFolder, List<ProjectNode> children, String path) {
-        String[] pathArray = path.split(CopyServiceConstants.PATH_SEPARATOR);
+        String[] pathArray = path.split(Pattern.quote(CopyServiceConstants.PATH_SEPARATOR));
         String fileId = pathArray[pathArray.length - 1];
         String archiveParentPath = pathArray[pathArray.length - 2];
         String fileName = archiveParentPath.substring(0, archiveParentPath.length() - fileId.length());
