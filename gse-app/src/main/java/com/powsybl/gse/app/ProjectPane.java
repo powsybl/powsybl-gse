@@ -704,11 +704,11 @@ public class ProjectPane extends Tab {
                 if (clipboard.hasString()) {
                     String copyInfos = clipboard.getString();
 
-                    //the PATH_LIST_SEPARATOR delimiter separates the copied nodes paths
+                    //the PATH_LIST_SEPARATOR delimits the copied nodes paths
                     String[] array = copyInfos.split(CopyServiceConstants.PATH_LIST_SEPARATOR);
 
                     // the first index  represents the copy signature
-                    //the last indexes represents the copied nodes archive directory paths
+                    //the last indexes represents the copied nodes archive directory
                     String[] copyArray = ArrayUtils.remove(array, 0);
 
                     for (String path : copyArray) {
@@ -728,20 +728,20 @@ public class ProjectPane extends Tab {
         String[] pathArray = path.split(Pattern.quote(CopyServiceConstants.PATH_SEPARATOR));
         String fileId = pathArray[pathArray.length - 1];
         String archiveParentPath = pathArray[pathArray.length - 2];
-        String fileName = archiveParentPath.substring(0, archiveParentPath.length() - fileId.length());
-        boolean nameAlreadyExists = children.stream().anyMatch(child -> fileName.equals(child.getName()));
+        String archiveNodeName = archiveParentPath.substring(0, archiveParentPath.length() - fileId.length());
+        boolean nameAlreadyExists = children.stream().anyMatch(child -> archiveNodeName.equals(child.getName()));
         if (!nameAlreadyExists) {
             projectFolder.unarchive(Paths.get(path));
         } else {
-            pasteAndRename(projectFolder, children, path, fileName);
+            pasteAndRename(projectFolder, children, path, archiveNodeName);
         }
     }
 
     private void pasteAndRename(ProjectFolder projectFolder, List<ProjectNode> children, String path, String fileName) {
         String copy = " - " + RESOURCE_BUNDLE.getString("Copy");
         for (ProjectNode child : children) {
-            if (fileName.equals(child.getName())) {
-                String name = child.getName();
+            String name = child.getName();
+            if (fileName.equals(name)) {
                 child.rename("temporaryName");
                 projectFolder.unarchive(Paths.get(path));
                 projectFolder.getChild(name).ifPresent(pNode -> {
@@ -761,21 +761,21 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private static void renameCopiedNode(ProjectFolder projectFolder, String copy, ProjectNode child, String name, ProjectNode pNode) {
-        String lastCopyNode = projectFolder.getChildren().stream()
+    private static void renameCopiedNode(ProjectFolder projectFolder, String copy, ProjectNode child, String name, ProjectNode projectNode) {
+        String lastCopiedNode = projectFolder.getChildren().stream()
                 .map(ProjectNode::getName)
                 .filter(n -> n.startsWith(name + copy))
                 .sorted(Comparator.reverseOrder())
                 .collect(Collectors.toList())
                 .get(0);
 
-        String substring = lastCopyNode.substring(lastCopyNode.indexOf(name + copy) + name.length() + copy.length());
-        if (substring.isEmpty()) {
-            pNode.rename(name + copy + 2);
+        String lastCopiedNodeNumber = lastCopiedNode.substring(lastCopiedNode.indexOf(name + copy) + name.length() + copy.length());
+        if (lastCopiedNodeNumber.isEmpty()) {
+            projectNode.rename(name + copy + 2);
             child.rename(name);
         } else {
-            int i = Integer.parseInt(substring) + 1;
-            pNode.rename(name + copy + i);
+            int numberOfCopies = Integer.parseInt(lastCopiedNodeNumber) + 1;
+            projectNode.rename(name + copy + numberOfCopies);
             child.rename(name);
         }
     }

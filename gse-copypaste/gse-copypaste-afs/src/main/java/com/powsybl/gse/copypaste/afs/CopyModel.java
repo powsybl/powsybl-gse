@@ -39,6 +39,7 @@ public final class CopyModel {
     public void copy(List<? extends AbstractNodeBase> nodes) {
         StringBuilder copyParameters = new StringBuilder();
 
+        //Add a signature to discriminate the copies
         copyParameters.append(CopyServiceConstants.COPY_SIGNATURE).append(CopyServiceConstants.PATH_LIST_SEPARATOR);
 
         //copy single nodes
