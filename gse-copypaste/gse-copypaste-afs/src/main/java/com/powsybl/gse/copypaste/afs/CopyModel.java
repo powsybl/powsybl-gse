@@ -29,10 +29,6 @@ public final class CopyModel {
         storageDirectory = getStorageDirectory();
     }
 
-    private String getStorageDirectory() {
-        return LocalComputationConfig.load().getLocalDir() + CopyServiceConstants.PATH_SEPARATOR;
-    }
-
     /**
      * @param nodes the nodes to copy
      */
@@ -52,7 +48,7 @@ public final class CopyModel {
                 copyParameters.append(CopyServiceConstants.PATH_LIST_SEPARATOR);
             }
         }
-        setClipboardContent(copyParameters);
+        setClipboardContent(copyParameters.toString());
     }
 
     private void archiveAndCopy(StringBuilder copyPaths, AbstractNodeBase node) {
@@ -80,13 +76,29 @@ public final class CopyModel {
         } else if (node instanceof Node) {
             ((Node) node).archive(Paths.get(parentPath));
         }
+        deleteOnExit(archiveRootFolder);
     }
 
-    private static void setClipboardContent(StringBuilder copyParameters) {
+    private static void deleteOnExit(File folder) {
+        folder.deleteOnExit();
+        for (File file : folder.listFiles()) {
+            if (file.isDirectory()) {
+                deleteOnExit(file);
+            } else {
+                file.deleteOnExit();
+            }
+        }
+    }
+
+    private static void setClipboardContent(String copyParameters) {
         final Clipboard clipboard = Clipboard.getSystemClipboard();
         final ClipboardContent content = new ClipboardContent();
-        content.putString(copyParameters.toString());
+        content.putString(copyParameters);
         clipboard.setContent(content);
+    }
+
+    private static String getStorageDirectory() {
+        return LocalComputationConfig.load().getLocalDir() + CopyServiceConstants.PATH_SEPARATOR;
     }
 
 }
