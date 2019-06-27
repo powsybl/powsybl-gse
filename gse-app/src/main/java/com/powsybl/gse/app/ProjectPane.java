@@ -687,9 +687,9 @@ public class ProjectPane extends Tab {
 
     private MenuItem createCopyProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
         MenuItem copyMenuItem = GseMenuItem.createCopyMenuItem();
-        copyMenuItem.setOnAction(event -> findCopyService(selectedTreeItems));
         List<TreeItem<Object>> selectedItems = new ArrayList<>(selectedTreeItems);
         copyMenuItem.setDisable(ancestorsExistIn(selectedItems) || selectedItems.contains(treeView.getRoot()));
+        copyMenuItem.setOnAction(event -> findCopyService(selectedTreeItems));
         return copyMenuItem;
     }
 
