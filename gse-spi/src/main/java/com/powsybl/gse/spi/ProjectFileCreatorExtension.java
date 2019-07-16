@@ -9,6 +9,7 @@ package com.powsybl.gse.spi;
 import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.ProjectFolder;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCodeCombination;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -18,6 +19,8 @@ public interface ProjectFileCreatorExtension {
     Class<? extends ProjectFile> getProjectFileType();
 
     String getMenuText();
+
+    KeyCodeCombination getMenuKeycode();
 
     ProjectFileCreator newCreator(ProjectFolder folder, Scene scene, GseContext context);
 }

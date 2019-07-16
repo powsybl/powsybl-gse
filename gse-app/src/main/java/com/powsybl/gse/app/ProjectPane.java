@@ -95,7 +95,23 @@ public class ProjectPane extends Tab {
         public MyTab(String text, ProjectFileViewer viewer) {
             super(text, viewer.getContent());
             this.viewer = viewer;
+            onKeyPressed();
             setContextMenu(contextMenu());
+        }
+
+        private void onKeyPressed() {
+            getContent().setOnKeyPressed((KeyEvent ke) -> {
+                if (closeKeyCombination.match(ke)) {
+                    closeTab(ke, this);
+                    ke.consume();
+                } else if (closeAllKeyCombination.match(ke)) {
+                    List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
+                            .map(tab -> (MyTab) tab)
+                            .collect(Collectors.toList()));
+                    mytabs.forEach(mytab -> closeTab(ke, mytab));
+                    ke.consume();
+                }
+            });
         }
 
         private ContextMenu contextMenu() {
@@ -108,8 +124,6 @@ public class ProjectPane extends Tab {
                         .collect(Collectors.toList()));
                 mytabs.forEach(mytab -> closeTab(event, mytab));
             });
-            closeMenuItem.setAccelerator(closeKeyCombination);
-            closeAllMenuItem.setAccelerator(closeAllKeyCombination);
             return new ContextMenu(closeMenuItem, closeAllMenuItem);
         }
 
@@ -200,8 +214,10 @@ public class ProjectPane extends Tab {
             TreeItem<Object> selectedTreeItem = c.getList().get(0);
             Object value = selectedTreeItem.getValue();
             treeView.setOnKeyPressed((KeyEvent ke) -> {
-                if (ke.getCode() == KeyCode.F2) {
+                if (new KeyCodeCombination(KeyCode.F2).match(ke)) {
                     renameProjectNode(selectedTreeItem);
+                } else if (new KeyCodeCombination(KeyCode.ENTER).match(ke)) {
+                    runDefaultActionAfterDoubleClick(selectedTreeItem);
                 }
             });
             if (value instanceof ProjectFolder) {
@@ -668,6 +684,7 @@ public class ProjectPane extends Tab {
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
+        menuItem.setAccelerator(new KeyCodeCombination(KeyCode.F2));
         menuItem.setOnAction(event -> renameProjectNode(selectedTreeItem));
         return menuItem;
     }
@@ -798,9 +815,12 @@ public class ProjectPane extends Tab {
         viewer.view();
     }
 
-    private MenuItem initMenuItem(ProjectFileMenuConfigurableExtension menuConfigurable, ProjectFile file) {
+    private static MenuItem initMenuItem(ProjectFileMenuConfigurableExtension menuConfigurable, ProjectFile file) {
         Node graphic = menuConfigurable.getMenuGraphic(file);
         MenuItem menuItem = new MenuItem(menuConfigurable.getMenuText(file), graphic);
+        if (menuConfigurable.getMenuKeyCode() != null) {
+            menuItem.setAccelerator(menuConfigurable.getMenuKeyCode());
+        }
         menuItem.setDisable(!menuConfigurable.isMenuEnabled(file));
         return menuItem;
     }
@@ -878,6 +898,7 @@ public class ProjectPane extends Tab {
                     selectedTreeItem.setExpanded(true);
                 })
         );
+        menuItem.setAccelerator(new KeyCodeCombination(KeyCode.D, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
         return menuItem;
     }
 
@@ -944,6 +965,7 @@ public class ProjectPane extends Tab {
             for (ProjectFileCreatorExtension creatorExtension : findCreatorExtension(type)) {
                 if (creatorExtension != null) {
                     MenuItem menuItem = new MenuItem(creatorExtension.getMenuText());
+                    menuItem.setAccelerator(creatorExtension.getMenuKeycode());
                     menuItem.setOnAction(event -> showProjectItemCreatorDialog(selectedTreeItem, creatorExtension));
                     items.add(menuItem);
                 }

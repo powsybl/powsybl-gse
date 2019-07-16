@@ -12,6 +12,9 @@ import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileCreatorExtension;
 import com.powsybl.security.afs.SecurityAnalysisRunner;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 
 import java.util.ResourceBundle;
 
@@ -31,6 +34,11 @@ public class SecurityAnalysisRunnerCreatorExtension implements ProjectFileCreato
     @Override
     public String getMenuText() {
         return RESOURCE_BUNDLE.getString("CreateSecurityAnalysis") + "...";
+    }
+
+    @Override
+    public KeyCodeCombination getMenuKeycode() {
+        return new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
     }
 
     @Override
