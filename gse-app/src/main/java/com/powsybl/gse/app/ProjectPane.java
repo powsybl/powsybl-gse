@@ -509,6 +509,16 @@ public class ProjectPane extends Tab {
         }
     }
 
+    private static void getLastView(TreeItem<Object> rootItem, Map<TreeItem<Object>, Boolean> lastViews) {
+        List<TreeItem<Object>> treeItems = new ArrayList<>(rootItem.getChildren());
+        for (TreeItem<Object> treeItem : treeItems) {
+            if (treeItem != null && treeItem.getValue() instanceof ProjectFolder) {
+                lastViews.put(treeItem, treeItem.isExpanded());
+                getLastView(treeItem, lastViews);
+            }
+        }
+    }
+
     private static String getTabName(TreeItem<Object> treeItem) {
         StringBuilder builder = new StringBuilder();
         getTabName(treeItem, builder);
@@ -685,6 +695,10 @@ public class ProjectPane extends Tab {
         Optional<String> result = RenamePane.showAndWaitDialog(getContent().getScene().getWindow(), (ProjectNode) selectedTreeItem.getValue());
         result.ifPresent(newName -> {
             if (selectedTreeItem.getValue() instanceof ProjectNode) {
+
+                Map<TreeItem<Object>, Boolean> lastViews = new HashMap<>();
+                getLastView(treeView.getRoot(), lastViews);
+
                 ProjectNode selectedProjectNode = (ProjectNode) selectedTreeItem.getValue();
                 selectedProjectNode.rename(newName);
 
@@ -705,8 +719,22 @@ public class ProjectPane extends Tab {
                         }
                     }
                 }
+
+                //  refresh impacted dependencies
+                refresh(treeView.getRoot());
+                Set<TreeItem<Object>> treeItems = lastViews.keySet();
+                refreshDependencies(lastViews, treeItems);
+
             }
         });
+    }
+
+    private static void refreshDependencies(Map<TreeItem<Object>, Boolean> lastViews, Set<TreeItem<Object>> treeItems) {
+        for (TreeItem<Object> treeItem : treeItems) {
+            if (lastViews.get(treeItem)) {
+                treeItem.setExpanded(true);
+            }
+        }
     }
 
     /**
