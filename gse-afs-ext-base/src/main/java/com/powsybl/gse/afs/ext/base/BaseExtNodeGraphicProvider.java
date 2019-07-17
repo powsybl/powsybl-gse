@@ -13,7 +13,7 @@ import com.powsybl.afs.ext.base.ModificationScript;
 import com.powsybl.afs.ext.base.VirtualCase;
 import com.powsybl.gse.spi.NodeGraphicProvider;
 import com.powsybl.gse.util.Glyph;
-import com.powsybl.iidm.import_.Importer;
+import com.powsybl.iidm.api.converter.Importer;
 import javafx.scene.Node;
 import javafx.scene.text.Font;
 

@@ -6,7 +6,7 @@
  */
 package com.powsybl.gse.map;
 
-import com.powsybl.iidm.network.Line;
+import com.powsybl.iidm.api.Line;
 import javafx.scene.paint.Color;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

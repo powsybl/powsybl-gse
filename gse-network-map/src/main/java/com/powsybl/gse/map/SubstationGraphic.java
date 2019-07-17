@@ -7,7 +7,7 @@
 package com.powsybl.gse.map;
 
 import com.github.davidmoten.rtree.geometry.Rectangle;
-import com.powsybl.iidm.network.Substation;
+import com.powsybl.iidm.api.Substation;
 import javafx.scene.paint.Color;
 
 import java.util.Objects;

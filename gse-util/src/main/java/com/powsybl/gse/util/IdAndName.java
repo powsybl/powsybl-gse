@@ -6,7 +6,7 @@
  */
 package com.powsybl.gse.util;
 
-import com.powsybl.iidm.network.Identifiable;
+import com.powsybl.iidm.api.Identifiable;
 
 import java.io.Serializable;
 import java.util.Objects;
