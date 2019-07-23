@@ -103,11 +103,13 @@ public class ProjectPane extends Tab {
             getContent().setOnKeyPressed((KeyEvent ke) -> {
                 if (closeKeyCombination.match(ke)) {
                     closeTab(ke, this);
+                    ke.consume();
                 } else if (closeAllKeyCombination.match(ke)) {
                     List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
                             .map(tab -> (MyTab) tab)
                             .collect(Collectors.toList()));
                     mytabs.forEach(mytab -> closeTab(ke, mytab));
+                    ke.consume();
                 }
             });
         }
