@@ -8,6 +8,7 @@ package com.powsybl.gse.spi;
 
 import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.ProjectFolder;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 
 /**
@@ -16,6 +17,10 @@ import javafx.scene.Scene;
 public interface ProjectFileCreatorExtension {
 
     Class<? extends ProjectFile> getProjectFileType();
+
+    default Node getMenuGraphic() {
+        return null;
+    }
 
     String getMenuText();
 
