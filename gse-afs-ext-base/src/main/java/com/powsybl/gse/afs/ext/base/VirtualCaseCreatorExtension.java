@@ -13,6 +13,7 @@ import com.powsybl.afs.ext.base.VirtualCase;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileCreator;
 import com.powsybl.gse.spi.ProjectFileCreatorExtension;
+import com.powsybl.gse.util.Glyph;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
@@ -36,7 +37,12 @@ public class VirtualCaseCreatorExtension implements ProjectFileCreatorExtension 
 
     @Override
     public Node getMenuGraphic() {
-        return BaseExtNodeGraphicProvider.createVirtualCaseGlyph();
+        return new Glyph("powsybl-gse-font", '\ue901')
+                .size("1.4em")
+                .color("orangered")
+                .stack(Glyph.createAwesomeFont('\uf14b')
+                .color("limegreen")
+                .size("0.9em"));
     }
 
     @Override

@@ -1098,7 +1098,6 @@ public class ProjectPane extends Tab {
                 if (creatorExtension != null) {
                     MenuItem menuItem = new MenuItem(creatorExtension.getMenuText());
                     menuItem.setGraphic(creatorExtension.getMenuGraphic());
-                    menuItem.setAccelerator(creatorExtension.getMenuKeycode());
                     menuItem.setOnAction(event -> showProjectItemCreatorDialog(selectedTreeItem, creatorExtension));
                     items.add(menuItem);
                 }
