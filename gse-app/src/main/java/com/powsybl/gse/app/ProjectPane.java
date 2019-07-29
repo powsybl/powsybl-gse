@@ -886,6 +886,8 @@ public class ProjectPane extends Tab {
 
     private MenuItem createCreateFolderItem(TreeItem<Object> selectedTreeItem, ProjectFolder folder) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("CreateFolder") + "...");
+        Glyph createFolderGlyph = Glyph.createAwesomeFont('\uf07b').size("1.3em").color("#FFDB69");
+        menuItem.setGraphic(createFolderGlyph);
         menuItem.setOnAction((ActionEvent event) ->
                 NewFolderPane.showAndWaitDialog(getContent().getScene().getWindow(), folder).ifPresent(newFolder -> {
                     refresh(selectedTreeItem);
@@ -958,6 +960,7 @@ public class ProjectPane extends Tab {
             for (ProjectFileCreatorExtension creatorExtension : findCreatorExtension(type)) {
                 if (creatorExtension != null) {
                     MenuItem menuItem = new MenuItem(creatorExtension.getMenuText());
+                    menuItem.setGraphic(creatorExtension.getMenuGraphic());
                     menuItem.setOnAction(event -> showProjectItemCreatorDialog(selectedTreeItem, creatorExtension));
                     items.add(menuItem);
                 }
