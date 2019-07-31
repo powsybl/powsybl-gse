@@ -10,6 +10,7 @@ import com.powsybl.afs.AbstractNodeBase;
 import com.powsybl.afs.ProjectNode;
 import com.powsybl.afs.Node;
 import com.powsybl.gse.spi.Savable;
+import javafx.beans.binding.BooleanBinding;
 import javafx.scene.control.*;
 
 import java.text.MessageFormat;
@@ -53,6 +54,31 @@ public final class GseAlerts {
         alert.getButtonTypes().setAll(save, dontSave, ButtonType.CANCEL);
 
         return alert.showAndWait();
+    }
+
+    public static Optional<ButtonType> showReplaceAndQuitDialog(String folderName, String documentName) {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle(RESOURCE_BUNDLE.getString("FileConflict"));
+        alert.setHeaderText(MessageFormat.format(RESOURCE_BUNDLE.getString("ReplaceFile"), documentName));
+        alert.setContentText(MessageFormat.format(RESOURCE_BUNDLE.getString("FileWithTheSameNameExists"), folderName));
+        ButtonType replace = new ButtonType(RESOURCE_BUNDLE.getString("Replace"), ButtonBar.ButtonData.YES);
+        ButtonType rename = new ButtonType(RESOURCE_BUNDLE.getString("Rename"), ButtonBar.ButtonData.OTHER);
+        alert.getButtonTypes().setAll(replace, rename, ButtonType.CANCEL);
+        alert.getDialogPane().setPrefWidth(600);
+        alert.getDialogPane().setPrefHeight(170);
+
+        return alert.showAndWait();
+    }
+
+    public static Optional<String> showReplaceTextInputDialog(String documentName) {
+        TextInputDialog dialog = new TextInputDialog(documentName);
+        dialog.setTitle(RESOURCE_BUNDLE.getString("Rename"));
+        dialog.setHeaderText(MessageFormat.format(RESOURCE_BUNDLE.getString("ChooseNewName"), documentName));
+        dialog.setGraphic(null);
+        javafx.scene.Node okButtonType = dialog.getDialogPane().lookupButton(ButtonType.OK);
+        BooleanBinding disableOkProperty = dialog.getEditor().textProperty().isEmpty().or(dialog.getEditor().textProperty().isEqualTo(documentName));
+        okButtonType.disableProperty().bind(disableOkProperty);
+        return dialog.showAndWait();
     }
 
     public static boolean showSaveDialog(String documentName, Savable savable) {
