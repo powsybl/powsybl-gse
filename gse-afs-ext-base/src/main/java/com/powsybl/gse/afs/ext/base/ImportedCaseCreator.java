@@ -6,14 +6,19 @@
  */
 package com.powsybl.gse.afs.ext.base;
 
+import com.powsybl.afs.Dependent;
+import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.ProjectFolder;
+import com.powsybl.afs.ProjectNode;
 import com.powsybl.afs.ext.base.Case;
 import com.powsybl.afs.ext.base.ImportedCaseBuilder;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectCreationTask;
 import com.powsybl.gse.spi.ProjectFileCreator;
+import com.powsybl.gse.util.GseAlerts;
 import com.powsybl.gse.util.NodeSelectionPane;
 import com.powsybl.iidm.parameters.Parameter;
+import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
@@ -38,6 +43,12 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
     private final NodeSelectionPane<Case> caseSelectionPane;
 
     private final Map<String, String> parametersValue = new HashMap<>();
+
+    private List<ProjectFile> backwardDependencies = new ArrayList<>();
+
+    private static final String TEMPORARY_NAME = "temporaryName";
+
+    private String projectFileId;
 
     ImportedCaseCreator(ProjectFolder folder, Scene scene, GseContext context) {
         this.folder = Objects.requireNonNull(folder);
@@ -131,10 +142,13 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
 
             @Override
             public void run() {
-                folder.fileBuilder(ImportedCaseBuilder.class)
-                        .withCase(aCase)
-                        .withParameters(parametersValue)
-                        .build();
+                Optional<ProjectNode> child = folder.getChild(aCase.getName());
+                if (child.isPresent()) {
+                    projectFileId = child.get().getId();
+                    Platform.runLater(() -> replaceNode(folder, aCase));
+                } else {
+                    buildFile(aCase, folder, null);
+                }
             }
 
             @Override
@@ -162,5 +176,48 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
 
     @Override
     public void dispose() {
+    }
+
+    private void replaceNode(ProjectFolder folder, Case aCase) {
+        String name = aCase.getName();
+        Optional<ButtonType> result = GseAlerts.showReplaceAndQuitDialog(folder.getName(), name);
+        result.ifPresent(buttonType -> {
+            if (buttonType.getButtonData() == ButtonBar.ButtonData.YES) {
+                folder.getChild(name).ifPresent(projectNode -> backwardDependencies = projectNode.getBackwardDependencies());
+                folder.getChild(name).ifPresent(projectNode -> projectNode.rename(TEMPORARY_NAME));
+                buildFile(aCase, folder, null);
+                backwardDependencies.forEach(projectFile -> folder.getChild(name).ifPresent(child -> resetDependencies(projectFile, child)));
+                folder.getChild(TEMPORARY_NAME).ifPresent(ProjectNode::delete);
+            } else if (buttonType.getButtonData() == ButtonBar.ButtonData.OTHER) {
+                Optional<String> newName = GseAlerts.showReplaceTextInputDialog(name);
+                newName.ifPresent(newname -> {
+                    if (folder.getChild(newname).isPresent()) {
+                        replaceNode(folder, aCase);
+                    } else {
+                        buildFile(aCase, folder, newname);
+                    }
+                });
+
+            }
+        });
+    }
+
+    private void buildFile(Case aCase, ProjectFolder folder, String name) {
+        ImportedCaseBuilder importedCaseBuilder = folder.fileBuilder(ImportedCaseBuilder.class)
+                .withCase(aCase)
+                .withParameters(parametersValue);
+        if (name != null) {
+            importedCaseBuilder.withName(name);
+        }
+        importedCaseBuilder.build();
+    }
+
+    private void resetDependencies(ProjectFile projectFile, ProjectNode child) {
+        if (projectFile instanceof Dependent) {
+            String dependencyKeyName = ((Dependent) projectFile).getDependencyKeyName(projectFileId);
+            projectFile.setDependencies(dependencyKeyName, Collections.singletonList(child));
+        } else {
+            throw new IllegalArgumentException("this projectFile should be an instance of Dependent");
+        }
     }
 }
