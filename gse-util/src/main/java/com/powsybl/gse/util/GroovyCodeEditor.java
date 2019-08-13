@@ -80,6 +80,8 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
     private final KeyCombination pasteKeyCombination = new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN);
 
+    private final KeyCombination tabKeyCombination = new KeyCodeCombination(KeyCode.TAB);
+
     private static final ServiceLoaderCache<KeywordsProvider> KEYWORDS_LOADER = new ServiceLoaderCache<>(KeywordsProvider.class);
 
     private static final ServiceLoaderCache<AutoCompletionWordsProvider> AUTO_COMPLETION_WORDS_LOADER = new ServiceLoaderCache<>(AutoCompletionWordsProvider.class);
@@ -363,7 +365,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
     }
 
     private void setTabulationSpace(KeyEvent ke) {
-        if (ke.getCode() == KeyCode.TAB) {
+        if (tabKeyCombination.match(ke)) {
             ke.consume();
             int currentLine = codeArea.getCaretSelectionBind().getParagraphIndex();
             int fromLineStartToCaret = codeArea.getText(currentLine, 0, currentLine, codeArea.getCaretColumn()).length();
