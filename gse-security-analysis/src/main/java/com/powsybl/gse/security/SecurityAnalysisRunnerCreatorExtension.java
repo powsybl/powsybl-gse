@@ -10,7 +10,9 @@ import com.google.auto.service.AutoService;
 import com.powsybl.afs.ProjectFolder;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileCreatorExtension;
+import com.powsybl.gse.util.Glyph;
 import com.powsybl.security.afs.SecurityAnalysisRunner;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 
 import java.util.ResourceBundle;
@@ -22,6 +24,13 @@ import java.util.ResourceBundle;
 public class SecurityAnalysisRunnerCreatorExtension implements ProjectFileCreatorExtension {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.SecurityAnalysis");
+
+    @Override
+    public Node getMenuGraphic() {
+        return Glyph.createAwesomeFont('\uf132')
+                .size("1.4em")
+                .color("dimgray");
+    }
 
     @Override
     public Class<SecurityAnalysisRunner> getProjectFileType() {
