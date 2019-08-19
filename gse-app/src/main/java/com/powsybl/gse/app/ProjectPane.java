@@ -16,21 +16,31 @@ import com.powsybl.gse.util.*;
 import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
+import javafx.collections.FXCollections;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
+import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
+import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.*;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Callback;
+import org.controlsfx.control.CheckComboBox;
+import org.controlsfx.control.MasterDetailPane;
+import org.controlsfx.control.textfield.CustomTextField;
+import org.controlsfx.control.textfield.TextFields;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +48,7 @@ import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -57,6 +68,10 @@ public class ProjectPane extends Tab {
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
 
     private final KeyCombination saveKeyCombination = new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
+
+    private final CustomTextField dependencySearchField = (CustomTextField) TextFields.createClearableTextField();
+
+    private final CheckComboBox filterBox;
 
     private static class TabKey {
 
@@ -158,6 +173,8 @@ public class ProjectPane extends Tab {
 
     private final TreeView<Object> treeView;
 
+    private final TreeView<Object> dependencyView;
+
     private final StackPane viewPane;
 
     private final TaskItemList taskItems;
@@ -231,6 +248,34 @@ public class ProjectPane extends Tab {
         }
     }
 
+    private void dependencyViewChangeListener(ListChangeListener.Change<? extends TreeItem<Object>> c) {
+        if (c.getList().isEmpty()) {
+            dependencyView.setContextMenu(null);
+        } else if (c.getList().size() == 1) {
+            TreeItem<Object> selectedTreeItem = c.getList().get(0);
+            Object value = selectedTreeItem.getValue();
+            dependencyView.setOnKeyPressed((KeyEvent ke) -> {
+                if (ke.getCode() == KeyCode.F2) {
+                    renameProjectNode(selectedTreeItem);
+                }
+            });
+            if (value instanceof ProjectFolder) {
+                dependencyView.setContextMenu(createFolderContextMenu(selectedTreeItem));
+            } else if (value instanceof ProjectFile) {
+                dependencyView.setContextMenu(createFileContextMenu(selectedTreeItem));
+            } else {
+                // TODO show contextual menu to reach advanced task status ?
+                dependencyView.setContextMenu(null);
+            }
+        } else {
+            dependencyView.setContextMenu(createMultipleContextMenu(c.getList()));
+        }
+    }
+
+    private void dependencFilteredListener(ListChangeListener.Change<? extends CheckBox> c) {
+        //TODO
+    }
+
     private TreeCell<Object> treeViewCellFactory(TreeView<Object> item) {
 
         return new TreeCell<Object>() {
@@ -302,6 +347,15 @@ public class ProjectPane extends Tab {
     private void treeViewMouseClickHandler(MouseEvent mouseEvent) {
         if (mouseEvent.getClickCount() == 2) {
             TreeItem<Object> selectedTreeItem = treeView.getSelectionModel().getSelectedItem();
+            if (selectedTreeItem != null) {
+                runDefaultActionAfterDoubleClick(selectedTreeItem);
+            }
+        }
+    }
+
+    private void dependencyViewMouseClickHandler(MouseEvent mouseEvent) {
+        if (mouseEvent.getClickCount() == 2) {
+            TreeItem<Object> selectedTreeItem = dependencyView.getSelectionModel().getSelectedItem();
             if (selectedTreeItem != null) {
                 runDefaultActionAfterDoubleClick(selectedTreeItem);
             }
@@ -451,6 +505,26 @@ public class ProjectPane extends Tab {
         treeView.setCellFactory(this::treeViewCellFactory);
         treeView.setOnMouseClicked(this::treeViewMouseClickHandler);
 
+        filterBox = new CheckComboBox<>(FXCollections.observableArrayList("All", "None"));
+        filterBox.getCheckModel().check(0);
+        filterBox.getItemBooleanProperty(1).addListener((observable, oldvalue, newvalue) -> {
+            if (newvalue) {
+                filterBox.getCheckModel().clearCheck(0);
+            }
+        });
+        filterBox.getItemBooleanProperty(0).addListener((observable, oldvalue, newvalue) -> {
+            if (newvalue) {
+                filterBox.getCheckModel().clearCheck(1);
+            }
+        });
+        filterBox.getCheckModel().getCheckedItems().addListener(this::dependencFilteredListener);
+
+        dependencyView = new TreeView<>();
+        dependencyView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        dependencyView.getSelectionModel().getSelectedItems().addListener(this::dependencyViewChangeListener);
+        dependencyView.setCellFactory(this::treeViewCellFactory);
+        dependencyView.setOnMouseClicked(this::dependencyViewMouseClickHandler);
+
         DetachableTabPane ctrlTabPane1 = new DetachableTabPane();
         DetachableTabPane ctrlTabPane2 = new DetachableTabPane();
         ctrlTabPane1.setScope("Control");
@@ -459,7 +533,24 @@ public class ProjectPane extends Tab {
         projectTab.setClosable(false);
         Tab taskTab = new Tab(RESOURCE_BUNDLE.getString("Tasks"), taskMonitorPane);
         taskTab.setClosable(false);
-        ctrlTabPane1.getTabs().add(projectTab);
+
+        Text searchGlyph = Glyph.createAwesomeFont('\uf002').size("1.2em");
+        dependencySearchField.setLeft(searchGlyph);
+        dependencySearchField.setPrefWidth(260);
+        dependencySearchField.getStyleClass().add("search-field");
+
+        HBox hBox = new HBox(dependencySearchField, filterBox);
+        HBox.setMargin(dependencySearchField, new Insets(0, 0, 0, 3));
+
+        MasterDetailPane masterDetailPane = new MasterDetailPane();
+        masterDetailPane.setDetailSide(Side.TOP);
+        masterDetailPane.setDetailNode(hBox);
+        masterDetailPane.setMasterNode(dependencyView);
+        masterDetailPane.setDividerPosition(0.06);
+
+        Tab dependencyTab = new Tab(RESOURCE_BUNDLE.getString("Dependencies"), masterDetailPane);
+        dependencyTab.setClosable(false);
+        ctrlTabPane1.getTabs().addAll(projectTab, dependencyTab);
         ctrlTabPane2.getTabs().add(taskTab);
         SplitPane ctrlSplitPane = new SplitPane(ctrlTabPane1, ctrlTabPane2);
         ctrlSplitPane.setOrientation(Orientation.VERTICAL);
@@ -492,6 +583,7 @@ public class ProjectPane extends Tab {
         setContent(splitPane);
 
         createRootFolderTreeItem(project);
+        createDependencyRootFolderTreeItem();
 
         getContent().setOnKeyPressed((KeyEvent ke) -> {
             if (saveKeyCombination.match(ke)) {
@@ -536,6 +628,9 @@ public class ProjectPane extends Tab {
             item.setExpanded(false);
             item.setExpanded(true);
         }
+        //refresh dependency tree view
+        dependencyView.getRoot().setExpanded(false);
+        dependencyView.getRoot().setExpanded(true);
     }
 
     private TreeItem<Object> createNodeTreeItem(ProjectNode node) {
@@ -551,6 +646,44 @@ public class ProjectPane extends Tab {
                 treeView.setRoot(root);
                 root.setExpanded(true);
             });
+        });
+    }
+
+    private void createDependencyRootFolderTreeItem() {
+        dependencyView.setRoot(createWaitingTreeItem());
+        GseUtil.execute(context.getExecutor(), () -> {
+            TreeItem<Object> root2 = createDependencyRootItem();
+            Platform.runLater(() -> {
+                dependencyView.setRoot(root2);
+                root2.setExpanded(true);
+                dependencyView.setShowRoot(false);
+            });
+        });
+    }
+
+
+    private TreeItem<Object> createDependencyRootItem() {
+        TreeItem<Object> rootItem = new TreeItem<>(project.getRootFolder(), NodeGraphics.getGraphic(project.getRootFolder()));
+        rootItem.expandedProperty().addListener((observable, oldvalue, newvalue) -> {
+            if (newvalue) {
+                List<TreeItem<Object>> fileTreeItems = new ArrayList<>();
+                addFilesTreeItems(project.getRootFolder(), fileTreeItems);
+                List<TreeItem<Object>> fileSortedItems = fileTreeItems.stream().sorted(Comparator.comparing(fileItem -> fileItem.getValue().toString()))
+                        .collect(Collectors.toList());
+                rootItem.getChildren().setAll(fileSortedItems);
+            }
+        });
+        return rootItem;
+    }
+
+    private void addFilesTreeItems(ProjectFolder folder, List<TreeItem<Object>> fileTreeItems) {
+        List<ProjectNode> allNodes = folder.getChildren();
+        allNodes.forEach(projectNode -> {
+            if(!projectNode.isFolder()) {
+                fileTreeItems.add(createFileTreeItem((ProjectFile) projectNode));
+            } else {
+                addFilesTreeItems((ProjectFolder)projectNode, fileTreeItems);
+            }
         });
     }
 
@@ -705,6 +838,7 @@ public class ProjectPane extends Tab {
                 // to force the refresh
                 selectedTreeItem.setValue(null);
                 selectedTreeItem.setValue(selectedProjectNode);
+                refresh(dependencyView.getRoot());
 
                 // refresh impacted tabs
                 Map<String, TreeItem<Object>> treeItemsToRefresh = new HashMap<>();
