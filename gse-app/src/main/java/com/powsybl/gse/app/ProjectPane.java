@@ -17,8 +17,8 @@ import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.collections.FXCollections;
-import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.geometry.Insets;
@@ -48,7 +48,6 @@ import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -264,7 +263,6 @@ public class ProjectPane extends Tab {
             } else if (value instanceof ProjectFile) {
                 dependencyView.setContextMenu(createFileContextMenu(selectedTreeItem));
             } else {
-                // TODO show contextual menu to reach advanced task status ?
                 dependencyView.setContextMenu(null);
             }
         } else {
@@ -272,7 +270,7 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private void dependencFilteredListener(ListChangeListener.Change<? extends CheckBox> c) {
+    private void dependencyFilteredListener(ListChangeListener.Change<? extends CheckBox> c) {
         //TODO
     }
 
@@ -505,20 +503,34 @@ public class ProjectPane extends Tab {
         treeView.setCellFactory(this::treeViewCellFactory);
         treeView.setOnMouseClicked(this::treeViewMouseClickHandler);
 
-        filterBox = new CheckComboBox<>(FXCollections.observableArrayList("All", "None"));
+        ObservableList<String> filterList = FXCollections.observableArrayList("All");
+        filterBox = new CheckComboBox<>(filterList);
+        for (Class<? extends ProjectFile> type : project.getFileSystem().getData().getProjectFileClasses()) {
+            for (ProjectFileCreatorExtension creatorExtension : findCreatorExtension(type)) {
+                if (creatorExtension != null) {
+                    String fileExtension = creatorExtension.getProjectFileType().getSimpleName();
+                    if (!filterList.contains(fileExtension)) {
+                        filterList.add(fileExtension);
+                    }
+                }
+            }
+        }
         filterBox.getCheckModel().check(0);
-        filterBox.getItemBooleanProperty(1).addListener((observable, oldvalue, newvalue) -> {
-            if (newvalue) {
-                filterBox.getCheckModel().clearCheck(0);
-            }
-        });
+        for (int i =1 ; i<filterList.size(); i++) {
+            filterBox.getItemBooleanProperty(i).addListener((observable, oldvalue, newvalue) -> {
+                if(newvalue) {
+                    filterBox.getCheckModel().clearCheck(0);
+                }
+            });
+        }
         filterBox.getItemBooleanProperty(0).addListener((observable, oldvalue, newvalue) -> {
-            if (newvalue) {
-                filterBox.getCheckModel().clearCheck(1);
+            if(newvalue) {
+                for (int i =1 ; i<filterList.size(); i++) {
+                    filterBox.getCheckModel().clearCheck(i);
+                }
             }
         });
-        filterBox.getCheckModel().getCheckedItems().addListener(this::dependencFilteredListener);
-
+        filterBox.getCheckModel().getCheckedItems().addListener(this::dependencyFilteredListener);
         dependencyView = new TreeView<>();
         dependencyView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         dependencyView.getSelectionModel().getSelectedItems().addListener(this::dependencyViewChangeListener);
