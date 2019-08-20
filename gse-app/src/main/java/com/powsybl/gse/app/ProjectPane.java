@@ -95,7 +95,23 @@ public class ProjectPane extends Tab {
         public MyTab(String text, ProjectFileViewer viewer) {
             super(text, viewer.getContent());
             this.viewer = viewer;
+            onKeyPressed();
             setContextMenu(contextMenu());
+        }
+
+        private void onKeyPressed() {
+            getContent().setOnKeyPressed((KeyEvent ke) -> {
+                if (closeKeyCombination.match(ke)) {
+                    closeTab(ke, this);
+                    ke.consume();
+                } else if (closeAllKeyCombination.match(ke)) {
+                    List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
+                            .map(tab -> (MyTab) tab)
+                            .collect(Collectors.toList()));
+                    mytabs.forEach(mytab -> closeTab(ke, mytab));
+                    ke.consume();
+                }
+            });
         }
 
         private ContextMenu contextMenu() {
@@ -108,8 +124,6 @@ public class ProjectPane extends Tab {
                         .collect(Collectors.toList()));
                 mytabs.forEach(mytab -> closeTab(event, mytab));
             });
-            closeMenuItem.setAccelerator(closeKeyCombination);
-            closeAllMenuItem.setAccelerator(closeAllKeyCombination);
             return new ContextMenu(closeMenuItem, closeAllMenuItem);
         }
 
