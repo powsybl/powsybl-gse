@@ -23,6 +23,39 @@
     <description>A demonstration module of GSE</description>
 
     <profiles>
+      <profile>
+          <id>windows</id>
+          <activation>
+            <os>
+              <family>windows</family>
+            </os>
+          </activation>
+          <properties>
+            <javafx.bundler>windows.app</javafx.bundler>
+          </properties>
+        </profile>
+        <profile>
+          <id>mac</id>
+          <activation>
+            <os>
+              <family>mac</family>
+            </os>
+          </activation>
+          <properties>
+            <javafx.bundler>mac.app</javafx.bundler>
+          </properties>
+        </profile>
+        <profile>
+          <id>unix</id>
+          <activation>
+            <os>
+              <family>unix</family>
+            </os>
+          </activation>
+          <properties>
+            <javafx.bundler>linux.app</javafx.bundler>
+          </properties>
+        </profile>
         <profile>
             <id>native-package</id>
             <activation>
@@ -71,6 +104,7 @@
                                 <powsybl.config.dirs>${user_home}/.powsybl:${app.root}/app</powsybl.config.dirs>
                                 <javafx.preloader>com.powsybl.gse.app.GsePreloader</javafx.preloader>
                             </jvmProperties>
+                            <bundler>${javafx.bundler}</bundler>
                         </configuration>
                         <executions>
                             <execution>
