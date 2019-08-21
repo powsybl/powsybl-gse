@@ -16,6 +16,8 @@ import com.powsybl.gse.util.*;
 import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -28,6 +30,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.*;
 import javafx.scene.layout.HBox;
@@ -48,6 +51,7 @@ import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -57,6 +61,8 @@ public class ProjectPane extends Tab {
     private static final Logger LOGGER = LoggerFactory.getLogger(ProjectPane.class);
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ProjectPane");
+
+    private static final ServiceLoaderCache<ProjectFileExtension> FILE_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExtension.class);
 
     private static final ServiceLoaderCache<ProjectFileCreatorExtension> CREATOR_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileCreatorExtension.class);
 
@@ -70,7 +76,7 @@ public class ProjectPane extends Tab {
 
     private final CustomTextField dependencySearchField = (CustomTextField) TextFields.createClearableTextField();
 
-    private final CheckComboBox filterBox;
+    private final CheckComboBox filterTypeBox;
 
     private static class TabKey {
 
@@ -172,7 +178,7 @@ public class ProjectPane extends Tab {
 
     private final TreeView<Object> treeView;
 
-    private final TreeView<Object> dependencyView;
+    private final TreeTableView<ProjectNode> dependencyTableView;
 
     private final StackPane viewPane;
 
@@ -247,31 +253,88 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private void dependencyViewChangeListener(ListChangeListener.Change<? extends TreeItem<Object>> c) {
+    private void dependencyViewChangeListener(ListChangeListener.Change<? extends TreeItem<ProjectNode>> c) {
         if (c.getList().isEmpty()) {
-            dependencyView.setContextMenu(null);
+            dependencyTableView.setContextMenu(null);
         } else if (c.getList().size() == 1) {
-            TreeItem<Object> selectedTreeItem = c.getList().get(0);
+            TreeItem selectedTreeItem = c.getList().get(0);
             Object value = selectedTreeItem.getValue();
-            dependencyView.setOnKeyPressed((KeyEvent ke) -> {
+            dependencyTableView.setOnKeyPressed((KeyEvent ke) -> {
                 if (ke.getCode() == KeyCode.F2) {
                     renameProjectNode(selectedTreeItem);
                 }
             });
-            if (value instanceof ProjectFolder) {
-                dependencyView.setContextMenu(createFolderContextMenu(selectedTreeItem));
-            } else if (value instanceof ProjectFile) {
-                dependencyView.setContextMenu(createFileContextMenu(selectedTreeItem));
+            if (value instanceof ProjectFile) {
+                dependencyTableView.setContextMenu(createFileContextMenu(selectedTreeItem));
             } else {
-                dependencyView.setContextMenu(null);
+                dependencyTableView.setContextMenu(null);
             }
         } else {
-            dependencyView.setContextMenu(createMultipleContextMenu(c.getList()));
+            dependencyTableView.setContextMenu(createMultipleContextMenu(c.getList()));
         }
     }
 
-    private void dependencyFilteredListener(ListChangeListener.Change<? extends CheckBox> c) {
-        //TODO
+    private ChangeListener<String> dependencyTextFieldListener() {
+        return (observable, oldValue, newValue) -> {
+            TreeItem rootItem = createDependencyRootItem();
+            dependencyTableView.setRoot(rootItem);
+            List<TreeItem<ProjectNode>> filteredItems;
+
+            ObservableList checkedTypes = filterTypeBox.getCheckModel().getCheckedItems();
+            Stream<TreeItem<ProjectNode>> sortedItems = dependencyTableView.getRoot().getChildren().stream()
+                    .sorted(Comparator.comparing(fileItem -> fileItem.getValue().toString()));
+
+            if (!newValue.isEmpty()) {
+                filteredItems = sortedItems
+                        .filter(item -> isItemChecked(checkedTypes, item) && itemNameStartsWith(item, newValue))
+                        .collect(Collectors.toList());
+            } else {
+                filteredItems = sortedItems
+                        .filter(file -> isItemChecked(checkedTypes, file))
+                        .collect(Collectors.toList());
+            }
+            dependencyTableView.getRoot().getChildren().setAll(filteredItems);
+        };
+    }
+
+    private void dependencyFilteredBoxListener(ListChangeListener.Change<? extends String> c) {
+        TreeItem rootItem = createDependencyRootItem();
+        dependencyTableView.setRoot(rootItem);
+        List<TreeItem<ProjectNode>> filteredItems;
+
+        ObservableList checkedTypes = c.getList();
+        Stream<TreeItem<ProjectNode>> sortedItems = dependencyTableView.getRoot().getChildren().stream()
+                .sorted(Comparator.comparing(fileItem -> fileItem.getValue().toString()));
+        String searchText = dependencySearchField.getText();
+
+        String allTypes = RESOURCE_BUNDLE.getString("All");
+        if (c.getList().size() == 1) {
+            String checkedType = c.getList().get(0);
+            dependencyTableView.setRoot(rootItem);
+            if (checkedType.equals(allTypes)) {
+                dependencyTableView.setRoot(rootItem);
+            } else {
+                filteredItems = sortedItems
+                        .filter(file -> isItemChecked(checkedTypes, file))
+                        .collect(Collectors.toList());
+                if (!searchText.isEmpty()) {
+                    filteredItems = filteredItems.stream()
+                            .filter(item -> itemNameStartsWith(item, searchText))
+                            .collect(Collectors.toList());
+                }
+                dependencyTableView.getRoot().getChildren().setAll(filteredItems);
+            }
+        } else {
+            filteredItems = sortedItems
+                    .filter(file -> isItemChecked(checkedTypes, file))
+                    .collect(Collectors.toList());
+            if (!searchText.isEmpty()) {
+                filteredItems = filteredItems.stream()
+                        .filter(item -> itemNameStartsWith(item, searchText))
+                        .collect(Collectors.toList());
+            }
+            dependencyTableView.getRoot().getChildren().setAll(filteredItems);
+        }
     }
 
     private TreeCell<Object> treeViewCellFactory(TreeView<Object> item) {
@@ -353,7 +416,7 @@ public class ProjectPane extends Tab {
 
     private void dependencyViewMouseClickHandler(MouseEvent mouseEvent) {
         if (mouseEvent.getClickCount() == 2) {
-            TreeItem<Object> selectedTreeItem = dependencyView.getSelectionModel().getSelectedItem();
+            TreeItem selectedTreeItem = dependencyTableView.getSelectionModel().getSelectedItem();
             if (selectedTreeItem != null) {
                 runDefaultActionAfterDoubleClick(selectedTreeItem);
             }
@@ -503,39 +566,47 @@ public class ProjectPane extends Tab {
         treeView.setCellFactory(this::treeViewCellFactory);
         treeView.setOnMouseClicked(this::treeViewMouseClickHandler);
 
-        ObservableList<String> filterList = FXCollections.observableArrayList("All");
-        filterBox = new CheckComboBox<>(filterList);
-        for (Class<? extends ProjectFile> type : project.getFileSystem().getData().getProjectFileClasses()) {
-            for (ProjectFileCreatorExtension creatorExtension : findCreatorExtension(type)) {
-                if (creatorExtension != null) {
-                    String fileExtension = creatorExtension.getProjectFileType().getSimpleName();
-                    if (!filterList.contains(fileExtension)) {
-                        filterList.add(fileExtension);
-                    }
-                }
-            }
-        }
-        filterBox.getCheckModel().check(0);
-        for (int i =1 ; i<filterList.size(); i++) {
-            filterBox.getItemBooleanProperty(i).addListener((observable, oldvalue, newvalue) -> {
-                if(newvalue) {
-                    filterBox.getCheckModel().clearCheck(0);
-                }
-            });
-        }
-        filterBox.getItemBooleanProperty(0).addListener((observable, oldvalue, newvalue) -> {
-            if(newvalue) {
-                for (int i =1 ; i<filterList.size(); i++) {
-                    filterBox.getCheckModel().clearCheck(i);
-                }
+        dependencyTableView = new TreeTableView<>();
+        dependencyTableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        dependencyTableView.getSelectionModel().getSelectedItems().addListener(this::dependencyViewChangeListener);
+        dependencyTableView.setOnMouseClicked(this::dependencyViewMouseClickHandler);
+
+        TreeTableColumn<ProjectNode, String> fileColumn = new TreeTableColumn<>(RESOURCE_BUNDLE.getString("Name"));
+        fileColumn.setPrefWidth(150);
+        TreeTableColumn<ProjectNode, String> locationColumn = new TreeTableColumn<>(RESOURCE_BUNDLE.getString("Location"));
+        TreeTableColumn<ProjectNode, String> referenceColumn = new TreeTableColumn<>(RESOURCE_BUNDLE.getString("Reference"));
+
+        fileColumn.setCellValueFactory(new TreeItemPropertyValueFactory<>("Name"));
+        locationColumn.setCellValueFactory(column -> {
+            TreeItem<ProjectNode> item = column.getValue();
+            if (item != null && item.getValue() != null) {
+                return new SimpleStringProperty("/" + item.getValue().getPath().toString().replace(item.getValue().getName(), ""));
+            } else {
+                return new SimpleStringProperty("");
             }
         });
-        filterBox.getCheckModel().getCheckedItems().addListener(this::dependencyFilteredListener);
-        dependencyView = new TreeView<>();
-        dependencyView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        dependencyView.getSelectionModel().getSelectedItems().addListener(this::dependencyViewChangeListener);
-        dependencyView.setCellFactory(this::treeViewCellFactory);
-        dependencyView.setOnMouseClicked(this::dependencyViewMouseClickHandler);
+        referenceColumn.setCellValueFactory(column -> {
+            TreeItem<ProjectNode> item = column.getValue();
+            if (item != null && item.getValue() != null && item != dependencyTableView.getRoot() && item.getParent() != dependencyTableView.getRoot()) {
+                List<ProjectDependency<ProjectNode>> dependencies = ((ProjectFile) item.getValue()).getDependencies();
+                boolean isABackwardDependency = dependencies.stream().anyMatch(dep -> dep.getProjectNode().getId().equals(item.getParent().getValue().getId()));
+                if (isABackwardDependency) {
+                    return new SimpleStringProperty(RESOURCE_BUNDLE.getString("ReferencedBy"));
+                }
+                return new SimpleStringProperty(RESOURCE_BUNDLE.getString("Reference"));
+            } else {
+                return new SimpleStringProperty();
+            }
+        });
+        dependencyTableView.getColumns().addAll(fileColumn, locationColumn, referenceColumn);
+
+        ObservableList<String> filteredList = FXCollections.observableArrayList(RESOURCE_BUNDLE.getString("All"));
+        ObservableList<String> types = createFilterTypes();
+        filteredList.addAll(types);
+        filterTypeBox = new CheckComboBox<>(filteredList);
+        filterTypeBox.setMaxWidth(250);
+        filterTypeBox.getCheckModel().check(0);
+        filterTypeBox.getCheckModel().getCheckedItems().addListener(this::dependencyFilteredBoxListener);
 
         DetachableTabPane ctrlTabPane1 = new DetachableTabPane();
         DetachableTabPane ctrlTabPane2 = new DetachableTabPane();
@@ -551,13 +622,13 @@ public class ProjectPane extends Tab {
         dependencySearchField.setPrefWidth(260);
         dependencySearchField.getStyleClass().add("search-field");
 
-        HBox hBox = new HBox(dependencySearchField, filterBox);
+        HBox filterBox = new HBox(dependencySearchField, filterTypeBox);
         HBox.setMargin(dependencySearchField, new Insets(0, 0, 0, 3));
 
         MasterDetailPane masterDetailPane = new MasterDetailPane();
         masterDetailPane.setDetailSide(Side.TOP);
-        masterDetailPane.setDetailNode(hBox);
-        masterDetailPane.setMasterNode(dependencyView);
+        masterDetailPane.setDetailNode(filterBox);
+        masterDetailPane.setMasterNode(dependencyTableView);
         masterDetailPane.setDividerPosition(0.06);
 
         Tab dependencyTab = new Tab(RESOURCE_BUNDLE.getString("Dependencies"), masterDetailPane);
@@ -597,6 +668,8 @@ public class ProjectPane extends Tab {
         createRootFolderTreeItem(project);
         createDependencyRootFolderTreeItem();
 
+        dependencySearchField.textProperty().addListener(dependencyTextFieldListener());
+
         getContent().setOnKeyPressed((KeyEvent ke) -> {
             if (saveKeyCombination.match(ke)) {
                 findDetachableTabPanes().stream()
@@ -609,6 +682,33 @@ public class ProjectPane extends Tab {
                         });
             }
         });
+    }
+
+    private static boolean isItemChecked(ObservableList checkedTypes, TreeItem<ProjectNode> file) {
+        final String allTypes = RESOURCE_BUNDLE.getString("All");
+        for (ProjectFileExtension fileExtension : findFileExtension(((ProjectFile) file.getValue()).getClass())) {
+            if (fileExtension != null) {
+                return checkedTypes.contains(fileExtension.getProjectFileTrivialName()) || checkedTypes.contains(allTypes);
+            }
+        }
+        return false;
+    }
+
+    private static boolean itemNameStartsWith(TreeItem<ProjectNode> item, String value) {
+        return item.getValue().getName().toLowerCase().startsWith(value.toLowerCase());
+    }
+
+    private static ObservableList<String> createFilterTypes() {
+        ObservableList<String> types = FXCollections.observableArrayList();
+        for (ProjectFileExtension fileExtension : FILE_EXTENSION_LOADER.getServices()) {
+            if (fileExtension != null) {
+                String fileEName = fileExtension.getProjectFileTrivialName();
+                if (!types.contains(fileEName)) {
+                    types.add(fileEName);
+                }
+            }
+        }
+        return types;
     }
 
     public Project getProject() {
@@ -640,9 +740,13 @@ public class ProjectPane extends Tab {
             item.setExpanded(false);
             item.setExpanded(true);
         }
+        refreshDependencyView();
+    }
+
+    private void refreshDependencyView() {
         //refresh dependency tree view
-        dependencyView.getRoot().setExpanded(false);
-        dependencyView.getRoot().setExpanded(true);
+        dependencyTableView.getRoot().setExpanded(false);
+        dependencyTableView.getRoot().setExpanded(true);
     }
 
     private TreeItem<Object> createNodeTreeItem(ProjectNode node) {
@@ -662,17 +766,16 @@ public class ProjectPane extends Tab {
     }
 
     private void createDependencyRootFolderTreeItem() {
-        dependencyView.setRoot(createWaitingTreeItem());
+        dependencyTableView.setRoot(new TreeItem<>());
         GseUtil.execute(context.getExecutor(), () -> {
-            TreeItem<Object> root2 = createDependencyRootItem();
+            TreeItem root2 = createDependencyRootItem();
             Platform.runLater(() -> {
-                dependencyView.setRoot(root2);
+                dependencyTableView.setRoot(root2);
                 root2.setExpanded(true);
-                dependencyView.setShowRoot(false);
+                dependencyTableView.setShowRoot(false);
             });
         });
     }
-
 
     private TreeItem<Object> createDependencyRootItem() {
         TreeItem<Object> rootItem = new TreeItem<>(project.getRootFolder(), NodeGraphics.getGraphic(project.getRootFolder()));
@@ -691,10 +794,17 @@ public class ProjectPane extends Tab {
     private void addFilesTreeItems(ProjectFolder folder, List<TreeItem<Object>> fileTreeItems) {
         List<ProjectNode> allNodes = folder.getChildren();
         allNodes.forEach(projectNode -> {
-            if(!projectNode.isFolder()) {
-                fileTreeItems.add(createFileTreeItem((ProjectFile) projectNode));
+            if (projectNode instanceof ProjectFile) {
+                TreeItem<Object> fileTreeItem = createFileTreeItem((ProjectFile) projectNode);
+                fileTreeItems.add(fileTreeItem);
+                if (!projectNode.getBackwardDependencies().isEmpty()) {
+                    projectNode.getBackwardDependencies().forEach(file -> fileTreeItem.getChildren().add(createFileTreeItem(file)));
+                }
+                if (!((ProjectFile) projectNode).getDependencies().isEmpty()) {
+                    ((ProjectFile) projectNode).getDependencies().forEach(file -> fileTreeItem.getChildren().add(createFileTreeItem((ProjectFile) file.getProjectNode())));
+                }
             } else {
-                addFilesTreeItems((ProjectFolder)projectNode, fileTreeItems);
+                addFilesTreeItems((ProjectFolder) projectNode, fileTreeItems);
             }
         });
     }
@@ -752,6 +862,12 @@ public class ProjectPane extends Tab {
 
     // extension search
 
+    private static List<ProjectFileExtension> findFileExtension(Class<? extends ProjectFile> type) {
+        return FILE_EXTENSION_LOADER.getServices().stream()
+                .filter(extension -> extension.getProjectFileClass().isAssignableFrom(type))
+                .collect(Collectors.toList());
+    }
+
     private static List<ProjectFileCreatorExtension> findCreatorExtension(Class<? extends ProjectFile> type) {
         return CREATOR_EXTENSION_LOADER.getServices().stream()
                 .filter(extension -> extension.getProjectFileType().isAssignableFrom(type))
@@ -781,16 +897,16 @@ public class ProjectPane extends Tab {
 
     // contextual menu
 
-    private MenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
+    private MenuItem createDeleteProjectNodeItem(List<? extends TreeItem> selectedTreeItems) {
         MenuItem deleteMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.1em"));
         deleteMenuItem.setOnAction(event -> deleteNodesAlert(selectedTreeItems));
         deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
-        List<TreeItem<Object>> selectedItems = new ArrayList<>(selectedTreeItems);
+        List<TreeItem> selectedItems = new ArrayList<>(selectedTreeItems);
         deleteMenuItem.setDisable(ancestorsExistIn(selectedItems) || selectedItems.contains(treeView.getRoot()));
         return deleteMenuItem;
     }
 
-    private void deleteNodesAlert(List<? extends TreeItem<Object>> selectedTreeItems) {
+    private void deleteNodesAlert(List<? extends TreeItem> selectedTreeItems) {
         GseAlerts.deleteNodesAlert(selectedTreeItems).showAndWait().ifPresent(buttonType -> {
             if (buttonType == ButtonType.OK) {
                 List<TreeItem<Object>> parentTreeItems = new ArrayList<>();
@@ -811,9 +927,9 @@ public class ProjectPane extends Tab {
         });
     }
 
-    private boolean ancestorsExistIn(List<? extends TreeItem<Object>> treeItems) {
+    private boolean ancestorsExistIn(List<? extends TreeItem> treeItems) {
         boolean found = false;
-        for (TreeItem<Object> treeItem : treeItems) {
+        for (TreeItem treeItem : treeItems) {
             if (treeItem != treeView.getRoot()) {
                 AbstractNodeBase value = (AbstractNodeBase) treeItem.getValue();
                 found = treeItems.stream().filter(it -> it != treeItem).anyMatch(item -> ((AbstractNodeBase) item.getValue()).isAncestorOf(value));
@@ -850,7 +966,7 @@ public class ProjectPane extends Tab {
                 // to force the refresh
                 selectedTreeItem.setValue(null);
                 selectedTreeItem.setValue(selectedProjectNode);
-                refresh(dependencyView.getRoot());
+                refreshDependencyView();
 
                 // refresh impacted tabs
                 Map<String, TreeItem<Object>> treeItemsToRefresh = new HashMap<>();
@@ -1043,7 +1159,7 @@ public class ProjectPane extends Tab {
         return menuItem;
     }
 
-    private ContextMenu createMultipleContextMenu(List<? extends TreeItem<Object>> selectedTreeItems) {
+    private ContextMenu createMultipleContextMenu(List<? extends TreeItem> selectedTreeItems) {
         ContextMenu contextMenu = new ContextMenu();
         contextMenu.getItems().add(createDeleteProjectNodeItem(selectedTreeItems));
         return contextMenu;
