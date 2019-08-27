@@ -11,7 +11,6 @@ import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.TaskMonitor;
 import com.powsybl.afs.ext.base.ProjectCase;
 import com.powsybl.gse.spi.ExecutionTaskConfigurator;
-import com.powsybl.gse.spi.Exportable;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileExecutionTaskExtension;
 import com.powsybl.gse.util.Glyph;
@@ -44,7 +43,7 @@ import java.util.zip.GZIPOutputStream;
  * @author Marianne Funfrock <marianne.funfrock at rte-france.com>
  */
 @AutoService(ProjectFileExecutionTaskExtension.class)
-public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExtension<ProjectFile, ProjectCaseExportParameters>, Exportable {
+public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExtension<ProjectFile, ProjectCaseExportParameters> {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ProjectCaseExport");
 
