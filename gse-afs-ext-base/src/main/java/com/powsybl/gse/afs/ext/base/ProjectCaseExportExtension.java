@@ -11,6 +11,7 @@ import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.TaskMonitor;
 import com.powsybl.afs.ext.base.ProjectCase;
 import com.powsybl.gse.spi.ExecutionTaskConfigurator;
+import com.powsybl.gse.spi.Exportable;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileExecutionTaskExtension;
 import com.powsybl.gse.util.Glyph;
@@ -23,6 +24,9 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
@@ -40,7 +44,7 @@ import java.util.zip.GZIPOutputStream;
  * @author Marianne Funfrock <marianne.funfrock at rte-france.com>
  */
 @AutoService(ProjectFileExecutionTaskExtension.class)
-public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExtension<ProjectFile, ProjectCaseExportParameters> {
+public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExtension<ProjectFile, ProjectCaseExportParameters>, Exportable {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ProjectCaseExport");
 
@@ -59,6 +63,11 @@ public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExten
     @Override
     public String getMenuText(ProjectFile projectCase) {
         return RESOURCE_BUNDLE.getString("CaseExport");
+    }
+
+    @Override
+    public KeyCombination getMenuKeyCode() {
+        return new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN);
     }
 
     @Override
