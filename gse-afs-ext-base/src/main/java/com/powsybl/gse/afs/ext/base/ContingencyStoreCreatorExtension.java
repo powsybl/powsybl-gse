@@ -12,7 +12,7 @@ import com.powsybl.contingency.afs.ContingencyStore;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileCreator;
 import com.powsybl.gse.spi.ProjectFileCreatorExtension;
-import com.powsybl.gse.util.Glyph;
+import com.powsybl.gse.util.NodeGraphics;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
@@ -36,7 +36,7 @@ public class ContingencyStoreCreatorExtension implements ProjectFileCreatorExten
 
     @Override
     public Node getMenuGraphic() {
-        return Glyph.createAwesomeFont('\uf016').size("1.2em");
+        return NodeGraphics.createFileGraphic();
     }
 
     @Override
