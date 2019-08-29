@@ -18,6 +18,7 @@ import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -575,30 +576,16 @@ public class ProjectPane extends Tab {
         fileColumn.setPrefWidth(150);
         TreeTableColumn<ProjectNode, String> locationColumn = new TreeTableColumn<>(RESOURCE_BUNDLE.getString("Location"));
         TreeTableColumn<ProjectNode, String> referenceColumn = new TreeTableColumn<>(RESOURCE_BUNDLE.getString("Reference"));
+        TreeTableColumn<ProjectNode, String> creationDateColumn = new TreeTableColumn<>(RESOURCE_BUNDLE.getString("Creation"));
+        TreeTableColumn<ProjectNode, String> modificationDateColumn = new TreeTableColumn<>(RESOURCE_BUNDLE.getString("Modification"));
 
         fileColumn.setCellValueFactory(new TreeItemPropertyValueFactory<>("Name"));
-        locationColumn.setCellValueFactory(column -> {
-            TreeItem<ProjectNode> item = column.getValue();
-            if (item != null && item.getValue() != null) {
-                return new SimpleStringProperty("/" + item.getValue().getPath().toString().replace(item.getValue().getName(), ""));
-            } else {
-                return new SimpleStringProperty("");
-            }
-        });
-        referenceColumn.setCellValueFactory(column -> {
-            TreeItem<ProjectNode> item = column.getValue();
-            if (item != null && item.getValue() != null && item != dependencyTableView.getRoot() && item.getParent() != dependencyTableView.getRoot()) {
-                List<ProjectDependency<ProjectNode>> dependencies = ((ProjectFile) item.getValue()).getDependencies();
-                boolean isABackwardDependency = dependencies.stream().anyMatch(dep -> dep.getProjectNode().getId().equals(item.getParent().getValue().getId()));
-                if (isABackwardDependency) {
-                    return new SimpleStringProperty(RESOURCE_BUNDLE.getString("ReferencedBy"));
-                }
-                return new SimpleStringProperty(RESOURCE_BUNDLE.getString("Reference"));
-            } else {
-                return new SimpleStringProperty();
-            }
-        });
-        dependencyTableView.getColumns().addAll(fileColumn, locationColumn, referenceColumn);
+        locationColumn.setCellValueFactory(this::locationColumnCellValueFactory);
+        referenceColumn.setCellValueFactory(this::referenceColumnCellValueFactory);
+        creationDateColumn.setCellValueFactory(this::creationDateColumnCellValueFactory);
+        modificationDateColumn.setCellValueFactory(this::modificationDateColumCellValueFactory);
+
+        dependencyTableView.getColumns().addAll(fileColumn, locationColumn, referenceColumn, creationDateColumn, modificationDateColumn);
 
         ObservableList<String> filteredList = FXCollections.observableArrayList(RESOURCE_BUNDLE.getString("All"));
         ObservableList<String> types = createFilterTypes();
@@ -682,6 +669,45 @@ public class ProjectPane extends Tab {
                         });
             }
         });
+    }
+
+    private ObservableValue<String> modificationDateColumCellValueFactory(TreeTableColumn.CellDataFeatures<ProjectNode, String> column) {
+        TreeItem<ProjectNode> item = column.getValue();
+        if (item != null && item.getValue() != null) {
+            return new SimpleStringProperty(item.getValue().getModificationDate().toLocalDate().toString());
+        }
+        return new SimpleStringProperty();
+    }
+
+    private ObservableValue<String> creationDateColumnCellValueFactory(TreeTableColumn.CellDataFeatures<ProjectNode, String> column) {
+        TreeItem<ProjectNode> item = column.getValue();
+        if (item != null && item.getValue() != null) {
+            return new SimpleStringProperty(item.getValue().getCreationDate().toLocalDate().toString());
+        }
+        return new SimpleStringProperty();
+    }
+
+    private ObservableValue<String> referenceColumnCellValueFactory(TreeTableColumn.CellDataFeatures<ProjectNode, String> column) {
+        TreeItem<ProjectNode> item = column.getValue();
+        if (item != null && item.getValue() != null && item != dependencyTableView.getRoot() && item.getParent() != dependencyTableView.getRoot()) {
+            List<ProjectDependency<ProjectNode>> dependencies = ((ProjectFile) item.getValue()).getDependencies();
+            boolean isABackwardDependency = dependencies.stream().anyMatch(dep -> dep.getProjectNode().getId().equals(item.getParent().getValue().getId()));
+            if (isABackwardDependency) {
+                return new SimpleStringProperty(RESOURCE_BUNDLE.getString("ReferencedBy"));
+            }
+            return new SimpleStringProperty(RESOURCE_BUNDLE.getString("Reference"));
+        } else {
+            return new SimpleStringProperty();
+        }
+    }
+
+    private ObservableValue<String> locationColumnCellValueFactory(TreeTableColumn.CellDataFeatures<ProjectNode, String> column) {
+        TreeItem<ProjectNode> item = column.getValue();
+        if (item != null && item.getValue() != null) {
+            return new SimpleStringProperty("/" + item.getValue().getPath().toString().replace(item.getValue().getName(), ""));
+        } else {
+            return new SimpleStringProperty("");
+        }
     }
 
     private static boolean isItemChecked(ObservableList checkedTypes, TreeItem<ProjectNode> file) {
