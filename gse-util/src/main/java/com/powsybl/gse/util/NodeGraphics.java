@@ -24,7 +24,7 @@ public final class NodeGraphics {
     private NodeGraphics() {
     }
 
-    private static Text createFileGraphic() {
+    public static Text createFileGraphic() {
         return Glyph.createAwesomeFont('\uf016').size("1.2em");
     }
 
