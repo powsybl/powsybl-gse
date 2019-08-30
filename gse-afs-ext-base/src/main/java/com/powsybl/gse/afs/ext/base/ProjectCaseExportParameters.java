@@ -14,7 +14,8 @@ import java.nio.file.Paths;
  */
 public class ProjectCaseExportParameters {
 
-    private static final String GZ_EXT = ".gz";
+    public static final String GZ_EXT = ".gz";
+    public static final String XIIDM_EXT = ".xiidm";
 
     private String filePath;
     private boolean zipped;
@@ -36,6 +37,10 @@ public class ProjectCaseExportParameters {
             filePath += GZ_EXT;
         }
         return Paths.get(filePath);
+    }
+
+    public String getFilePathText() {
+        return filePath;
     }
 
     public void setFilePath(String filePath) {
