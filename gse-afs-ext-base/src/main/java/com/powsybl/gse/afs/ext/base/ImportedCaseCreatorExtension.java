@@ -13,6 +13,7 @@ import com.powsybl.afs.ext.base.ImportedCase;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileCreator;
 import com.powsybl.gse.spi.ProjectFileCreatorExtension;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 
 import java.util.ResourceBundle;
@@ -28,6 +29,11 @@ public class ImportedCaseCreatorExtension implements ProjectFileCreatorExtension
     @Override
     public Class<? extends ProjectFile> getProjectFileType() {
         return ImportedCase.class;
+    }
+
+    @Override
+    public Node getMenuGraphic() {
+        return BaseExtNodeGraphicProvider.createIidmGlyph();
     }
 
     @Override
