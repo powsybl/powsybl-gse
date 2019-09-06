@@ -20,6 +20,12 @@ import javafx.scene.Node;
 @AutoService(NodeGraphicProvider.class)
 public class SecurityAnalysisNodeGraphicProvider implements NodeGraphicProvider {
 
+    public static Node createSecurityAnalysisRunnerGlyph() {
+        return Glyph.createAwesomeFont('\uf132')
+                .size("1.4em")
+                .color("dimgray");
+    }
+
     @Override
     public Node getGraphic(Object file) {
         if (file instanceof ActionScript) {
@@ -30,9 +36,7 @@ public class SecurityAnalysisNodeGraphicProvider implements NodeGraphicProvider 
                     .size("1.4em")
                     .color("orange");
         } else if (file instanceof SecurityAnalysisRunner) {
-            return Glyph.createAwesomeFont('\uf132')
-                    .size("1.4em")
-                    .color("dimgray");
+            return createSecurityAnalysisRunnerGlyph();
         }
         return null;
     }

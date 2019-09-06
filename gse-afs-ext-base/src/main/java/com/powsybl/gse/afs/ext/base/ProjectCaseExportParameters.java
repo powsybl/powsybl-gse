@@ -14,8 +14,8 @@ import java.nio.file.Paths;
  */
 public class ProjectCaseExportParameters {
 
-    private static  final String XML_EXT = ".xml";
-    private static final String GZ_EXT = ".gz";
+    public static final String GZ_EXT = ".gz";
+    public static final String XIIDM_EXT = ".xiidm";
 
     private String filePath;
     private boolean zipped;
@@ -33,20 +33,14 @@ public class ProjectCaseExportParameters {
     }
 
     public Path getFilePath() {
-        if (zipped) {
-            if (!filePath.toLowerCase().endsWith(GZ_EXT)) {
-                if (!filePath.toLowerCase().endsWith(XML_EXT)) {
-                    filePath += XML_EXT + GZ_EXT;
-                } else {
-                    filePath += GZ_EXT;
-                }
-            }
-        } else {
-            if (!filePath.toLowerCase().endsWith(XML_EXT)) {
-                filePath += XML_EXT;
-            }
+        if (zipped && !filePath.toLowerCase().endsWith(GZ_EXT)) {
+            filePath += GZ_EXT;
         }
         return Paths.get(filePath);
+    }
+
+    public String getFilePathText() {
+        return filePath;
     }
 
     public void setFilePath(String filePath) {
