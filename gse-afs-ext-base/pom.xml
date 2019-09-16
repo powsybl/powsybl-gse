@@ -42,11 +42,15 @@
         <!-- Compilation dependencies -->
         <dependency>
             <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-action-dsl</artifactId>
+            <artifactId>powsybl-action-dsl-afs</artifactId>
         </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-afs-ext-base</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-contingency-afs</artifactId>
         </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>

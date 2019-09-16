@@ -431,7 +431,7 @@
             <!-- powsybl-core dependencies -->
             <dependency>
                 <groupId>com.powsybl</groupId>
-                <artifactId>powsybl-action-dsl</artifactId>
+                <artifactId>powsybl-action-dsl-afs</artifactId>
                 <version>${powsyblcore.version}</version>
             </dependency>
             <dependency>
@@ -442,6 +442,11 @@
             <dependency>
                 <groupId>com.powsybl</groupId>
                 <artifactId>powsybl-afs-ext-base</artifactId>
+                <version>${powsyblcore.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-contingency-afs</artifactId>
                 <version>${powsyblcore.version}</version>
             </dependency>
             <dependency>
