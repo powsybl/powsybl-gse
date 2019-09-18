@@ -12,6 +12,8 @@ import com.powsybl.contingency.afs.ContingencyStore;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileCreator;
 import com.powsybl.gse.spi.ProjectFileCreatorExtension;
+import com.powsybl.gse.util.NodeGraphics;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 
 import java.util.ResourceBundle;
@@ -27,6 +29,11 @@ public class ContingencyStoreCreatorExtension implements ProjectFileCreatorExten
     @Override
     public Class<ContingencyStore> getProjectFileType() {
         return ContingencyStore.class;
+    }
+
+    @Override
+    public Node getMenuGraphic() {
+        return NodeGraphics.createFileGraphic();
     }
 
     @Override

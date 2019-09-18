@@ -104,7 +104,23 @@ public class ProjectPane extends Tab {
         public MyTab(String text, ProjectFileViewer viewer) {
             super(text, viewer.getContent());
             this.viewer = viewer;
+            onKeyPressed();
             setContextMenu(contextMenu());
+        }
+
+        private void onKeyPressed() {
+            getContent().setOnKeyPressed((KeyEvent ke) -> {
+                if (closeKeyCombination.match(ke)) {
+                    closeTab(ke, this);
+                    ke.consume();
+                } else if (closeAllKeyCombination.match(ke)) {
+                    List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
+                            .map(tab -> (MyTab) tab)
+                            .collect(Collectors.toList()));
+                    mytabs.forEach(mytab -> closeTab(ke, mytab));
+                    ke.consume();
+                }
+            });
         }
 
         private ContextMenu contextMenu() {
@@ -117,8 +133,6 @@ public class ProjectPane extends Tab {
                         .collect(Collectors.toList()));
                 mytabs.forEach(mytab -> closeTab(event, mytab));
             });
-            closeMenuItem.setAccelerator(closeKeyCombination);
-            closeAllMenuItem.setAccelerator(closeAllKeyCombination);
             return new ContextMenu(closeMenuItem, closeAllMenuItem);
         }
 
@@ -994,6 +1008,8 @@ public class ProjectPane extends Tab {
 
     private MenuItem createCreateFolderItem(TreeItem<Object> selectedTreeItem, ProjectFolder folder) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("CreateFolder") + "...");
+        Glyph createFolderGlyph = Glyph.createAwesomeFont('\uf07b').size("1.3em").color("#FFDB69");
+        menuItem.setGraphic(createFolderGlyph);
         menuItem.setOnAction((ActionEvent event) ->
                 NewFolderPane.showAndWaitDialog(getContent().getScene().getWindow(), folder).ifPresent(newFolder -> {
                     refresh(selectedTreeItem);
@@ -1067,6 +1083,7 @@ public class ProjectPane extends Tab {
             for (ProjectFileCreatorExtension creatorExtension : findCreatorExtension(type)) {
                 if (creatorExtension != null) {
                     MenuItem menuItem = new MenuItem(creatorExtension.getMenuText());
+                    menuItem.setGraphic(creatorExtension.getMenuGraphic());
                     menuItem.setOnAction(event -> showProjectItemCreatorDialog(selectedTreeItem, creatorExtension));
                     items.add(menuItem);
                 }
