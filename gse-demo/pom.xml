@@ -220,7 +220,7 @@
         </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
-            <artifactId>gse-copypaste-afs-local</artifactId>
+            <artifactId>powsybl-gse-copypaste-afs-local</artifactId>
             <version>${project.version}</version>
             <scope>runtime</scope>
         </dependency>
