@@ -1,15 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright (c) 2019, RTE (http://www.rte-france.com)
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <parent>
-        <artifactId>gse-copypaste</artifactId>
-        <groupId>com.powsybl</groupId>
-        <version>1.7.0-SNAPSHOT</version>
-    </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>gse-copypaste-afs-server</artifactId>
+    <parent>
+        <groupId>com.powsybl</groupId>
+        <artifactId>powsybl-gse-copypaste</artifactId>
+        <version>1.7.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>powsybl-gse-copypaste-afs-server</artifactId>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Automatic-Module-Name>com.powsybl-gse-copypaste-afs-server</Automatic-Module-Name>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
     <dependencies>
         <dependency>
@@ -21,7 +46,7 @@
 
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>gse-copypaste-afs-local</artifactId>
+            <artifactId>powsybl-gse-copypaste-afs-local</artifactId>
             <version>${project.version}</version>
         </dependency>
 
@@ -31,6 +56,5 @@
             <version>${powsyblcore.version}</version>
         </dependency>
     </dependencies>
-
 
 </project>
