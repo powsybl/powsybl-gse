@@ -17,6 +17,7 @@ import com.powsybl.iidm.network.EnergySource;
 import groovyjarjarantlr.Token;
 import groovyjarjarantlr.TokenStream;
 import groovyjarjarantlr.TokenStreamException;
+import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
@@ -32,10 +33,7 @@ import org.codehaus.groovy.antlr.parser.GroovyLexer;
 import org.codehaus.groovy.antlr.parser.GroovyTokenTypes;
 import org.controlsfx.control.MasterDetailPane;
 import org.fxmisc.flowless.VirtualizedScrollPane;
-import org.fxmisc.richtext.Caret;
-import org.fxmisc.richtext.CharacterHit;
-import org.fxmisc.richtext.CodeArea;
-import org.fxmisc.richtext.LineNumberFactory;
+import org.fxmisc.richtext.*;
 import org.fxmisc.richtext.model.StyleSpans;
 import org.fxmisc.richtext.model.StyleSpansBuilder;
 import org.slf4j.Logger;
@@ -171,6 +169,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
         });
         codeArea.addEventFilter(KeyEvent.KEY_PRESSED, this::setTabulationSpace);
+        codeArea.addEventHandler(KeyEvent.KEY_PRESSED, this::handleAutoIndent);
         codeArea.setOnDragEntered(event -> codeArea.setShowCaret(Caret.CaretVisibility.ON));
         codeArea.setOnDragExited(event -> codeArea.setShowCaret(Caret.CaretVisibility.AUTO));
         codeArea.setOnDragDetected(this::onDragDetected);
@@ -360,6 +359,36 @@ public class GroovyCodeEditor extends MasterDetailPane {
                 } else {
                     searchBar.nextMatch();
                 }
+            }
+        }
+    }
+
+    private void handleAutoIndent(KeyEvent ke){
+        if (ke.getCode() == KeyCode.ENTER) {
+            final Pattern whiteSpace = Pattern.compile("^\\s+");
+            int caretPosition = codeArea.getCaretPosition();
+            int currentParagraph = codeArea.getCurrentParagraph();
+            if (currentParagraph > 0) {
+                Matcher m0 = whiteSpace.matcher(codeArea.getParagraph(currentParagraph - 1).getSegments().get(0));
+                StringBuilder indentation = new StringBuilder("");
+                if (codeArea.getParagraph(currentParagraph - 1).getSegments().get(0).trim().endsWith("{")) {
+                    indentation.append(generateTabSpace(getTabSize()));
+                }
+                if (m0.find()) {
+                    indentation.append(m0.group());
+                }
+                Platform.runLater(() -> codeArea.insertText(caretPosition, indentation.toString()));
+            }
+        } else if ("}".equals(ke.getText())) {
+            int caretPosition = codeArea.getCaretPosition();
+            final Pattern endBlockPattern = Pattern.compile("^\\s*\\s{"+tabSize+"}$");
+            int currentParagraph = codeArea.getCurrentParagraph();
+            Matcher matchEndBlock = endBlockPattern.matcher(codeArea.getParagraph(currentParagraph).getSegments().get(0));
+            if(matchEndBlock.find()) {
+                Platform.runLater(() -> {
+                    codeArea.deleteText(caretPosition-getTabSize(), caretPosition);
+                    codeArea.moveTo(codeArea.getCaretPosition()+1);
+                });
             }
         }
     }
