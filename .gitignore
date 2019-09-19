@@ -8,6 +8,11 @@
 /gse-spi/target/
 /gse-util/target/
 /target/
+/gse-copypaste/gse-copypaste-afs-remote/target/
+/gse-copypaste/gse-copypaste-afs-server/target/
+/gse-copypaste/gse-copypaste-afs-local/target/
+/gse-copypaste/gse-copypaste-afs/target/
+/gse-copypaste/target/
 
 # IntelliJ
 *.iml
