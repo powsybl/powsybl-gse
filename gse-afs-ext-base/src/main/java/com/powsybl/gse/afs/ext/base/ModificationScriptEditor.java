@@ -13,10 +13,10 @@ import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.spi.Savable;
-import com.powsybl.gse.util.Glyph;
-import com.powsybl.gse.util.GroovyCodeEditor;
-import com.powsybl.gse.util.GseAlerts;
-import com.powsybl.gse.util.GseUtil;
+import com.powsybl.gse.util.*;
+import com.powsybl.gse.util.editor.AbstractCodeEditor;
+import com.powsybl.gse.util.editor.impl.swing.AlternateCodeEditor;
+import com.powsybl.gse.util.editor.impl.javafx.GroovyCodeEditor;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.concurrent.Service;
@@ -62,7 +62,7 @@ public class ModificationScriptEditor extends BorderPane
 
     private final Button saveButton;
 
-    private final GroovyCodeEditor codeEditor;
+    private final AbstractCodeEditor codeEditor;
 
     private final ProgressIndicator progressIndicator = new ProgressIndicator();
 
@@ -85,7 +85,7 @@ public class ModificationScriptEditor extends BorderPane
         List<AutoCompletionWordsProvider> completionWordsProviderExtensions = findCompletionWordsProviderExtensions(storableScript);
         completionWordsProviderExtensions.forEach(extension -> suggestions.addAll(extension.completionKeyWords()));
 
-        codeEditor = new GroovyCodeEditor(scene, suggestions);
+        codeEditor = new AlternateCodeEditor(scene, suggestions);
         Text saveGlyph = Glyph.createAwesomeFont('\uf0c7').size("1.3em");
         saveButton = new Button("", saveGlyph);
         saveButton.getStyleClass().add("gse-toolbar-button");

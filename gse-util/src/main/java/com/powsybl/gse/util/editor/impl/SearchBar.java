@@ -4,9 +4,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.gse.util;
+package com.powsybl.gse.util.editor.impl;
 
 import com.powsybl.commons.PowsyblException;
+import com.powsybl.gse.util.Glyph;
+import com.powsybl.gse.util.editor.Searchable;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
@@ -41,14 +43,19 @@ import java.util.ResourceBundle;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static com.powsybl.gse.util.editor.impl.SearchBar.SearchMode.REPLACE;
 
 /**
  * @author Nicolas Lhuillier <nicolas.lhuillier at rte-france.com>
  */
-public final class SearchBar extends HBox {
+public final class SearchBar extends VBox {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.SearchBar");
-
+    private static final int DEFAULT_PREF_HEIGHT = 32;
+    private static final int FULL_PREF_HEIGHT = 62;
     private final KeyCombination nextKeyCombination = new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN);
     private final KeyCombination previousKeyCombination = new KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN);
 
@@ -68,13 +75,21 @@ public final class SearchBar extends HBox {
 
     private final SearchMatcher matcher = new SearchMatcher();
 
-    private class SearchTuple {
+    public class SearchTuple {
         final int start;
         final int end;
 
         SearchTuple(int start, int end) {
             this.start = start;
             this.end = end;
+        }
+
+        public int getStart() {
+            return start;
+        }
+
+        public int getEnd() {
+            return end;
         }
 
         @Override
@@ -151,6 +166,27 @@ public final class SearchBar extends HBox {
             }
         }
 
+        void updateAfterCurrentReplacement() {
+            int replacementDiff = getReplaceText().length() - getSearchedText().length();
+            int totalMatches = nbMatchesProperty.intValue();
+            if (totalMatches > 1) {
+                int currentMatch = currentMatchProperty.intValue();
+                List<SearchTuple> newPositions = positions.stream().limit(currentMatch).collect(Collectors.toList());
+                for (int i = currentMatch + 1; i < totalMatches; i++) {
+                    newPositions.add(new SearchTuple(positions.get(i).start + replacementDiff, positions.get(i).end + replacementDiff));
+                }
+                positions = newPositions;
+                nbMatchesProperty.set(positions.size());
+                if (currentMatch >= nbMatchesProperty.intValue()){
+                    currentMatchProperty.set(0);
+                }
+                searchedArea.select(getCurrentMatchStart(), getCurrentMatchEnd());
+            } else {
+                refreshFind();
+            }
+        }
+
+
         void reset() {
             positions.clear();
             nbMatchesProperty.set(-1);
@@ -167,7 +203,7 @@ public final class SearchBar extends HBox {
 
         ReplaceWordBar() {
             super(6);
-
+            VBox.setMargin(this, new Insets(5, 0, 0, 0));
             designSearchField(searchField);
             replaceButton = new Button(RESOURCE_BUNDLE.getString("Replace"));
             replaceAllButton = new Button(RESOURCE_BUNDLE.getString("ReplaceAll"));
@@ -200,21 +236,31 @@ public final class SearchBar extends HBox {
         wordSensitiveBox = new CheckBox(RESOURCE_BUNDLE.getString("Words"));
         matchLabel.getStyleClass().add("match-label");
         searchedArea = Objects.requireNonNull(textArea);
-        setPrefHeight(20);
+        setPrefHeight(DEFAULT_PREF_HEIGHT);
         setAlignment(Pos.CENTER_LEFT);
         closeButton.getStyleClass().add("close-button");
         designSearchField(searchField);
         upButton.getStyleClass().add("transparent-button");
         downButton.getStyleClass().add("transparent-button");
         failed = PseudoClass.getPseudoClass("fail");
+
+        HBox findComponents = new HBox();
+        findComponents.setAlignment(Pos.CENTER_LEFT);
         Pane gluePanel = new Pane();
-        setHgrow(gluePanel, Priority.ALWAYS);
-        getChildren().addAll(searchField, upButton, downButton, caseSensitiveBox, wordSensitiveBox, matchLabel, gluePanel, closeButton);
-        setMargin(searchField, new Insets(0, 0, 0, 5));
-        setMargin(caseSensitiveBox, new Insets(0, 0, 0, 5));
-        setMargin(wordSensitiveBox, new Insets(0, 0, 0, 8));
-        setMargin(matchLabel, new Insets(0, 0, 0, 25));
-        setMargin(closeButton, new Insets(0, 5, 0, 0));
+        HBox.setHgrow(gluePanel, Priority.ALWAYS);
+        findComponents.getChildren().addAll(searchField, upButton, downButton, caseSensitiveBox, wordSensitiveBox, matchLabel, gluePanel, closeButton);
+        getChildren().addAll(findComponents);
+        HBox.setMargin(searchField, new Insets(0, 0, 0, 5));
+        HBox.setMargin(caseSensitiveBox, new Insets(0, 0, 0, 5));
+        HBox.setMargin(wordSensitiveBox, new Insets(0, 0, 0, 8));
+        HBox.setMargin(matchLabel, new Insets(0, 0, 0, 25));
+        HBox.setMargin(closeButton, new Insets(0, 5, 0, 0));
+        // To force next tab order to replace field if present
+        upButton.setFocusTraversable(false);
+        downButton.setFocusTraversable(false);
+        caseSensitiveBox.setFocusTraversable(false);
+        wordSensitiveBox.setFocusTraversable(false);
+        closeButton.setFocusTraversable(false);
 
         caseSensitiveBox.selectedProperty().addListener((observable, oldValue, newValue) -> findCaseSensitiveMatches(textArea, newValue));
         wordSensitiveBox.selectedProperty().addListener((observable, oldValue, newValue) -> findWordSensitiveMatches(textArea, newValue));
@@ -244,7 +290,7 @@ public final class SearchBar extends HBox {
                 searchField.pseudoClassStateChanged(failed, true);
             } else {
                 searchField.pseudoClassStateChanged(failed, false);
-                matchLabel.setText(nbMatchFound.format(new Object[] {matcher.currentMatchProperty.getValue() + 1, newValue}));
+                matchLabel.setText(nbMatchFound.format(new Object[]{matcher.currentMatchProperty.getValue() + 1, newValue}));
             }
         });
 
@@ -256,13 +302,19 @@ public final class SearchBar extends HBox {
 
         matcher.currentMatchProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue.intValue() > -1) {
-                matchLabel.setText(nbMatchFound.format(new Object[] {newValue.intValue() + 1, matcher.nbMatchesProperty().getValue()}));
+                matchLabel.setText(nbMatchFound.format(new Object[]{newValue.intValue() + 1, matcher.nbMatchesProperty().getValue()}));
                 textArea.select(matcher.currentMatchStart(), matcher.currentMatchEnd());
             }
         });
 
         replaceWordBar.replaceAllButton.disableProperty().bind(validateDisableProperty());
         replaceWordBar.replaceButton.disableProperty().bind(validateDisableProperty());
+
+        searchField.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+            if (KeyCode.ENTER.equals(event.getCode())) {
+                refreshFind();
+            }
+        });
     }
 
     public static String escapeMetaCharacters(String value) {
@@ -280,17 +332,12 @@ public final class SearchBar extends HBox {
         return getNbMatchesProperty().isEqualTo(0).or(searchField.textProperty().isEmpty());
     }
 
-    public VBox setMode(String searchMode) {
-        VBox vBox = new VBox(6);
-        vBox.getChildren().add(this);
-        switch (searchMode) {
-            case "search":
-                return vBox;
-            case "replace":
-                vBox.getChildren().add(replaceWordBar);
-                return vBox;
-            default:
-                return null;
+    public void setMode(SearchMode searchMode) {
+        setPrefHeight(DEFAULT_PREF_HEIGHT);
+        getChildren().remove(replaceWordBar);
+        if (REPLACE.equals(searchMode)) {
+            setPrefHeight(FULL_PREF_HEIGHT);
+            getChildren().add(replaceWordBar);
         }
     }
 
@@ -323,6 +370,10 @@ public final class SearchBar extends HBox {
 
     public int getCurrentMatchStart() {
         return matcher.currentMatchStart();
+    }
+
+    public List<SearchTuple> getMatchPositions(){
+        return matcher.positions;
     }
 
     public int getCurrentMatchEnd() {
@@ -366,6 +417,10 @@ public final class SearchBar extends HBox {
         searchField.pseudoClassStateChanged(failed, false);
     }
 
+    public void updateAfterCurrentReplacement() {
+        matcher.updateAfterCurrentReplacement();
+    }
+
     public void requestFocus() {
         searchField.requestFocus();
     }
@@ -387,4 +442,12 @@ public final class SearchBar extends HBox {
         Platform.runLater(() -> searchField.positionCaret(pattern.length()));
     }
 
+    public void refreshFind(){
+        matcher.find(searchField.getText(), searchedArea.getText(), caseSensitiveBox.isSelected(), wordSensitiveBox.selectedProperty().get());
+    }
+
+    public static enum SearchMode {
+        SEARCH,
+        REPLACE
+    }
 }

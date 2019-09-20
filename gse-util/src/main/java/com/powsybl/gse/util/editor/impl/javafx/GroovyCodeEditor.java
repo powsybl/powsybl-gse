@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.gse.util;
+package com.powsybl.gse.util.editor.impl.javafx;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
@@ -12,6 +12,10 @@ import com.powsybl.commons.exceptions.UncheckedClassNotFoundException;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.KeywordsProvider;
+import com.powsybl.gse.util.EquipmentInfo;
+import com.powsybl.gse.util.editor.AbstractCodeEditor;
+import com.powsybl.gse.util.editor.Searchable;
+import com.powsybl.gse.util.editor.impl.SearchBar;
 import com.powsybl.iidm.network.Country;
 import com.powsybl.iidm.network.EnergySource;
 import groovyjarjarantlr.Token;
@@ -31,7 +35,6 @@ import org.codehaus.groovy.antlr.UnicodeEscapingReader;
 import org.codehaus.groovy.antlr.UnicodeLexerSharedInputState;
 import org.codehaus.groovy.antlr.parser.GroovyLexer;
 import org.codehaus.groovy.antlr.parser.GroovyTokenTypes;
-import org.controlsfx.control.MasterDetailPane;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.*;
 import org.fxmisc.richtext.model.StyleSpans;
@@ -39,6 +42,7 @@ import org.fxmisc.richtext.model.StyleSpansBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.UncheckedIOException;
@@ -62,7 +66,7 @@ import java.util.stream.Collectors;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-public class GroovyCodeEditor extends MasterDetailPane {
+public class GroovyCodeEditor extends AbstractCodeEditor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GroovyCodeEditor.class);
 
@@ -134,6 +138,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         public void deselect() {
             super.deselect();
         }
+
     }
 
     public GroovyCodeEditor(Scene scene) {
@@ -155,12 +160,12 @@ public class GroovyCodeEditor extends MasterDetailPane {
 
         setOnKeyPressed((KeyEvent ke) -> {
             if (searchKeyCombination.match(ke)) {
-                setSearchBar(vBox, "search");
+                setSearchBar(vBox, SearchBar.SearchMode.SEARCH);
                 showDetailNode();
                 searchBar.requestFocus();
             } else if (replaceWordKeyCombination.match(ke)) {
                 setShowDetailNode(false);
-                setSearchBar(vBox, "replace");
+                setSearchBar(vBox, SearchBar.SearchMode.REPLACE);
                 searchBar.setReplaceAllAction(event -> replaceAllOccurences(searchBar.getSearchedText(), codeArea.getText(), searchBar.isCaseSensitiveBoxSelected(), searchBar.isWordSensitiveBoxSelected()));
                 searchBar.setReplaceAction(event -> replaceCurrentOccurence(searchBar.getCurrentMatchStart(), searchBar.getCurrentMatchEnd()));
                 showDetailNode();
@@ -207,7 +212,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
     public GroovyCodeEditor(Scene scene, List<String> keywordsSuggestions) {
         this(scene);
         optionalSuggestions = keywordsSuggestions;
-        autoCompletion = new AutoCompletion(codeArea);
+        autoCompletion = new AutoCompletion(this);
         codeArea.textProperty().addListener((observable, oldCode, newCode) -> {
             autoCompletion.hide();
             int caretPosition = codeArea.getCaretPosition();
@@ -317,9 +322,10 @@ public class GroovyCodeEditor extends MasterDetailPane {
         }
     }
 
-    private void setSearchBar(VBox vBox, String searchMode) {
-        vBox.getChildren().setAll(searchBar.setMode(searchMode));
-        setDetailNode(vBox);
+    private void setSearchBar(VBox vBox, SearchBar.SearchMode searchMode) {
+        searchBar.setMode(searchMode);
+        vBox.getChildren().clear();
+        vBox.getChildren().add(searchBar);
         resetDividerPosition();
         if (codeArea.getSelectedText() != null && !"".equals(codeArea.getSelectedText())) {
             searchBar.setSearchPattern(codeArea.getSelectedText());
@@ -363,7 +369,7 @@ public class GroovyCodeEditor extends MasterDetailPane {
         }
     }
 
-    private void handleAutoIndent(KeyEvent ke){
+    private void handleAutoIndent(KeyEvent ke) {
         if (ke.getCode() == KeyCode.ENTER) {
             final Pattern whiteSpace = Pattern.compile("^\\s+");
             int caretPosition = codeArea.getCaretPosition();
@@ -381,13 +387,13 @@ public class GroovyCodeEditor extends MasterDetailPane {
             }
         } else if ("}".equals(ke.getText())) {
             int caretPosition = codeArea.getCaretPosition();
-            final Pattern endBlockPattern = Pattern.compile("^\\s*\\s{"+tabSize+"}$");
+            final Pattern endBlockPattern = Pattern.compile("^\\s*\\s{" + tabSize + "}$");
             int currentParagraph = codeArea.getCurrentParagraph();
             Matcher matchEndBlock = endBlockPattern.matcher(codeArea.getParagraph(currentParagraph).getSegments().get(0));
-            if(matchEndBlock.find()) {
+            if (matchEndBlock.find()) {
                 Platform.runLater(() -> {
-                    codeArea.deleteText(caretPosition-getTabSize(), caretPosition);
-                    codeArea.moveTo(codeArea.getCaretPosition()+1);
+                    codeArea.deleteText(caretPosition - getTabSize(), caretPosition);
+                    codeArea.moveTo(codeArea.getCaretPosition() + 1);
                 });
             }
         }
@@ -588,6 +594,21 @@ public class GroovyCodeEditor extends MasterDetailPane {
         int caretColumn = codeArea.getCaretColumn() + 1;
         int paragraphIndex = codeArea.getCaretSelectionBind().getParagraphIndex() + 1;
         return paragraphIndex + ":" + caretColumn;
+    }
+
+    @Override
+    public void moveCaret(int newPosition) {
+        codeArea.moveTo(newPosition);
+    }
+
+    @Override
+    public void replace(String text, int rangeStart, int rangeEnd) {
+        codeArea.replaceText(rangeStart, rangeEnd, text);
+    }
+
+    @Override
+    public @Nullable Pair<Double, Double> caretDisplayPosition() {
+        return codeArea.getCaretBounds().map(caretBound -> new Pair<>(caretBound.getMinX(), caretBound.getMinY())).orElse(null);
     }
 
     private static String styleClass(int tokenType) {

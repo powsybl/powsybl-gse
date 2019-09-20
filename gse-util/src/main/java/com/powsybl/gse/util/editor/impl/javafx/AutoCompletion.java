@@ -4,8 +4,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.gse.util;
+package com.powsybl.gse.util.editor.impl.javafx;
 
+import com.powsybl.gse.util.editor.AbstractCodeEditor;
 import javafx.collections.FXCollections;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -15,8 +16,11 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
 import javafx.stage.Popup;
 import javafx.stage.Window;
+import javafx.util.Pair;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fxmisc.richtext.CodeArea;
 
+import java.security.acl.LastOwnerException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -29,7 +33,7 @@ public class AutoCompletion {
 
     private final ListView<MenuItem> listView;
 
-    private final CodeArea codeArea;
+    private final AbstractCodeEditor codeArea;
 
     private Set<String> suggestions;
 
@@ -39,8 +43,8 @@ public class AutoCompletion {
 
     private static final int MAX_HEIGHT = 260;
 
-    public AutoCompletion(CodeArea codeArea) {
-        this.codeArea = Objects.requireNonNull(codeArea);
+    public AutoCompletion(AbstractCodeEditor codeEditor) {
+        this.codeArea = Objects.requireNonNull(codeEditor);
         suggestions = new HashSet<>();
         listView = new ListView<>();
         listView.setMaxHeight(260);
@@ -119,10 +123,10 @@ public class AutoCompletion {
     private void menuItemOnAction(int tokenLength) {
         String selectedItemText = listView.getSelectionModel().getSelectedItem().getText();
         String text = selectedItemText.contains("(") ? selectedItemText.substring(0, selectedItemText.indexOf('(')) + "()" : selectedItemText;
-
-        codeArea.replaceText(codeArea.getCaretPosition() - tokenLength, codeArea.getCaretPosition(), text);
+        Integer caretPosition = codeArea.caretPositionProperty().getValue();
+        codeArea.replace(text, caretPosition - tokenLength, caretPosition);
         if (selectedItemText.contains("(") && !selectedItemText.substring(selectedItemText.lastIndexOf('(')).equals("()")) {
-            codeArea.getCaretSelectionBind().moveTo(codeArea.getCaretPosition() - 1);
+            codeArea.moveCaret(caretPosition - 1);
         }
         completionPopup.hide();
     }
@@ -135,7 +139,10 @@ public class AutoCompletion {
 
     public void show(Window window) {
         if (!listView.getItems().isEmpty()) {
-            codeArea.getCaretBounds().ifPresent(caretBounds -> completionPopup.show(window, caretBounds.getMinX() - 20, caretBounds.getMinY() + 20));
+            Pair<Double, Double> caretDisplayPosition = codeArea.caretDisplayPosition();
+            if (caretDisplayPosition != null) {
+                completionPopup.show(window, caretDisplayPosition.getKey() - 20, caretDisplayPosition.getValue() + 20);
+            }
         }
     }
 

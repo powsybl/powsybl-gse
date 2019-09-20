@@ -77,6 +77,7 @@ public class GsePane extends StackPane {
         tabPane.getStyleClass().add("gse-tab-pane");
         tabPane.getTabs().addListener(this::tabPaneChangeListener);
         mainPane.setCenter(tabPane);
+
         getChildren().addAll(mainPane);
 
         preferences = Preferences.userNodeForPackage(getClass());
