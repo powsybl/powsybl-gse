@@ -13,6 +13,8 @@ import com.powsybl.afs.ProjectFolder;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileCreator;
 import com.powsybl.gse.spi.ProjectFileCreatorExtension;
+import com.powsybl.gse.util.Glyph;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 
 import java.util.ResourceBundle;
@@ -28,6 +30,13 @@ public class ActionScriptCreatorExtension implements ProjectFileCreatorExtension
     @Override
     public Class<? extends ProjectFile> getProjectFileType() {
         return ActionScript.class;
+    }
+
+    @Override
+    public Node getMenuGraphic() {
+        return Glyph.createAwesomeFont('\uf0e7')
+                .size("1.4em")
+                .color("orange");
     }
 
     @Override

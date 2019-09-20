@@ -95,7 +95,23 @@ public class ProjectPane extends Tab {
         public MyTab(String text, ProjectFileViewer viewer) {
             super(text, viewer.getContent());
             this.viewer = viewer;
+            onKeyPressed();
             setContextMenu(contextMenu());
+        }
+
+        private void onKeyPressed() {
+            getContent().setOnKeyPressed((KeyEvent ke) -> {
+                if (closeKeyCombination.match(ke)) {
+                    closeTab(ke, this);
+                    ke.consume();
+                } else if (closeAllKeyCombination.match(ke)) {
+                    List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
+                            .map(tab -> (MyTab) tab)
+                            .collect(Collectors.toList()));
+                    mytabs.forEach(mytab -> closeTab(ke, mytab));
+                    ke.consume();
+                }
+            });
         }
 
         private ContextMenu contextMenu() {
@@ -108,8 +124,6 @@ public class ProjectPane extends Tab {
                         .collect(Collectors.toList()));
                 mytabs.forEach(mytab -> closeTab(event, mytab));
             });
-            closeMenuItem.setAccelerator(closeKeyCombination);
-            closeAllMenuItem.setAccelerator(closeAllKeyCombination);
             return new ContextMenu(closeMenuItem, closeAllMenuItem);
         }
 
@@ -407,8 +421,8 @@ public class ProjectPane extends Tab {
         if (dragNodeNameAlreadyExists(projectFolder)) {
             GseAlerts.showDraggingError();
         } else {
-            ProjectNode monfichier = (ProjectNode) dragAndDropMove.getSource();
-            monfichier.moveTo(projectFolder);
+            ProjectNode projectNode = (ProjectNode) dragAndDropMove.getSource();
+            projectNode.moveTo(projectFolder);
             success = true;
         }
     }
@@ -626,6 +640,8 @@ public class ProjectPane extends Tab {
         MenuItem deleteMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.1em"));
         deleteMenuItem.setOnAction(event -> deleteNodesAlert(selectedTreeItems));
         deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
+        List<TreeItem<Object>> selectedItems = new ArrayList<>(selectedTreeItems);
+        deleteMenuItem.setDisable(ancestorsExistIn(selectedItems) || selectedItems.contains(treeView.getRoot()));
         return deleteMenuItem;
     }
 
@@ -648,6 +664,20 @@ public class ProjectPane extends Tab {
                 }
             }
         });
+    }
+
+    private boolean ancestorsExistIn(List<? extends TreeItem<Object>> treeItems) {
+        boolean found = false;
+        for (TreeItem<Object> treeItem : treeItems) {
+            if (treeItem != treeView.getRoot()) {
+                AbstractNodeBase value = (AbstractNodeBase) treeItem.getValue();
+                found = treeItems.stream().filter(it -> it != treeItem).anyMatch(item -> ((AbstractNodeBase) item.getValue()).isAncestorOf(value));
+                if (found) {
+                    break;
+                }
+            }
+        }
+        return found;
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
@@ -856,6 +886,8 @@ public class ProjectPane extends Tab {
 
     private MenuItem createCreateFolderItem(TreeItem<Object> selectedTreeItem, ProjectFolder folder) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("CreateFolder") + "...");
+        Glyph createFolderGlyph = Glyph.createAwesomeFont('\uf07b').size("1.3em").color("#FFDB69");
+        menuItem.setGraphic(createFolderGlyph);
         menuItem.setOnAction((ActionEvent event) ->
                 NewFolderPane.showAndWaitDialog(getContent().getScene().getWindow(), folder).ifPresent(newFolder -> {
                     refresh(selectedTreeItem);
@@ -928,6 +960,7 @@ public class ProjectPane extends Tab {
             for (ProjectFileCreatorExtension creatorExtension : findCreatorExtension(type)) {
                 if (creatorExtension != null) {
                     MenuItem menuItem = new MenuItem(creatorExtension.getMenuText());
+                    menuItem.setGraphic(creatorExtension.getMenuGraphic());
                     menuItem.setOnAction(event -> showProjectItemCreatorDialog(selectedTreeItem, creatorExtension));
                     items.add(menuItem);
                 }

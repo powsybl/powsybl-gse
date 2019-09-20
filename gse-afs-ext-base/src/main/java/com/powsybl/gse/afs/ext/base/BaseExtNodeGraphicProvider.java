@@ -27,13 +27,13 @@ public class BaseExtNodeGraphicProvider implements NodeGraphicProvider {
         Font.loadFont(Glyph.class.getResourceAsStream("/fonts/powsybl-gse-font.ttf"), 12);
     }
 
-    private static Glyph createIidmGlyph() {
+    public static Glyph createIidmGlyph() {
         return new Glyph("powsybl-gse-font", '\ue901')
                 .size("1.4em")
                 .color("orangered");
     }
 
-    private Node createCaseGlyph(Importer importer) {
+    public Node createCaseGlyph(Importer importer) {
         String format = importer.getFormat();
         if (format.equals("CIM1") || format.equals("CGMES")) {
             return new Glyph("powsybl-gse-font", '\ue900')
@@ -48,6 +48,17 @@ public class BaseExtNodeGraphicProvider implements NodeGraphicProvider {
         return null;
     }
 
+    public static Node createModificationScriptGlyph() {
+        return Glyph.createAwesomeFont('\uf0f6').size("1.2em");
+    }
+
+    public static Node createVirtualCaseGlyph() {
+        return createIidmGlyph()
+                .stack(Glyph.createAwesomeFont('\uf14b')
+                        .color("limegreen")
+                        .size("0.9em"));
+    }
+
     @Override
     public Node getGraphic(Object file) {
         if (file instanceof Case) {
@@ -57,12 +68,9 @@ public class BaseExtNodeGraphicProvider implements NodeGraphicProvider {
             ImportedCase importedCase = (ImportedCase) file;
             return createCaseGlyph(importedCase.getImporter());
         } else if (file instanceof VirtualCase) {
-            return createIidmGlyph()
-                    .stack(Glyph.createAwesomeFont('\uf14b')
-                                .color("limegreen")
-                                .size("0.9em"));
+            return createVirtualCaseGlyph();
         } else if (file instanceof AbstractModificationScript) {
-            return Glyph.createAwesomeFont('\uf0f6').size("1.2em");
+            return createModificationScriptGlyph();
         }
         return null;
     }

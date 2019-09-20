@@ -11,6 +11,7 @@ import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.ext.base.ReadOnlyScript;
 import com.powsybl.afs.ext.base.ScriptListener;
 import com.powsybl.afs.ext.base.StorableScript;
+import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.spi.Savable;
@@ -35,6 +36,8 @@ import javafx.scene.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.ResourceBundle;
 
 /**
@@ -77,7 +80,12 @@ public class ModificationScriptEditor extends BorderPane
         this.script = script;
         this.context = context;
 
-        codeEditor = new GroovyCodeEditor(scene);
+        //Adding  autocompletion keywords suggestions depending the context
+        List<String> suggestions = new ArrayList<>();
+        List<AutoCompletionWordsProvider> completionWordsProviderExtensions = findCompletionWordsProviderExtensions(script);
+        completionWordsProviderExtensions.forEach(extension -> suggestions.addAll(extension.completionKeyWords()));
+
+        codeEditor = new GroovyCodeEditor(scene, suggestions);
         Text saveGlyph = Glyph.createAwesomeFont('\uf0c7').size("1.3em");
         saveButton = new Button("", saveGlyph);
         saveButton.getStyleClass().add("gse-toolbar-button");
@@ -110,6 +118,10 @@ public class ModificationScriptEditor extends BorderPane
 
         // listen to modifications
         script.addListener(this);
+    }
+
+    private List<AutoCompletionWordsProvider> findCompletionWordsProviderExtensions(ReadOnlyScript script) {
+        return GroovyCodeEditor.findAutoCompletionWordProviderExtensions(script.getClass());
     }
 
     @Override

@@ -29,6 +29,10 @@
     -fx-background-color: #f2f9fc;
 }
 
+.bracket-matches {
+    -rtfx-background-color: #99CCFF;
+}
+
 .other {
     -fx-fill: #008080;
     -fx-font-weight: bold;
