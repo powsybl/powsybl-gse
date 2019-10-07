@@ -44,7 +44,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.powsybl.gse.util.editor.impl.SearchBar.SearchMode.REPLACE;
 
@@ -177,7 +176,7 @@ public final class SearchBar extends VBox {
                 }
                 positions = newPositions;
                 nbMatchesProperty.set(positions.size());
-                if (currentMatch >= nbMatchesProperty.intValue()){
+                if (currentMatch >= nbMatchesProperty.intValue()) {
                     currentMatchProperty.set(0);
                 }
                 searchedArea.select(getCurrentMatchStart(), getCurrentMatchEnd());
@@ -185,7 +184,6 @@ public final class SearchBar extends VBox {
                 refreshFind();
             }
         }
-
 
         void reset() {
             positions.clear();
@@ -372,7 +370,7 @@ public final class SearchBar extends VBox {
         return matcher.currentMatchStart();
     }
 
-    public List<SearchTuple> getMatchPositions(){
+    public List<SearchTuple> getMatchPositions() {
         return matcher.positions;
     }
 
@@ -442,7 +440,7 @@ public final class SearchBar extends VBox {
         Platform.runLater(() -> searchField.positionCaret(pattern.length()));
     }
 
-    public void refreshFind(){
+    public void refreshFind() {
         matcher.find(searchField.getText(), searchedArea.getText(), caseSensitiveBox.isSelected(), wordSensitiveBox.selectedProperty().get());
     }
 

@@ -36,8 +36,8 @@ public class AlternateCodeEditor extends AbstractCodeEditor implements Searchabl
     private final KeyCombination replaceWordKeyCombination = new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN);
     private final RSyntaxTextArea codeArea;
     private final SearchBar searchBar;
-    private ObservableValueHelper<String> codeProperty;
-    private ObservableValueHelper<Integer> caretProperty;
+    private AbstractObservableValueHelper<String> codeProperty;
+    private AbstractObservableValueHelper<Integer> caretProperty;
 
     public AlternateCodeEditor(Scene scene, List<String> autocompleteList) {
         // Code editor
@@ -104,7 +104,7 @@ public class AlternateCodeEditor extends AbstractCodeEditor implements Searchabl
 
     private void replaceAllOccurences() {
         int replacementDiff = searchBar.getReplaceText().length() - searchBar.getSearchedText().length();
-        for (int i = 0; i < searchBar.getNbMatchesProperty().intValue(); i++){
+        for (int i = 0; i < searchBar.getNbMatchesProperty().intValue(); i++) {
             codeArea.replaceRange(
                     searchBar.getReplaceText(),
                     searchBar.getMatchPositions().get(i).getStart() + (i * replacementDiff),
@@ -114,7 +114,7 @@ public class AlternateCodeEditor extends AbstractCodeEditor implements Searchabl
         searchBar.refreshFind();
     }
 
-    private void fixSwingIntegrationBug(SwingNode swingNode, Scene scene){
+    private void fixSwingIntegrationBug(SwingNode swingNode, Scene scene) {
         swingNode.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (KeyCode.DELETE.equals(event.getCode())) {
                 event.consume();
@@ -191,8 +191,8 @@ public class AlternateCodeEditor extends AbstractCodeEditor implements Searchabl
     /**
      * Initialize binding between swing component event listener and javafx observable values
      */
-    private void initObservableValues(){
-        codeProperty = new ObservableValueHelper<String>() {
+    private void initObservableValues() {
+        codeProperty = new AbstractObservableValueHelper<String>() {
             @Override
             public String getValue() {
                 return codeArea.getText();
@@ -216,7 +216,7 @@ public class AlternateCodeEditor extends AbstractCodeEditor implements Searchabl
             }
         });
 
-        caretProperty = new ObservableValueHelper<Integer>() {
+        caretProperty = new AbstractObservableValueHelper<Integer>() {
             @Override
             public Integer getValue() {
                 return codeArea.getCaretPosition();

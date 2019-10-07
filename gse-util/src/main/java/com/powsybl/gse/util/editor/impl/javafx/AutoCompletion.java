@@ -17,10 +17,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Popup;
 import javafx.stage.Window;
 import javafx.util.Pair;
-import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fxmisc.richtext.CodeArea;
 
-import java.security.acl.LastOwnerException;
 import java.util.*;
 import java.util.stream.Collectors;
 
