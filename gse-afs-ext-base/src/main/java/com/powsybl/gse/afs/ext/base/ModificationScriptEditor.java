@@ -31,6 +31,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
+import org.controlsfx.control.ToggleSwitch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,13 +63,13 @@ public class ModificationScriptEditor extends BorderPane
 
     private final Button saveButton;
 
-    private final AbstractCodeEditor codeEditor;
-
     private final ProgressIndicator progressIndicator = new ProgressIndicator();
 
     private final StackPane codeEditorWithProgressIndicator;
 
     private final SplitPane splitPane;
+
+    private AbstractCodeEditor codeEditor;
 
     private StorableScript storableScript;
 
@@ -85,7 +86,11 @@ public class ModificationScriptEditor extends BorderPane
         List<AutoCompletionWordsProvider> completionWordsProviderExtensions = findCompletionWordsProviderExtensions(storableScript);
         completionWordsProviderExtensions.forEach(extension -> suggestions.addAll(extension.completionKeyWords()));
 
-        codeEditor = new AlternateCodeEditor(scene, suggestions);
+        codeEditorWithProgressIndicator = new StackPane();
+        splitPane = new SplitPane(codeEditorWithProgressIndicator);
+        setUpEditor(new AlternateCodeEditor(scene, suggestions));
+        codeEditor.setTabSize(4);
+
         Text saveGlyph = Glyph.createAwesomeFont('\uf0c7').size("1.3em");
         saveButton = new Button("", saveGlyph);
         saveButton.getStyleClass().add("gse-toolbar-button");
@@ -96,14 +101,19 @@ public class ModificationScriptEditor extends BorderPane
         comboBox.getSelectionModel().selectedIndexProperty().addListener((observable, oldvalue, newvalue) -> codeEditor.setTabSize(comboBox.getItems().get((int) newvalue)));
         tabSizeLabel = new Label(RESOURCE_BUNDLE.getString("TabSize") + ": ");
         caretPositionDisplay = new Label(codeEditor.currentPosition());
-        codeEditor.caretPositionProperty().addListener((observable, oldValue, newValue) -> caretPositionDisplay.setText(codeEditor.currentPosition()));
-        codeEditorWithProgressIndicator = new StackPane(codeEditor, new Group(progressIndicator));
-        codeEditor.codeProperty().addListener((observable, oldValue, newValue) -> saved.set(false));
-        splitPane = new SplitPane(codeEditorWithProgressIndicator);
+
         toolBar = new ToolBar(saveButton);
+
+        ToggleSwitch editorSwitch = new ToggleSwitch();
+        editorSwitch.setSelected(true);
+        editorSwitch.selectedProperty().addListener((observable, oldValue, newValue) -> {
+            if (oldValue != newValue) {
+                setUpEditor(newValue ? new AlternateCodeEditor(scene, suggestions) : new GroovyCodeEditor(scene, suggestions));
+            }
+        });
         Pane spacer = new Pane();
-        bottomToolBar = new ToolBar(tabSizeLabel, comboBox, spacer, caretPositionDisplay);
-        bottomToolBar.widthProperty().addListener((observable, oldvalue, newvalue) -> spacer.setPadding(new Insets(0, (double) newvalue - 280, 0, 0)));
+        bottomToolBar = new ToolBar(tabSizeLabel, comboBox, spacer, caretPositionDisplay, editorSwitch);
+        bottomToolBar.widthProperty().addListener((observable, oldvalue, newvalue) -> spacer.setPadding(new Insets(0, (double) newvalue - 240, 0, 0)));
         splitPane.setOrientation(Orientation.VERTICAL);
         splitPane.setDividerPosition(0, 0.8);
         setTop(toolBar);
@@ -112,6 +122,16 @@ public class ModificationScriptEditor extends BorderPane
 
         // listen to modifications
         storableScript.addListener(this);
+    }
+
+    private void setUpEditor(AbstractCodeEditor editor) {
+        String prevContent = codeEditor != null ? codeEditor.getCode() : "";
+        codeEditor = editor;
+        codeEditor.setCode(prevContent);
+        codeEditor.caretPositionProperty().addListener((observable, oldValue, newValue) -> caretPositionDisplay.setText(codeEditor.currentPosition()));
+        codeEditor.codeProperty().addListener((observable, oldValue, newValue) -> saved.set(false));
+        codeEditorWithProgressIndicator.getChildren().clear();
+        codeEditorWithProgressIndicator.getChildren().addAll(codeEditor, new Group(progressIndicator));
     }
 
     private List<AutoCompletionWordsProvider> findCompletionWordsProviderExtensions(StorableScript storableScript) {

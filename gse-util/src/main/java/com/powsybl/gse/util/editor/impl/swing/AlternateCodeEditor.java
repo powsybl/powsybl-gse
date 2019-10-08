@@ -10,6 +10,8 @@ import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.input.*;
 import javafx.util.Pair;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.SystemUtils;
 import org.fife.ui.autocomplete.BasicCompletion;
 import org.fife.ui.autocomplete.CompletionProvider;
 import org.fife.ui.autocomplete.DefaultCompletionProvider;
@@ -38,12 +40,15 @@ public class AlternateCodeEditor extends AbstractCodeEditor implements Searchabl
     private final SearchBar searchBar;
     private AbstractObservableValueHelper<String> codeProperty;
     private AbstractObservableValueHelper<Integer> caretProperty;
+    private boolean ignoreDocumentLoadChange = false;
 
     public AlternateCodeEditor(Scene scene, List<String> autocompleteList) {
         // Code editor
         codeArea = new RSyntaxTextArea(20, 60);
         codeArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_GROOVY);
         codeArea.setCodeFoldingEnabled(true);
+        codeArea.setAntiAliasingEnabled(true);
+        codeArea.setTabsEmulated(true);
         RTextScrollPane sp = new RTextScrollPane(codeArea);
         SwingNode swingNode = new SwingNode();
         swingNode.setContent(sp);
@@ -115,11 +120,25 @@ public class AlternateCodeEditor extends AbstractCodeEditor implements Searchabl
     }
 
     private void fixSwingIntegrationBug(SwingNode swingNode, Scene scene) {
+        // This is a fix for the jdk bug : https://bugs.openjdk.java.net/browse/JDK-8088471
+        if (SystemUtils.IS_OS_WINDOWS || SystemUtils.IS_OS_MAC) {
+            String altGrCharsFailList = "~#{[|`\\^@]¤€";
+            swingNode.addEventHandler(KeyEvent.KEY_TYPED, event -> {
+                if (altGrCharsFailList.contains(event.getCharacter())) {
+                    codeArea.insert(event.getCharacter(), codeArea.getCaretPosition());
+                    codeArea.setCaretPosition(codeArea.getCaretPosition() + 1);
+                }
+            });
+        }
+
+        // because when the editor is focused, the script selected in the project view react to the delete event key...
         swingNode.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (KeyCode.DELETE.equals(event.getCode())) {
                 event.consume();
             }
         });
+
+        // on linux, there is a focus issue...
         swingNode.addEventHandler(MouseEvent.MOUSE_PRESSED, event -> {
             if (scene != null) {
                 if (this.equals(scene.getFocusOwner())) {
@@ -147,7 +166,11 @@ public class AlternateCodeEditor extends AbstractCodeEditor implements Searchabl
 
     @Override
     public void setCode(String code) {
+        if (StringUtils.isNotBlank(code)) {
+            ignoreDocumentLoadChange = true;
+        }
         codeArea.setText(code);
+        codeArea.discardAllEdits();
     }
 
     @Override
@@ -202,6 +225,10 @@ public class AlternateCodeEditor extends AbstractCodeEditor implements Searchabl
         codeArea.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
+                if (ignoreDocumentLoadChange) {
+                    ignoreDocumentLoadChange = false;
+                    return;
+                }
                 codeProperty.fireChange();
             }
 
@@ -212,6 +239,9 @@ public class AlternateCodeEditor extends AbstractCodeEditor implements Searchabl
 
             @Override
             public void changedUpdate(DocumentEvent e) {
+                if (ignoreDocumentLoadChange) {
+                    return;
+                }
                 codeProperty.fireChange();
             }
         });
