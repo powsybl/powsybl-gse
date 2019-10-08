@@ -15,6 +15,8 @@ import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.spi.Savable;
 import com.powsybl.gse.util.*;
 import com.powsybl.gse.util.editor.AbstractCodeEditor;
+import com.powsybl.gse.util.editor.impl.js.AceCodeEditor;
+import com.powsybl.gse.util.editor.impl.js.CodeMirrorEditor;
 import com.powsybl.gse.util.editor.impl.swing.AlternateCodeEditor;
 import com.powsybl.gse.util.editor.impl.javafx.GroovyCodeEditor;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -88,7 +90,7 @@ public class ModificationScriptEditor extends BorderPane
 
         codeEditorWithProgressIndicator = new StackPane();
         splitPane = new SplitPane(codeEditorWithProgressIndicator);
-        setUpEditor(new AlternateCodeEditor(scene, suggestions));
+        setUpEditor(new CodeMirrorEditor(scene, suggestions));
         codeEditor.setTabSize(4);
 
         Text saveGlyph = Glyph.createAwesomeFont('\uf0c7').size("1.3em");
@@ -111,6 +113,7 @@ public class ModificationScriptEditor extends BorderPane
                 setUpEditor(newValue ? new AlternateCodeEditor(scene, suggestions) : new GroovyCodeEditor(scene, suggestions));
             }
         });
+
         Pane spacer = new Pane();
         bottomToolBar = new ToolBar(tabSizeLabel, comboBox, spacer, caretPositionDisplay, editorSwitch);
         bottomToolBar.widthProperty().addListener((observable, oldvalue, newvalue) -> spacer.setPadding(new Insets(0, (double) newvalue - 240, 0, 0)));

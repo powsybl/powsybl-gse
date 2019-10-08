@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>JS Code editor (code mirror)</title>
+    JAVA_INJECTED_STYLESHEETS
+    JAVA_INJECTED_SCRIPTS
+</head>
+<body width="100%" height="100%" style="margin: 0;">
+<form width="100%" height="100%"><textarea id="code" name="code" width="100%" height="100%">
+JAVA_INJECTED_CODE
+</textarea></form>
+<style>
+    .CodeMirror {
+  border: 1px solid #eee;
+  height: auto;
+}
+
+</style>
+<script>
+/*      CodeMirror.commands.autocomplete = function(cm) {
+        cm.showHint({hint: CodeMirror.hint.anyword});
+      }*/
+
+        var comp = {
+            "": [JAVA_INJECTED_BASIC_COMPLETION]
+        }
+
+          function customHint(cm, option) {
+            return new Promise(function(accept) {
+              setTimeout(function() {
+                var cursor = cm.getCursor();
+                var line = cm.getLine(cursor.line);
+                var start = cursor.ch;
+                var end = cursor.ch;
+                while (start && /\w/.test(line.charAt(start - 1))) {
+                  --start;
+                }
+                while (end < line.length && /\w/.test(line.charAt(end))) {
+                    ++end;
+                }
+                var word = line.slice(start, end).toLowerCase();
+                console.log(word);
+                console.log(cursor);
+                console.log(line);
+                console.log(start);
+                console.log(end);
+
+
+                  return accept({list: comp[""].filter(function(el){
+                                    return el.startsWith(word);
+                                }),
+                                 from: CodeMirror.Pos(cursor.line, start),
+                                 to: CodeMirror.Pos(cursor.line, end)})
+                return accept(null)
+              }, 100)
+            })
+          }
+
+
+      var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+          mode: "text/x-groovy",
+          styleActiveLine: true,
+          lineNumbers: true,
+          lineWrapping: true,
+          autoCloseBrackets: true,
+          extraKeys: {"Ctrl-Space": "autocomplete"},
+          viewportMargin: Infinity,
+          matchBrackets: true,
+          hintOptions: {hint: customHint}
+      });
+
+       /*editor.on("keyup", function (cm, event) {
+            if (!cm.state.completionActive &&
+                event.keyCode != 13) {
+                CodeMirror.commands.autocomplete(cm, null, {completeSingle: false});
+            }
+        });*/
+
+
+</script>
+
+</body>
+</html>
