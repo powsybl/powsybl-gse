@@ -40,7 +40,7 @@ public final class CopyModel {
 
         //copy single nodes
         for (AbstractNodeBase node : nodes) {
-            if (node instanceof Folder && node.isInLocalFileSystem()) {
+            if (node instanceof Folder && !((Folder) node).isWritable()) {
                 String path = node.getPath().toString().replace("/:", "");
                 copyParameters.append(path).append(CopyServiceConstants.PATH_LIST_SEPARATOR);
             } else {
@@ -55,7 +55,7 @@ public final class CopyModel {
         String nodeId = node.getId();
         String archiveDirectory = storageDirectory + node.getName() + node.getId();
         archiveNode(node, nodeId, archiveDirectory);
-        copyPaths.append(archiveDirectory).append(CopyServiceConstants.PATH_SEPARATOR).append(nodeId);
+        copyPaths.append(archiveDirectory).append(CopyServiceConstants.PATH_SEPARATOR).append(nodeId).append(CopyServiceConstants.PATH_SEPARATOR).append(node.getClass());
     }
 
     private static void archiveNode(AbstractNodeBase node, String nodeId, String parentPath) {

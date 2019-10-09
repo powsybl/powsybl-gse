@@ -31,14 +31,11 @@ import org.controlsfx.control.BreadCrumbBar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.*;
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -575,13 +572,16 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private ContextMenu createFolderContextMenu(TreeItem<N> selectedTreeItem) {
+        N value = selectedTreeItem.getValue();
         ContextMenu contextMenu = new ContextMenu();
         List<MenuItem> items = new ArrayList<>();
         items.add(createRenameProjectMenuItem());
         items.add(createCreateFolderMenuItem());
-        items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
-        items.add(createPasteProjectNodeItem(selectedTreeItem));
-        items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
+        if (value instanceof Folder && ((Folder) value).isWritable()) {
+            items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+            items.add(createPasteProjectNodeItem(selectedTreeItem));
+            items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
+        }
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
                 .collect(Collectors.toList()));
@@ -640,7 +640,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private  boolean selectionContainsNonArchiveFolder(List<? extends TreeItem<N>> selectedTreeItems) {
         return selectedTreeItems.stream().map(treeItem -> (N) treeItem.getValue())
-                    .filter(val -> val instanceof Folder && ((AbstractNodeBase) val).isInLocalFileSystem())
+                    .filter(val -> val instanceof Folder && !((Folder) val).isWritable())
                     .map(folder -> new java.io.File(((Folder) folder).getPath().toString().replace("/:", "")))
                     .anyMatch(this::isNotAnArchiveFolder);
     }
@@ -662,9 +662,15 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         });
         final Clipboard systemClipboard = Clipboard.getSystemClipboard();
         if (systemClipboard != null && systemClipboard.hasString() && systemClipboard.getString() != null) {
-            pasteMenuItem.setDisable(!systemClipboard.getString().contains(CopyServiceConstants.COPY_SIGNATURE));
+            pasteMenuItem.setDisable(!systemClipboard.getString().contains(CopyServiceConstants.COPY_SIGNATURE) || clipboardContainsNodes(systemClipboard));
+        } else {
+            pasteMenuItem.setDisable(true);
         }
         return pasteMenuItem;
+    }
+
+    private boolean clipboardContainsNodes(Clipboard systemClipboard) {
+        return !systemClipboard.getString().contains("com.powsybl.afs.Project") && !systemClipboard.getString().contains("com.powsybl.afs.Folder");
     }
 
     private void unarchiveNode(Folder destinationFolder) {
@@ -675,34 +681,10 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             String[] copyArray = ArrayUtils.remove(array, 0);
 
             for (String str : copyArray) {
-                if (destinationFolder.isInLocalFileSystem()) {
-                    copyArchive(str, destinationFolder);
-                } else {
-                    destinationFolder.unarchive(Paths.get(str));
+                String storageDirectory = str.substring(0, str.lastIndexOf(CopyServiceConstants.PATH_SEPARATOR));
+                if (destinationFolder.isWritable()) {
+                    destinationFolder.unarchive(Paths.get(storageDirectory));
                 }
-            }
-        }
-    }
-
-    private void copyArchive(String str, Folder destFolder) {
-        String fileName = str.substring(0, str.lastIndexOf(CopyServiceConstants.PATH_SEPARATOR));
-        String path1 = fileName.substring(fileName.lastIndexOf(CopyServiceConstants.PATH_SEPARATOR));
-
-        String st = destFolder.getPath().toString();
-        String destFolderPath = st.substring(st.indexOf(':') + 1);
-
-        Path source = Paths.get(fileName);
-        Path dest = Paths.get(destFolderPath + path1);
-
-        Stream<Path> walk = null;
-        try {
-            walk = Files.walk(source);
-            walk.forEach(src -> copy(src, dest.resolve(source.relativize(src))));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        } finally {
-            if (walk != null) {
-                walk.close();
             }
         }
     }
@@ -714,16 +696,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         nodes.get(0).findService(CopyService.class).copy(nodes);
     }
 
-    private static void copy(Path source, Path dest) {
-        try {
-            Files.copy(source, dest, StandardCopyOption.REPLACE_EXISTING);
-        } catch (DirectoryNotEmptyException ex) {
-            LOGGER.warn("to implement");
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
     private MenuItem createDeleteNodeMenuItem(List<? extends TreeItem<N>> selectedTreeItems) {
         MenuItem deleteMenuItem = GseMenuItem.createDeleteMenuItem();
         if (selectedTreeItems.size() == 1) {
@@ -731,7 +703,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             N selectedTreeItemValue = selectedTreeItem.getValue();
             if (selectedTreeItemValue instanceof Folder) {
                 Folder folder = (Folder) selectedTreeItemValue;
-                if (!folder.getChildren().isEmpty() || folder.isInLocalFileSystem()) {
+                if (!folder.getChildren().isEmpty() || !folder.isWritable()) {
                     deleteMenuItem.setDisable(true);
                 }
             } else if (selectedTreeItemValue instanceof Project) {
