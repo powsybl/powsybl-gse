@@ -60,7 +60,11 @@
             <artifactId>powsybl-gse-util</artifactId>
             <version>${project.version}</version>
         </dependency>
-
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-gse-copypaste-afs</artifactId>
+            <version>1.7.0-SNAPSHOT</version>
+        </dependency>
         <!-- Test dependencies -->
         <dependency>
             <groupId>junit</groupId>

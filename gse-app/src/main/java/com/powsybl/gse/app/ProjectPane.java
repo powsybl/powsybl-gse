@@ -11,11 +11,15 @@ import com.google.common.collect.Multimap;
 import com.panemu.tiwulfx.control.DetachableTabPane;
 import com.powsybl.afs.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
+import com.powsybl.gse.copypaste.afs.CopyServiceConstants;
 import com.powsybl.gse.spi.*;
 import com.powsybl.gse.util.*;
+import com.powsybl.gse.copypaste.afs.CopyService;
 import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -31,12 +35,15 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Callback;
+import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -57,6 +64,8 @@ public class ProjectPane extends Tab {
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
 
     private final KeyCombination saveKeyCombination = new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
+
+    private BooleanProperty copied = new SimpleBooleanProperty(false);
 
     private static class TabKey {
 
@@ -505,6 +514,16 @@ public class ProjectPane extends Tab {
                         });
             }
         });
+
+        final Clipboard systemClipboard = Clipboard.getSystemClipboard();
+        new com.sun.glass.ui.ClipboardAssistance(com.sun.glass.ui.Clipboard.SYSTEM) {
+            @Override
+            public void contentChanged() {
+                if (systemClipboard != null && systemClipboard.hasString() && systemClipboard.getString() != null) {
+                    copied.set(systemClipboard.getString().contains(CopyServiceConstants.COPY_SIGNATURE));
+                }
+            }
+        };
     }
 
     public Project getProject() {
@@ -637,7 +656,7 @@ public class ProjectPane extends Tab {
     // contextual menu
 
     private MenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
-        MenuItem deleteMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.1em"));
+        MenuItem deleteMenuItem = GseMenuItem.createDeleteMenuItem();
         deleteMenuItem.setOnAction(event -> deleteNodesAlert(selectedTreeItems));
         deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
         List<TreeItem<Object>> selectedItems = new ArrayList<>(selectedTreeItems);
@@ -678,6 +697,118 @@ public class ProjectPane extends Tab {
             }
         }
         return found;
+    }
+
+    private MenuItem createCopyProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
+        MenuItem copyMenuItem = GseMenuItem.createCopyMenuItem();
+        List<TreeItem<Object>> selectedItems = new ArrayList<>(selectedTreeItems);
+        copyMenuItem.setDisable(ancestorsExistIn(selectedItems) || selectedItems.contains(treeView.getRoot()));
+        copyMenuItem.setOnAction(event -> findCopyService(selectedTreeItems));
+        return copyMenuItem;
+    }
+
+    private MenuItem createPasteProjectNodeItem(TreeItem<Object> selectedTreeItem) {
+        MenuItem pasteMenuItem = GseMenuItem.createPasteMenuItem();
+        pasteMenuItem.setOnAction(event -> {
+            if (selectedTreeItem.getValue() instanceof ProjectFolder) {
+                ProjectFolder projectFolder = (ProjectFolder) selectedTreeItem.getValue();
+                List<ProjectNode> children = projectFolder.getChildren();
+
+                final Clipboard clipboard = Clipboard.getSystemClipboard();
+                if (clipboard.hasString()) {
+                    String copyInfos = clipboard.getString();
+
+                    //the PATH_LIST_SEPARATOR delimits the copied nodes paths
+                    String[] array = copyInfos.split(CopyServiceConstants.PATH_LIST_SEPARATOR);
+
+                    // the first index  represents the copy signature
+                    //the last index represents the copied node archive's directory
+                    String[] copyArray = ArrayUtils.remove(array, 0);
+
+                    for (String path : copyArray) {
+                        unarchiveAndRename(projectFolder, children, path);
+                    }
+
+                    refresh(selectedTreeItem);
+                }
+                event.consume();
+            }
+        });
+        pasteMenuItem.disableProperty().bind(copied.not());
+        return pasteMenuItem;
+    }
+
+    private void unarchiveAndRename(ProjectFolder projectFolder, List<ProjectNode> children, String path) {
+        String[] pathArray = path.split(Pattern.quote(CopyServiceConstants.PATH_SEPARATOR));
+        String fileType = pathArray[pathArray.length - 1];
+        String fileId = pathArray[pathArray.length - 2];
+        String archiveParentPath = pathArray[pathArray.length - 3];
+        String archiveNodeName = archiveParentPath.substring(0, archiveParentPath.length() - fileId.length());
+        String substring = path.substring(0, path.lastIndexOf(CopyServiceConstants.PATH_SEPARATOR));
+        boolean nameAlreadyExists = children.stream().anyMatch(child -> archiveNodeName.equals(child.getName()));
+        if (!nameAlreadyExists) {
+            projectFolder.unarchive(Paths.get(substring));
+        } else {
+            pasteAndRename(projectFolder, children, substring, archiveNodeName, fileType);
+        }
+    }
+
+    private void pasteAndRename(ProjectFolder projectFolder, List<ProjectNode> children, String path, String fileName, String fileType) {
+        String copy = " - " + RESOURCE_BUNDLE.getString("Copy");
+        for (ProjectNode child : children) {
+            String name = child.getName();
+            if (fileName.equals(name)) {
+                if (fileType.equals(child.getClass().toString())) {
+                    renameSameTypeNode(projectFolder, path, copy, child, name);
+                } else {
+                    GseAlerts.showDraggingError();
+                }
+                break;
+            }
+        }
+    }
+
+    private void renameSameTypeNode(ProjectFolder projectFolder, String path, String copy, ProjectNode child, String name) {
+        child.rename("temporaryName");
+        projectFolder.unarchive(Paths.get(path));
+        projectFolder.getChild(name).ifPresent(pNode -> {
+            if (!name.contains(copy) && !projectFolder.getChild(name + copy).isPresent()) {
+                pNode.rename(name + copy);
+                child.rename(name);
+            } else {
+                if (!name.contains(copy)) {
+                    renameCopiedNode(projectFolder, copy, child, name, pNode);
+                } else {
+                    renameCopiedNode(projectFolder, "", child, name, pNode);
+                }
+            }
+        });
+    }
+
+    private static void renameCopiedNode(ProjectFolder projectFolder, String copy, ProjectNode child, String name, ProjectNode projectNode) {
+        String lastCopiedNode = projectFolder.getChildren().stream()
+                .map(ProjectNode::getName)
+                .filter(n -> n.startsWith(name + copy))
+                .sorted(Comparator.reverseOrder())
+                .collect(Collectors.toList())
+                .get(0);
+
+        String lastCopiedNodeNumber = lastCopiedNode.substring(lastCopiedNode.indexOf(name + copy) + name.length() + copy.length());
+        if (lastCopiedNodeNumber.isEmpty()) {
+            projectNode.rename(name + copy + 2);
+            child.rename(name);
+        } else {
+            int numberOfCopies = Integer.parseInt(lastCopiedNodeNumber) + 1;
+            projectNode.rename(name + copy + numberOfCopies);
+            child.rename(name);
+        }
+    }
+
+    private void findCopyService(List<? extends TreeItem<Object>> selectedTreeItems) {
+        List<ProjectNode> projectNodes = selectedTreeItems.stream()
+                .map(item -> (ProjectNode) item.getValue())
+                .collect(Collectors.toList());
+        projectNodes.get(0).findService(CopyService.class).copy(projectNodes);
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
@@ -881,6 +1012,7 @@ public class ProjectPane extends Tab {
         contextMenu.getItems().add(menu);
         contextMenu.getItems().add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         contextMenu.getItems().add(createRenameProjectNodeItem(selectedTreeItem));
+        contextMenu.getItems().add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         return contextMenu;
     }
 
@@ -900,6 +1032,7 @@ public class ProjectPane extends Tab {
     private ContextMenu createMultipleContextMenu(List<? extends TreeItem<Object>> selectedTreeItems) {
         ContextMenu contextMenu = new ContextMenu();
         contextMenu.getItems().add(createDeleteProjectNodeItem(selectedTreeItems));
+        contextMenu.getItems().add(createCopyProjectNodeItem(selectedTreeItems));
         return contextMenu;
     }
 
@@ -969,7 +1102,9 @@ public class ProjectPane extends Tab {
         if (selectedTreeItem != treeView.getRoot()) {
             items.add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
             items.add(createRenameProjectNodeItem(selectedTreeItem));
+            items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         }
+        items.add(createPasteProjectNodeItem(selectedTreeItem));
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
                 .collect(Collectors.toList()));
