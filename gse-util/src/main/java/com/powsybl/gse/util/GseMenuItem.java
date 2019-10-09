@@ -32,10 +32,6 @@ public class GseMenuItem extends MenuItem {
         return new GseMenuItem(RESOURCE_BUNDLE.getString("Copy"), createGraphic('\uf0c5'), new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN));
     }
 
-    public static MenuItem createCutMenuItem() {
-        return new GseMenuItem(RESOURCE_BUNDLE.getString("Cut"), createGraphic('\uf0c4'), new KeyCodeCombination(KeyCode.X, KeyCombination.CONTROL_DOWN));
-    }
-
     public static MenuItem createPasteMenuItem() {
         return new GseMenuItem(RESOURCE_BUNDLE.getString("Paste"), createGraphic('\uf0ea'), new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN));
     }
