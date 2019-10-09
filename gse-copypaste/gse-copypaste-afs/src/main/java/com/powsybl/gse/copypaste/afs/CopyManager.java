@@ -16,16 +16,21 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Paths;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
  */
-public final class CopyModel {
+public final class CopyManager {
 
     private final String storageDirectory;
 
-    public CopyModel() {
+    private Map<String, CopyInfo> copy;
+
+    public CopyManager() {
         storageDirectory = getStorageDirectory();
     }
 
@@ -40,22 +45,36 @@ public final class CopyModel {
 
         //copy single nodes
         for (AbstractNodeBase node : nodes) {
-            if (node instanceof Folder && node.isInLocalFileSystem()) {
-                String path = node.getPath().toString().replace("/:", "");
-                copyParameters.append(path).append(CopyServiceConstants.PATH_LIST_SEPARATOR);
-            } else {
-                archiveAndCopy(copyParameters, node);
-                copyParameters.append(CopyServiceConstants.PATH_LIST_SEPARATOR);
-            }
+            archiveAndCopy(copyParameters, node);
+            copyParameters.append(CopyServiceConstants.PATH_LIST_SEPARATOR);
         }
         setClipboardContent(copyParameters.toString());
+    }
+
+    public Map<String, CopyInfo> copy2(List<? extends AbstractNodeBase> nodes) {
+        copy = new HashMap<>();
+
+        for (AbstractNodeBase node : nodes) {
+            CopyInfo copyInfo = new CopyInfo();
+            copyInfo.nodeId = node.getId();
+            copyInfo.nodeType = node.getClass().getSimpleName();
+            copyInfo.archivePath = storageDirectory + node.getName() + node.getId();
+            //copyInfo.expirationDate =
+            //copyInfo.archiveComplete =
+            copy.put(copyInfo.nodeId, copyInfo);
+        }
+        return copy;
+    }
+
+    public void paste() {
+
     }
 
     private void archiveAndCopy(StringBuilder copyPaths, AbstractNodeBase node) {
         String nodeId = node.getId();
         String archiveDirectory = storageDirectory + node.getName() + node.getId();
         archiveNode(node, nodeId, archiveDirectory);
-        copyPaths.append(archiveDirectory).append(CopyServiceConstants.PATH_SEPARATOR).append(nodeId);
+        copyPaths.append(archiveDirectory).append(CopyServiceConstants.PATH_SEPARATOR).append(nodeId).append(CopyServiceConstants.PATH_SEPARATOR).append(node.getClass());
     }
 
     private static void archiveNode(AbstractNodeBase node, String nodeId, String parentPath) {
@@ -101,4 +120,44 @@ public final class CopyModel {
         return LocalComputationConfig.load().getLocalDir() + CopyServiceConstants.PATH_SEPARATOR;
     }
 
+    private class CopyInfo {
+        //String uuid;
+        String nodeId;
+        String nodeType;
+        String archivePath;
+        boolean archiveComplete;
+        Date expirationDate;
+
+        public String getNodeId() {
+            return nodeId;
+        }
+
+        public String getNodeType() {
+            return nodeType;
+        }
+
+        public String getArchivePath() {
+            return archivePath;
+        }
+
+        public boolean isArchiveComplete() {
+            return archiveComplete;
+        }
+
+        public void setArchiveComplete(boolean archiveComplete) {
+            this.archiveComplete = archiveComplete;
+        }
+
+        public Date getExpirationDate() {
+            return expirationDate;
+        }
+
+        public void setExpirationDate(Date expirationDate) {
+            this.expirationDate = expirationDate;
+        }
+    }
+
+    private enum CopyType {
+
+    }
 }
