@@ -6,6 +6,7 @@
  */
 package com.powsybl.gse.afs.ext.base;
 
+import com.google.common.collect.ImmutableList;
 import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.ext.base.ScriptListener;
 import com.powsybl.afs.ext.base.StorableScript;
@@ -51,6 +52,14 @@ public class ModificationScriptEditor extends BorderPane
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ModificationScript");
 
+    private static final List<String> STANDARD_SUGGESTIONS = ImmutableList.of("as", "assert", "boolean", "break", "breaker", "byte",
+            "case", "catch", "char", "class", "continue", "def", "default", "double", "else", "enum",
+            "extends", "false", "finally", "float", "for", "generator", "if", "implements", "import", "in",
+            "instanceof", "int", "interface", "load", "long", "native", "network", "new", "null", "package", "private",
+            "protected", "public", "return", "short", "static", "substation", "super", "switch", "synchronized", "this",
+            "threadsafe", "throw", "throws", "transient", "true", "try", "void", "volatile", "voltageLevel", "while"
+    );
+
     private final GseContext context;
 
     private final ToolBar toolBar;
@@ -84,7 +93,7 @@ public class ModificationScriptEditor extends BorderPane
         this.context = context;
 
         //Adding  autocompletion keywords suggestions depending the context
-        List<String> suggestions = new ArrayList<>();
+        List<String> suggestions = new ArrayList<>(STANDARD_SUGGESTIONS);
         List<AutoCompletionWordsProvider> completionWordsProviderExtensions = findCompletionWordsProviderExtensions(storableScript);
         completionWordsProviderExtensions.forEach(extension -> suggestions.addAll(extension.completionKeyWords()));
 

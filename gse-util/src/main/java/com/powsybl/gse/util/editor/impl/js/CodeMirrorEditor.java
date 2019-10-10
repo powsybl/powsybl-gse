@@ -4,7 +4,6 @@ import com.powsybl.gse.util.editor.AbstractCodeEditor;
 import com.powsybl.gse.util.editor.impl.swing.AbstractObservableValueHelper;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Scene;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.web.WebView;
 import javafx.util.Pair;
 import netscape.javascript.JSObject;
