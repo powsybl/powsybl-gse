@@ -67,7 +67,16 @@ JAVA_INJECTED_CODE
           extraKeys: {"Ctrl-Space": "autocomplete"},
           viewportMargin: Infinity,
           matchBrackets: true,
+          theme: "mdn-like",
           hintOptions: {hint: customHint}
+      });
+
+      editor.getDoc().on("change", function(instance, changeObj){
+        window.javaBindings && window.javaBindings.onChange();
+      });
+
+      editor.getDoc().on("cursorActivity", function(instance) {
+        window.javaBindings && window.javaBindings.onCaretPositionChange();
       });
 
        /*editor.on("keyup", function (cm, event) {

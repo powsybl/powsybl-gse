@@ -31,8 +31,18 @@ JAVA_INJECTED_CODE
     editor.setOptions({
         enableBasicAutocompletion: true,
         enableSnippets: true,
-        enableLiveAutocompletion: true
+        enableLiveAutocompletion: true,
+        useSoftTabs: false
  });
+
+      editor.on("change", function(instance, changeObj){
+        window.javaBindings && window.javaBindings.onChange();
+      });
+
+      editor.getSelection().on("changeCursor", function(instance) {
+        window.javaBindings && window.javaBindings.onCaretPositionChange();
+      });
+
 </script>
 
 </body>

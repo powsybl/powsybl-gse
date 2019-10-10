@@ -1,8 +1,10 @@
 package com.powsybl.gse.util.editor.impl.js;
 
 import com.powsybl.gse.util.editor.AbstractCodeEditor;
-import com.powsybl.gse.util.editor.impl.swing.AbstractObservableValueHelper;
+import com.powsybl.gse.util.editor.AbstractObservableValueHelper;
+import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.concurrent.Worker;
 import javafx.scene.Scene;
 import javafx.scene.web.WebView;
 import javafx.util.Pair;
@@ -28,7 +30,8 @@ public class CodeMirrorEditor extends AbstractCodeEditor {
             "lib/codemirror.css",
             "addon/hint/show-hint.css",
             "addon/dialog/dialog.css",
-            "addon/search/matchesonscrollbar.css"
+            "addon/search/matchesonscrollbar.css",
+            "theme/mdn-like.css"
     );
     private static final List<String> JS_INCLUDES = Arrays.asList(
             "lib/codemirror.js",
@@ -50,6 +53,7 @@ public class CodeMirrorEditor extends AbstractCodeEditor {
     private String editingCode = "";
     private AbstractObservableValueHelper<String> codeProperty;
     private AbstractObservableValueHelper<Integer> caretProperty;
+    private final Bindings jsBindings = new Bindings();
 
     public CodeMirrorEditor(Scene scene, List<String> autoCompletion) {
         try {
@@ -72,6 +76,21 @@ public class CodeMirrorEditor extends AbstractCodeEditor {
             throw new RuntimeException("Should not happend", e);
         }
 
+        webview.getEngine().getLoadWorker().stateProperty().addListener(
+                (ChangeListener) (observable, oldValue, newValue) -> {
+                    if (newValue != Worker.State.SUCCEEDED) { return; }
+
+                    JSObject window = (JSObject) webview.getEngine().executeScript("window");
+                    // Maintain a strong reference to prevent garbage collection:
+                    // https://bugs.openjdk.java.net/browse/JDK-8154127
+                    window.setMember("javaBindings", jsBindings);
+//                    webview.getEngine().executeScript("console.log = function(message)\n" +
+//                            "{\n" +
+//                            "    javaBindings.log(message);\n" +
+//                            "};");
+                }
+        );
+
         webview.getEngine().loadContent(applyEditingTemplate());
 
         setMasterNode(webview);
@@ -84,21 +103,6 @@ public class CodeMirrorEditor extends AbstractCodeEditor {
         return editingTemplate.replace("JAVA_INJECTED_CODE", editingCode);
     }
 
-    /**
-     * returns the current code in the editor and updates an editing snapshot of the code which can be reverted to.
-     */
-    public String getCodeAndSnapshot() {
-        this.editingCode = (String) webview.getEngine().executeScript("editor.getValue();");
-        return editingCode;
-    }
-
-    /**
-     * revert edits of the code to the last edit snapshot taken.
-     */
-    public void revertEdits() {
-        setCode(editingCode);
-    }
-
     private void initObservableValues() {
         codeProperty = new AbstractObservableValueHelper<String>() {
             @Override
@@ -107,45 +111,18 @@ public class CodeMirrorEditor extends AbstractCodeEditor {
             }
         };
 
-//        codeArea.getDocument().addDocumentListener(new DocumentListener() {
-//            @Override
-//            public void insertUpdate(DocumentEvent e) {
-//                if (ignoreDocumentLoadChange) {
-//                    ignoreDocumentLoadChange = false;
-//                    return;
-//                }
-//                codeProperty.fireChange();
-//            }
-//
-//            @Override
-//            public void removeUpdate(DocumentEvent e) {
-//                codeProperty.fireChange();
-//            }
-//
-//            @Override
-//            public void changedUpdate(DocumentEvent e) {
-//                if (ignoreDocumentLoadChange) {
-//                    return;
-//                }
-//                codeProperty.fireChange();
-//            }
-//        });
-
         caretProperty = new AbstractObservableValueHelper<Integer>() {
             @Override
             public Integer getValue() {
                 try {
                     JSObject cursorPositionInfo = (JSObject) webview.getEngine().executeScript("editor.getDoc().getCursor();");
-                    return Integer.parseInt((String) cursorPositionInfo.getMember("line")) + Integer.parseInt((String) cursorPositionInfo.getMember("ch"));
+                    return (Integer) cursorPositionInfo.getMember("line") + (Integer) cursorPositionInfo.getMember("ch");
                 } catch (Exception e) {
                     return 0;
                 }
             }
         };
 
-//        codeArea.getCaret().addChangeListener(e -> {
-//            caretProperty.fireChange();
-//        });
     }
 
     @Override
@@ -186,7 +163,14 @@ public class CodeMirrorEditor extends AbstractCodeEditor {
 
     @Override
     public String currentPosition() {
-        return "0";
+        try {
+            JSObject cursorPositionInfo = (JSObject) webview.getEngine().executeScript("editor.getDoc().getCursor();");
+            Integer ch = (Integer) cursorPositionInfo.getMember("ch");
+            Integer line = (Integer) cursorPositionInfo.getMember("line");
+            return String.format("%d:%d", line, ch);
+        } catch (Exception e){
+            return "0:0";
+        }
     }
 
     @Override
@@ -201,12 +185,20 @@ public class CodeMirrorEditor extends AbstractCodeEditor {
 
     @Override
     public Pair<Double, Double> caretDisplayPosition() {
-        try {
-            JSObject cursorPositionInfo = (JSObject) webview.getEngine().executeScript("editor.getDoc().getCursor();");
-            return new Pair<>(Double.parseDouble((String) cursorPositionInfo.getMember("line")), Double.parseDouble((String) cursorPositionInfo.getMember("ch")));
+        return null;
+    }
 
-        } catch (Exception e) {
-            return new Pair<>(0.0, 0.0);
+    public class Bindings {
+        public void onChange(){
+            codeProperty.fireChange();
+        }
+
+        public void log(String text){
+            LOGGER.info(text);
+        }
+
+        public void onCaretPositionChange(){
+            caretProperty.fireChange();
         }
     }
 }

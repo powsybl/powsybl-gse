@@ -1,4 +1,4 @@
-package com.powsybl.gse.util.editor.impl.swing;
+package com.powsybl.gse.util.editor;
 
 import javafx.application.Platform;
 import javafx.beans.value.ObservableValueBase;
@@ -9,7 +9,7 @@ import javafx.beans.value.ObservableValueBase;
  */
 public abstract class AbstractObservableValueHelper<T> extends ObservableValueBase<T> {
 
-    void fireChange() {
+    public void fireChange() {
         Platform.runLater(this::fireValueChangedEvent);
     }
 }

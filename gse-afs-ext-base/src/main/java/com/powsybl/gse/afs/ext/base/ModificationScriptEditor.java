@@ -99,7 +99,7 @@ public class ModificationScriptEditor extends BorderPane
 
         codeEditorWithProgressIndicator = new StackPane();
         splitPane = new SplitPane(codeEditorWithProgressIndicator);
-        setUpEditor(new CodeMirrorEditor(scene, suggestions));
+        setUpEditor(new AceCodeEditor(scene, suggestions));
         codeEditor.setTabSize(4);
 
         Text saveGlyph = Glyph.createAwesomeFont('\uf0c7').size("1.3em");
@@ -125,7 +125,7 @@ public class ModificationScriptEditor extends BorderPane
 
         Pane spacer = new Pane();
         bottomToolBar = new ToolBar(tabSizeLabel, comboBox, spacer, caretPositionDisplay, editorSwitch);
-        bottomToolBar.widthProperty().addListener((observable, oldvalue, newvalue) -> spacer.setPadding(new Insets(0, (double) newvalue - 240, 0, 0)));
+        bottomToolBar.widthProperty().addListener((observable, oldvalue, newvalue) -> spacer.setPadding(new Insets(0, (double) newvalue - 340, 0, 0)));
         splitPane.setOrientation(Orientation.VERTICAL);
         splitPane.setDividerPosition(0, 0.8);
         setTop(toolBar);

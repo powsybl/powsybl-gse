@@ -1,9 +1,12 @@
 package com.powsybl.gse.util.editor.impl.js;
 
 import com.powsybl.gse.util.editor.AbstractCodeEditor;
-import com.powsybl.gse.util.editor.impl.swing.AbstractObservableValueHelper;
+import com.powsybl.gse.util.editor.AbstractObservableValueHelper;
+import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.concurrent.Worker;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.web.WebView;
 import javafx.util.Pair;
@@ -12,7 +15,6 @@ import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -39,6 +41,7 @@ public class AceCodeEditor extends AbstractCodeEditor {
     private String editingCode = "";
     private AbstractObservableValueHelper<String> codeProperty;
     private AbstractObservableValueHelper<Integer> caretProperty;
+    private final Bindings jsBindings = new Bindings();
 
     public AceCodeEditor(Scene scene, List<String> autoCompletion) {
 
@@ -51,7 +54,6 @@ public class AceCodeEditor extends AbstractCodeEditor {
                     String.format("<link rel=\"stylesheet\" href=\"%s\">", getClass().getResource(String.format("%s/%s", LIB_BASE_PATH, include)).toExternalForm())
             ).collect(Collectors.joining("\n")));
             editingTemplate = baseHtmlTemplate;
-
         } catch (IOException e) {
             throw new RuntimeException("Should not happend", e);
         }
@@ -60,7 +62,25 @@ public class AceCodeEditor extends AbstractCodeEditor {
 
         webview.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             LOGGER.info("{}", event);
+            if (KeyCode.ENTER.equals(event.getCode())) {
+                webview.getEngine().executeScript("editor.insert('\\n');");
+            }
         });
+
+        webview.getEngine().getLoadWorker().stateProperty().addListener(
+                (ChangeListener) (observable, oldValue, newValue) -> {
+                    if (newValue != Worker.State.SUCCEEDED) { return; }
+
+                    JSObject window = (JSObject) webview.getEngine().executeScript("window");
+                    // Maintain a strong reference to prevent garbage collection:
+                    // https://bugs.openjdk.java.net/browse/JDK-8154127
+                    window.setMember("javaBindings", jsBindings);
+//                    webview.getEngine().executeScript("console.log = function(message)\n" +
+//                            "{\n" +
+//                            "    javaBindings.log(message);\n" +
+//                            "};");
+                }
+        );
 
         webview.addEventHandler(KeyEvent.KEY_TYPED, event -> {
             LOGGER.info("{}", event);
@@ -76,21 +96,6 @@ public class AceCodeEditor extends AbstractCodeEditor {
         return editingTemplate.replace("JAVA_INJECTED_CODE", editingCode);
     }
 
-    /**
-     * returns the current code in the editor and updates an editing snapshot of the code which can be reverted to.
-     */
-    public String getCodeAndSnapshot() {
-        this.editingCode = (String) webview.getEngine().executeScript("editor.getValue();");
-        return editingCode;
-    }
-
-    /**
-     * revert edits of the code to the last edit snapshot taken.
-     */
-    public void revertEdits() {
-        setCode(editingCode);
-    }
-
     private void initObservableValues() {
         codeProperty = new AbstractObservableValueHelper<String>() {
             @Override
@@ -99,45 +104,17 @@ public class AceCodeEditor extends AbstractCodeEditor {
             }
         };
 
-//        codeArea.getDocument().addDocumentListener(new DocumentListener() {
-//            @Override
-//            public void insertUpdate(DocumentEvent e) {
-//                if (ignoreDocumentLoadChange) {
-//                    ignoreDocumentLoadChange = false;
-//                    return;
-//                }
-//                codeProperty.fireChange();
-//            }
-//
-//            @Override
-//            public void removeUpdate(DocumentEvent e) {
-//                codeProperty.fireChange();
-//            }
-//
-//            @Override
-//            public void changedUpdate(DocumentEvent e) {
-//                if (ignoreDocumentLoadChange) {
-//                    return;
-//                }
-//                codeProperty.fireChange();
-//            }
-//        });
-
         caretProperty = new AbstractObservableValueHelper<Integer>() {
             @Override
             public Integer getValue() {
                 try {
-                    JSObject cursorPositionInfo = (JSObject) webview.getEngine().executeScript("editor.getDoc().getCursor();");
-                    return Integer.parseInt((String) cursorPositionInfo.getMember("line")) + Integer.parseInt((String) cursorPositionInfo.getMember("ch"));
+                    JSObject cursorPositionInfo = (JSObject) webview.getEngine().executeScript("editor.getCursorPosition();");
+                    return (Integer) cursorPositionInfo.getMember("row") + (Integer) cursorPositionInfo.getMember("column");
                 } catch (Exception e) {
                     return 0;
                 }
             }
         };
-
-//        codeArea.getCaret().addChangeListener(e -> {
-//            caretProperty.fireChange();
-//        });
     }
 
     @Override
@@ -193,12 +170,16 @@ public class AceCodeEditor extends AbstractCodeEditor {
 
     @Override
     public Pair<Double, Double> caretDisplayPosition() {
-        try {
-            JSObject cursorPositionInfo = (JSObject) webview.getEngine().executeScript("editor.getDoc().getCursor();");
-            return new Pair<>(Double.parseDouble((String) cursorPositionInfo.getMember("line")), Double.parseDouble((String) cursorPositionInfo.getMember("ch")));
+        return null;
+    }
 
-        } catch (Exception e) {
-            return new Pair<>(0.0, 0.0);
+    public class Bindings{
+        public void onChange(){
+            codeProperty.fireChange();
+        }
+
+        public void onCaretPositionChange(){
+            caretProperty.fireChange();
         }
     }
 

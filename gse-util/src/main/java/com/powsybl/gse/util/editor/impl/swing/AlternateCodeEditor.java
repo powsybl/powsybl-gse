@@ -2,6 +2,7 @@ package com.powsybl.gse.util.editor.impl.swing;
 
 import com.google.common.collect.ImmutableList;
 import com.powsybl.gse.util.editor.AbstractCodeEditor;
+import com.powsybl.gse.util.editor.AbstractObservableValueHelper;
 import com.powsybl.gse.util.editor.impl.SearchBar;
 import com.powsybl.gse.util.editor.Searchable;
 import javafx.beans.value.ObservableValue;
