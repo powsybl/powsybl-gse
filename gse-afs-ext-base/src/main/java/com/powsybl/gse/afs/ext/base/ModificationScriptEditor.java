@@ -9,17 +9,20 @@ package com.powsybl.gse.afs.ext.base;
 import com.google.common.collect.ImmutableList;
 import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.ext.base.ScriptListener;
+import com.powsybl.afs.ext.base.ScriptType;
 import com.powsybl.afs.ext.base.StorableScript;
 import com.powsybl.commons.config.ModuleConfig;
 import com.powsybl.commons.config.PlatformConfig;
-import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.spi.Savable;
-import com.powsybl.gse.util.*;
+import com.powsybl.gse.util.Glyph;
+import com.powsybl.gse.util.GseAlerts;
+import com.powsybl.gse.util.GseUtil;
 import com.powsybl.gse.util.editor.AbstractCodeEditor;
 import com.powsybl.gse.util.editor.impl.GroovyCodeEditor;
+import groovy.lang.GroovyShell;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.concurrent.Service;
@@ -34,13 +37,12 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
+import org.codehaus.groovy.control.MultipleCompilationErrorsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.ResourceBundle;
+import java.util.*;
+import java.util.stream.StreamSupport;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -49,8 +51,6 @@ public class ModificationScriptEditor extends BorderPane
         implements ProjectFileViewer, Savable, ScriptListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ModificationScriptEditor.class);
-
-    private static final ServiceLoaderCache<AbstractCodeEditor> CODE_EDITOR_SERVICES = new ServiceLoaderCache<>(AbstractCodeEditor.class);
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ModificationScript");
 
@@ -96,9 +96,8 @@ public class ModificationScriptEditor extends BorderPane
         Optional<ModuleConfig> codeEditorConfig = PlatformConfig.defaultConfig().getOptionalModuleConfig("code-editor");
 
         if (codeEditorConfig.isPresent() && codeEditorConfig.get().hasProperty("editorClass")) {
-            Optional<AbstractCodeEditor> preferredCodeEditor = CODE_EDITOR_SERVICES
-                    .getServices()
-                    .stream()
+            Optional<AbstractCodeEditor> preferredCodeEditor = StreamSupport
+                    .stream(ServiceLoader.load(AbstractCodeEditor.class).spliterator(), false)
                     .filter(codeEditorService -> codeEditorService.getClass().getName().equals(codeEditorConfig.get().getStringProperty("editorClass")))
                     .findAny();
             codeEditor = preferredCodeEditor.orElse(new GroovyCodeEditor());
@@ -160,6 +159,18 @@ public class ModificationScriptEditor extends BorderPane
     @Override
     public void save() {
         if (!saved.getValue()) {
+
+            if (ScriptType.GROOVY.equals(storableScript.getScriptType())) {
+                try {
+                    GroovyShell groovyShell = new GroovyShell();
+                    groovyShell.parse(codeEditor.getCode());
+                } catch (MultipleCompilationErrorsException e) {
+//                    e.getErrorCollector().getErrors()
+                } catch (Exception e) {
+                    LOGGER.error("failed to parse script", e);
+                }
+            }
+
             // write script but remove listener before to avoid double update
             storableScript.removeListener(this);
             storableScript.writeScript(codeEditor.getCode());
