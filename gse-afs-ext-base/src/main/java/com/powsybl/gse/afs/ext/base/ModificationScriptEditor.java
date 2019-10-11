@@ -10,16 +10,16 @@ import com.google.common.collect.ImmutableList;
 import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.ext.base.ScriptListener;
 import com.powsybl.afs.ext.base.StorableScript;
+import com.powsybl.commons.config.ModuleConfig;
+import com.powsybl.commons.config.PlatformConfig;
+import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.spi.Savable;
 import com.powsybl.gse.util.*;
 import com.powsybl.gse.util.editor.AbstractCodeEditor;
-import com.powsybl.gse.util.editor.impl.js.AceCodeEditor;
-import com.powsybl.gse.util.editor.impl.js.CodeMirrorEditor;
-import com.powsybl.gse.util.editor.impl.swing.AlternateCodeEditor;
-import com.powsybl.gse.util.editor.impl.javafx.GroovyCodeEditor;
+import com.powsybl.gse.util.editor.impl.GroovyCodeEditor;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.concurrent.Service;
@@ -34,12 +34,12 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Text;
-import org.controlsfx.control.ToggleSwitch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.ResourceBundle;
 
 /**
@@ -49,6 +49,8 @@ public class ModificationScriptEditor extends BorderPane
         implements ProjectFileViewer, Savable, ScriptListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ModificationScriptEditor.class);
+
+    private static final ServiceLoaderCache<AbstractCodeEditor> CODE_EDITOR_SERVICES = new ServiceLoaderCache<>(AbstractCodeEditor.class);
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ModificationScript");
 
@@ -91,6 +93,18 @@ public class ModificationScriptEditor extends BorderPane
     public ModificationScriptEditor(StorableScript storableScript, Scene scene, GseContext context) {
         this.storableScript = storableScript;
         this.context = context;
+        Optional<ModuleConfig> codeEditorConfig = PlatformConfig.defaultConfig().getOptionalModuleConfig("code-editor");
+
+        if (codeEditorConfig.isPresent() && codeEditorConfig.get().hasProperty("editorClass")) {
+            Optional<AbstractCodeEditor> preferredCodeEditor = CODE_EDITOR_SERVICES
+                    .getServices()
+                    .stream()
+                    .filter(codeEditorService -> codeEditorService.getClass().getName().equals(codeEditorConfig.get().getStringProperty("editorClass")))
+                    .findAny();
+            codeEditor = preferredCodeEditor.orElse(new GroovyCodeEditor());
+        } else {
+            codeEditor = new GroovyCodeEditor();
+        }
 
         //Adding  autocompletion keywords suggestions depending the context
         List<String> suggestions = new ArrayList<>(STANDARD_SUGGESTIONS);
@@ -99,7 +113,7 @@ public class ModificationScriptEditor extends BorderPane
 
         codeEditorWithProgressIndicator = new StackPane();
         splitPane = new SplitPane(codeEditorWithProgressIndicator);
-        setUpEditor(new AceCodeEditor(scene, suggestions));
+        setUpEditor(codeEditor, suggestions);
         codeEditor.setTabSize(4);
 
         Text saveGlyph = Glyph.createAwesomeFont('\uf0c7').size("1.3em");
@@ -115,16 +129,8 @@ public class ModificationScriptEditor extends BorderPane
 
         toolBar = new ToolBar(saveButton);
 
-        ToggleSwitch editorSwitch = new ToggleSwitch();
-        editorSwitch.setSelected(true);
-        editorSwitch.selectedProperty().addListener((observable, oldValue, newValue) -> {
-            if (oldValue != newValue) {
-                setUpEditor(newValue ? new AlternateCodeEditor(scene, suggestions) : new GroovyCodeEditor(scene, suggestions));
-            }
-        });
-
         Pane spacer = new Pane();
-        bottomToolBar = new ToolBar(tabSizeLabel, comboBox, spacer, caretPositionDisplay, editorSwitch);
+        bottomToolBar = new ToolBar(tabSizeLabel, comboBox, spacer, caretPositionDisplay);
         bottomToolBar.widthProperty().addListener((observable, oldvalue, newvalue) -> spacer.setPadding(new Insets(0, (double) newvalue - 340, 0, 0)));
         splitPane.setOrientation(Orientation.VERTICAL);
         splitPane.setDividerPosition(0, 0.8);
@@ -136,10 +142,11 @@ public class ModificationScriptEditor extends BorderPane
         storableScript.addListener(this);
     }
 
-    private void setUpEditor(AbstractCodeEditor editor) {
+    private void setUpEditor(AbstractCodeEditor editor, List<String> completions) {
         String prevContent = codeEditor != null ? codeEditor.getCode() : "";
         codeEditor = editor;
         codeEditor.setCode(prevContent);
+        codeEditor.setCompletions(completions);
         codeEditor.caretPositionProperty().addListener((observable, oldValue, newValue) -> caretPositionDisplay.setText(codeEditor.currentPosition()));
         codeEditor.codeProperty().addListener((observable, oldValue, newValue) -> saved.set(false));
         codeEditorWithProgressIndicator.getChildren().clear();

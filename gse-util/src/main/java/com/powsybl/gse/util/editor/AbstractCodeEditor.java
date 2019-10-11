@@ -1,8 +1,9 @@
 package com.powsybl.gse.util.editor;
 
 import javafx.beans.value.ObservableValue;
-import javafx.util.Pair;
 import org.controlsfx.control.MasterDetailPane;
+
+import java.util.List;
 
 public abstract class AbstractCodeEditor extends MasterDetailPane {
 
@@ -18,13 +19,5 @@ public abstract class AbstractCodeEditor extends MasterDetailPane {
 
     public abstract String currentPosition();
 
-    public abstract void moveCaret(int newPosition);
-
-    public abstract void replace(String text, int rangeStart, int rangeEnd);
-
-    /**
-     * Caret display position
-     * @return x,y
-     */
-    public abstract Pair<Double, Double> caretDisplayPosition();
+    public abstract void setCompletions(List<String> completions);
 }
