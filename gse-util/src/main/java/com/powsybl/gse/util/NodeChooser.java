@@ -48,7 +48,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private enum NodeChooserView {
         ALL_STORAGES,
         LOCAL_STORAGE_ONLY,
-        PROJECTS_STOTAGE_ONLY
+        PROJECTS_STORAGE_ONLY
     }
 
     public interface TreeModel<N, F, D> {
@@ -368,7 +368,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private void setNodeChooserView(NodeChooserView nodeChooserView, TreeItem<N> node) {
-        if (nodeChooserView == NodeChooserView.PROJECTS_STOTAGE_ONLY) {
+        if (nodeChooserView == NodeChooserView.PROJECTS_STORAGE_ONLY) {
             if (node.getValue() instanceof Folder && ((Folder) node.getValue()).isWritable()) {
                 node.setExpanded(true);
             }
@@ -789,7 +789,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context,
                                                                  BiPredicate<Node, TreeModel<Node, File, Folder>> filter) {
-        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, filter,  NodeChooserView.PROJECTS_STOTAGE_ONLY);
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, filter,  NodeChooserView.PROJECTS_STORAGE_ONLY);
     }
 
     private static <N, T extends N> boolean testNode(N node, Class<T> filter, Class<?>... otherFilters) {
@@ -809,7 +809,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Class<T> filter, Set<String> openedProjectsList, Class<?>... otherFilters) {
-        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters), NodeChooserView.PROJECTS_STOTAGE_ONLY, openedProjectsList);
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters), NodeChooserView.PROJECTS_STORAGE_ONLY, openedProjectsList);
     }
 
     public static <T extends ProjectNode> Optional<T> showAndWaitDialog(Project project, Window window, GseContext context, BiPredicate<ProjectNode, TreeModel<ProjectNode, ProjectFile, ProjectFolder>> filter) {
