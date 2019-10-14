@@ -40,13 +40,8 @@ public final class CopyModel {
 
         //copy single nodes
         for (AbstractNodeBase node : nodes) {
-            if (node instanceof Folder && !((Folder) node).isWritable()) {
-                String path = node.getPath().toString().replace("/:", "");
-                copyParameters.append(path).append(CopyServiceConstants.PATH_LIST_SEPARATOR);
-            } else {
-                archiveAndCopy(copyParameters, node);
-                copyParameters.append(CopyServiceConstants.PATH_LIST_SEPARATOR);
-            }
+            archiveAndCopy(copyParameters, node);
+            copyParameters.append(CopyServiceConstants.PATH_LIST_SEPARATOR);
         }
         setClipboardContent(copyParameters.toString());
     }

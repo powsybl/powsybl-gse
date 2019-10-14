@@ -669,8 +669,8 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         return pasteMenuItem;
     }
 
-    private boolean clipboardContainsNodes(Clipboard systemClipboard) {
-        return !systemClipboard.getString().contains("com.powsybl.afs.Project") && !systemClipboard.getString().contains("com.powsybl.afs.Folder");
+    private static boolean clipboardContainsNodes(Clipboard systemClipboard) {
+        return !systemClipboard.getString().contains(CopyServiceConstants.PROJECT_TYPE) && !systemClipboard.getString().contains(CopyServiceConstants.FOLDER_TYPE);
     }
 
     private void unarchiveNode(Folder destinationFolder) {
