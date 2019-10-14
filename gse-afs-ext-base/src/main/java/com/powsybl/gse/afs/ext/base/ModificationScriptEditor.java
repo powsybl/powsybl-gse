@@ -13,6 +13,7 @@ import com.powsybl.afs.ext.base.ScriptType;
 import com.powsybl.afs.ext.base.StorableScript;
 import com.powsybl.commons.config.ModuleConfig;
 import com.powsybl.commons.config.PlatformConfig;
+import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileViewer;
@@ -21,6 +22,7 @@ import com.powsybl.gse.util.Glyph;
 import com.powsybl.gse.util.GseAlerts;
 import com.powsybl.gse.util.GseUtil;
 import com.powsybl.gse.util.editor.AbstractCodeEditor;
+import com.powsybl.gse.util.editor.AbstractCodeEditorFactoryService;
 import com.powsybl.gse.util.editor.impl.GroovyCodeEditor;
 import groovy.lang.GroovyShell;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -42,7 +44,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.stream.StreamSupport;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -53,6 +54,8 @@ public class ModificationScriptEditor extends BorderPane
     private static final Logger LOGGER = LoggerFactory.getLogger(ModificationScriptEditor.class);
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ModificationScript");
+
+    private static final ServiceLoaderCache<AbstractCodeEditorFactoryService> CODE_EDITOR_FACTORIES = new ServiceLoaderCache<>(AbstractCodeEditorFactoryService.class);
 
     private static final List<String> STANDARD_SUGGESTIONS = ImmutableList.of("as", "assert", "boolean", "break", "breaker", "byte",
             "case", "catch", "char", "class", "continue", "def", "default", "double", "else", "enum",
@@ -96,11 +99,20 @@ public class ModificationScriptEditor extends BorderPane
         Optional<ModuleConfig> codeEditorConfig = PlatformConfig.defaultConfig().getOptionalModuleConfig("code-editor");
 
         if (codeEditorConfig.isPresent() && codeEditorConfig.get().hasProperty("editorClass")) {
-            Optional<AbstractCodeEditor> preferredCodeEditor = StreamSupport
-                    .stream(ServiceLoader.load(AbstractCodeEditor.class).spliterator(), false)
-                    .filter(codeEditorService -> codeEditorService.getClass().getName().equals(codeEditorConfig.get().getStringProperty("editorClass")))
+            Optional<AbstractCodeEditorFactoryService> preferredCodeEditor = CODE_EDITOR_FACTORIES.getServices()
+                    .stream()
+                    .filter(codeEditorService -> codeEditorService.getEditorClass() != null && codeEditorService.getEditorClass().getName().equals(codeEditorConfig.get().getStringProperty("editorClass")))
                     .findAny();
-            codeEditor = preferredCodeEditor.orElse(new GroovyCodeEditor());
+            codeEditor = preferredCodeEditor
+                    .map(codeEditorFactoryService -> {
+                        try {
+                            return codeEditorFactoryService.build();
+                        } catch (Exception e) {
+                            LOGGER.error("Failed to instanciate editor {}", codeEditorFactoryService.getEditorClass(), e);
+                        }
+                        return null;
+                    })
+                    .orElse(new GroovyCodeEditor());
         } else {
             codeEditor = new GroovyCodeEditor();
         }

@@ -16,6 +16,7 @@ import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.KeywordsProvider;
 import com.powsybl.gse.util.EquipmentInfo;
 import com.powsybl.gse.util.editor.AbstractCodeEditor;
+import com.powsybl.gse.util.editor.AbstractCodeEditorFactoryService;
 import com.powsybl.gse.util.editor.SearchBar;
 import com.powsybl.gse.util.editor.Searchable;
 import com.powsybl.iidm.network.Country;
@@ -67,7 +68,6 @@ import java.util.stream.Collectors;
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-@AutoService(AbstractCodeEditor.class)
 public class GroovyCodeEditor extends AbstractCodeEditor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GroovyCodeEditor.class);
@@ -778,5 +778,12 @@ public class GroovyCodeEditor extends AbstractCodeEditor {
         LOGGER.trace("Highlighting of {} characters computed in {} ms", text.length(), stopwatch.elapsed(TimeUnit.MILLISECONDS));
 
         return spansBuilder.create();
+    }
+
+    @AutoService(AbstractCodeEditorFactoryService.class)
+    public static class GroovyCodeEditorFactory extends AbstractCodeEditorFactoryService<GroovyCodeEditor> {
+        public GroovyCodeEditorFactory() {
+            super(GroovyCodeEditor.class);
+        }
     }
 }
