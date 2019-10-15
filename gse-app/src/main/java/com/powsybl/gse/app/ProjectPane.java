@@ -245,7 +245,7 @@ public class ProjectPane extends Tab {
                     ProjectNode node = (ProjectNode) value;
                     setText(node.getName());
                     setGraphic(getTreeItem().getGraphic());
-                    setTextFill(Color.BLACK);
+                    setTextFillColor(value, this);
                     setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
                     setOnDragDetected(event -> dragDetectedEvent(getItem(), getTreeItem(), event));
                     setOnDragOver(event -> dragOverEvent(event, getItem(), getTreeItem(), this));
@@ -305,6 +305,14 @@ public class ProjectPane extends Tab {
             if (selectedTreeItem != null) {
                 runDefaultActionAfterDoubleClick(selectedTreeItem);
             }
+        }
+    }
+
+    private static void setTextFillColor(Object value, TreeCell<Object> treeCell) {
+        if (value instanceof ProjectFile && ((ProjectFile) value).mandatoryDependenciesAreMissing()) {
+            treeCell.setTextFill(Color.RED);
+        } else {
+            treeCell.setTextFill(Color.BLACK);
         }
     }
 
