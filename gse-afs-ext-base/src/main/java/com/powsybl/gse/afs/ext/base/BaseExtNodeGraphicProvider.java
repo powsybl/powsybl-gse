@@ -59,6 +59,20 @@ public class BaseExtNodeGraphicProvider implements NodeGraphicProvider {
                         .size("0.9em"));
     }
 
+    public static Node createImcompleteVirtualCaseGlyph() {
+        return createIidmGlyph()
+                .stack(Glyph.createAwesomeFont('\uf14b')
+                        .color("limegreen")
+                        .size("0.9em")
+                        .stack(incompleteIconGlyph()));
+    }
+
+    private static Glyph incompleteIconGlyph() {
+        return Glyph.createAwesomeFont('\uf057')
+                .color("red")
+                .size("0.8em");
+    }
+
     @Override
     public Node getGraphic(Object file) {
         if (file instanceof Case) {
@@ -68,6 +82,9 @@ public class BaseExtNodeGraphicProvider implements NodeGraphicProvider {
             ImportedCase importedCase = (ImportedCase) file;
             return createCaseGlyph(importedCase.getImporter());
         } else if (file instanceof VirtualCase) {
+            if (((VirtualCase) file).mandatoryDependenciesAreMissing()) {
+                return createImcompleteVirtualCaseGlyph();
+            }
             return createVirtualCaseGlyph();
         } else if (file instanceof ModificationScript) {
             return createModificationScriptGlyph();

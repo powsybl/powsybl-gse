@@ -26,6 +26,19 @@ public class SecurityAnalysisNodeGraphicProvider implements NodeGraphicProvider 
                 .color("dimgray");
     }
 
+    public static Node createIncompleteSecurityAnalysisRunnerGlyph() {
+        return Glyph.createAwesomeFont('\uf132')
+                .size("1.4em")
+                .color("dimgray")
+                .stack(incompleteIconGlyph());
+    }
+
+    private static Glyph incompleteIconGlyph() {
+        return Glyph.createAwesomeFont('\uf057')
+                .color("red")
+                .size("0.8em");
+    }
+
     @Override
     public Node getGraphic(Object file) {
         if (file instanceof ActionScript) {
