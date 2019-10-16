@@ -24,6 +24,9 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
@@ -63,6 +66,11 @@ public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExten
     @Override
     public String getMenuText(ProjectFile projectCase) {
         return RESOURCE_BUNDLE.getString("CaseExport");
+    }
+
+    @Override
+    public KeyCombination getMenuKeyCode() {
+        return new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN);
     }
 
     @Override
