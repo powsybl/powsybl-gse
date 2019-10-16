@@ -450,6 +450,11 @@ public class ProjectPane extends Tab {
         treeView.getSelectionModel().getSelectedItems().addListener(this::treeViewChangeListener);
         treeView.setCellFactory(this::treeViewCellFactory);
         treeView.setOnMouseClicked(this::treeViewMouseClickHandler);
+        treeView.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue) {
+                treeView.getSelectionModel().clearSelection();
+            }
+        });
 
         DetachableTabPane ctrlTabPane1 = new DetachableTabPane();
         DetachableTabPane ctrlTabPane2 = new DetachableTabPane();
