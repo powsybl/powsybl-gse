@@ -6,25 +6,30 @@
  */
 package com.powsybl.gse.app;
 
+import com.google.common.collect.ImmutableList;
 import com.powsybl.afs.AppData;
 import com.powsybl.afs.Project;
 import com.powsybl.afs.ws.client.utils.UserSession;
-import com.powsybl.gse.spi.BrandingConfig;
-import com.powsybl.gse.spi.GseContext;
-import com.powsybl.gse.spi.GseException;
+import com.powsybl.commons.util.ServiceLoaderCache;
+import com.powsybl.gse.spi.*;
 import com.powsybl.gse.util.GseUtil;
 import com.powsybl.gse.util.NodeChooser;
+import com.powsybl.gse.util.Shortcut;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.collections.ListChangeListener;
 import javafx.geometry.Side;
-import javafx.scene.control.ContextMenu;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.Tab;
-import javafx.scene.control.TabPane;
+import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Popup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +46,12 @@ public class GsePane extends StackPane {
     private static final Logger LOGGER = LoggerFactory.getLogger(GsePane.class);
     private static final String OPENED_PROJECTS = "openedProjects";
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.GsePane");
+    private static final ServiceLoaderCache<ProjectFileCreatorExtension> CREATOR_EXTENSION = new ServiceLoaderCache<>(ProjectFileCreatorExtension.class);
+    private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
+    private static final ServiceLoaderCache<ProjectFileEditorExtension> EDITOR_EXTENSION = new ServiceLoaderCache<>(ProjectFileEditorExtension.class);
+    private static final ServiceLoaderCache<ProjectFileViewerExtension> VIEWER_EXTENSION = new ServiceLoaderCache<>(ProjectFileViewerExtension.class);
+
+    private final KeyCombination closeKeyCombination = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN);
 
     private final GseContext context;
 
@@ -53,6 +64,10 @@ public class GsePane extends StackPane {
     private final Preferences preferences;
     private final Application javaxApplication;
 
+    private final KeyCombination createKeyCombination = new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN);
+
+    private final KeyCombination openKeyCombination = new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN);
+
     public GsePane(GseContext context, AppData data, Application app) {
         this.context = Objects.requireNonNull(context);
         this.data = Objects.requireNonNull(data);
@@ -60,12 +75,46 @@ public class GsePane extends StackPane {
         mainPane = new BorderPane();
         mainPane.setTop(createAppBar());
         tabPane.getStyleClass().add("gse-tab-pane");
+        tabPane.getTabs().addListener(this::tabPaneChangeListener);
         mainPane.setCenter(tabPane);
         getChildren().addAll(mainPane);
 
         preferences = Preferences.userNodeForPackage(getClass());
+        setOnKeyPressed(ke -> {
+            if (createKeyCombination.match(ke)) {
+                createNewProject(context, data);
+            } else if (openKeyCombination.match(ke)) {
+                openProjectDialog(context, data);
+            }
+        });
 
         loadPreferences();
+    }
+
+    private void tabPaneChangeListener(ListChangeListener.Change<? extends Tab> c) {
+        c.getList().forEach(this::onKeyPressed);
+    }
+
+    private void onKeyPressed(Tab tab) {
+        tab.getContent().setOnKeyPressed((KeyEvent ke) -> {
+            if (closeKeyCombination.match(ke)) {
+                tab.getTabPane().getTabs().remove(tab);
+            }
+        });
+    }
+
+    private void openProjectDialog(GseContext context, AppData data) {
+        Set<String> openedProjects = new HashSet<>();
+        for (Tab tab : tabPane.getTabs()) {
+            openedProjects.add(((ProjectPane) tab).getProject().getId());
+        }
+        Optional<Project> project = NodeChooser.showAndWaitDialog(getScene().getWindow(), data, context, Project.class, openedProjects);
+        project.ifPresent(this::openProject);
+    }
+
+    private void createNewProject(GseContext context, AppData data) {
+        Optional<Project> project = NewProjectPane.showAndWaitDialog(getScene().getWindow(), data, context);
+        project.ifPresent(this::addProject);
     }
 
     private void loadPreferences() {
@@ -133,6 +182,69 @@ public class GsePane extends StackPane {
         popup.show(getScene().getWindow());
     }
 
+    private void showShortcuts() {
+        TableView<Shortcut> tableView = new TableView<>();
+        TableColumn<Shortcut, String> column1 = new TableColumn<>(RESOURCE_BUNDLE.getString("Action"));
+        column1.setCellValueFactory(new PropertyValueFactory<>("action"));
+        TableColumn<Shortcut, String> column2 = new TableColumn<>(RESOURCE_BUNDLE.getString("Shortcut"));
+        column2.setCellValueFactory(new PropertyValueFactory<>("keycode"));
+
+        tableView.setPrefSize(430, 445);
+        tableView.getColumns().add(column1);
+        tableView.getColumns().add(column2);
+
+        createShortcuts().forEach(shortcut -> tableView.getItems().add(shortcut));
+
+        VBox vbox = new VBox(tableView);
+        Popup popup = new Popup();
+        popup.setAutoHide(true);
+        popup.getContent().addAll(vbox);
+        popup.show(getScene().getWindow());
+    }
+
+    private static List<Shortcut> createShortcuts() {
+        List<Shortcut> shortcuts = new ArrayList<>();
+
+        //Standard shortcuts
+        final List<Shortcut> standardShortcuts = ImmutableList.of(
+                new Shortcut(RESOURCE_BUNDLE.getString("CreateProject"), "CTRL + N"),
+                new Shortcut(RESOURCE_BUNDLE.getString("OpenProject"), "CTRL + O"),
+                new Shortcut(RESOURCE_BUNDLE.getString("Export"), "CTRL + S"),
+                new Shortcut(RESOURCE_BUNDLE.getString("Rename"), "F2"),
+                new Shortcut(RESOURCE_BUNDLE.getString("Delete"), RESOURCE_BUNDLE.getString("Delete")),
+                new Shortcut(RESOURCE_BUNDLE.getString("Edit"), RESOURCE_BUNDLE.getString("Enter")));
+        shortcuts.addAll(standardShortcuts);
+
+        //projectfile creation shortcuts
+        for (ProjectFileCreatorExtension creatorExtension : CREATOR_EXTENSION.getServices()) {
+            shortcuts.add(new Shortcut(creatorExtension.getMenuText(), creatorExtension.getMenuKeycode().getName()));
+        }
+
+        // projectfile edition shortcuts
+        for (ProjectFileEditorExtension editorExtension : EDITOR_EXTENSION.getServices()) {
+            if (editorExtension.getMenuKeyCode() != null) {
+                shortcuts.add(new Shortcut(editorExtension.getMenuText(null), editorExtension.getMenuKeyCode().getName()));
+            }
+        }
+
+        // projectfile execution shortcuts
+        for (ProjectFileExecutionTaskExtension taskExtension : EXECUTION_TASK_EXTENSION.getServices()) {
+            if (taskExtension.getMenuKeyCode() != null) {
+                shortcuts.add(new Shortcut(taskExtension.getMenuText(null), taskExtension.getMenuKeyCode().getName()));
+            }
+        }
+
+        // projectfile viewer shortcuts
+        for (ProjectFileViewerExtension viewerExtension : VIEWER_EXTENSION.getServices()) {
+            if (viewerExtension.getMenuKeyCode() != null) {
+                shortcuts.add(new Shortcut(viewerExtension.getMenuText(null), viewerExtension.getMenuKeyCode().getName()));
+            }
+        }
+
+        shortcuts.sort(Comparator.comparing(Shortcut::getAction));
+        return shortcuts;
+    }
+
     private void setUserSession(UserSession userSession) {
         data.setTokenProvider(() -> userSession != null ? userSession.getToken() : null);
     }
@@ -150,19 +262,8 @@ public class GsePane extends StackPane {
                 }
             });
         }
-        appBar.getCreateButton().setOnAction(event -> {
-            Optional<Project> project = NewProjectPane.showAndWaitDialog(getScene().getWindow(), data, context);
-            project.ifPresent(this::addProject);
-        });
-
-        appBar.getOpenButton().setOnAction(event -> {
-            Set<String> openedProjects = new HashSet<>();
-            for (Tab tab : tabPane.getTabs()) {
-                openedProjects.add(((ProjectPane) tab).getProject().getId());
-            }
-            Optional<Project> project = NodeChooser.showAndWaitDialog(getScene().getWindow(), data, context, Project.class, openedProjects);
-            project.ifPresent(this::openProject);
-        });
+        appBar.getCreateButton().setOnAction(event -> createNewProject(context, data));
+        appBar.getOpenButton().setOnAction(event -> openProjectDialog(context, data));
 
         ContextMenu contextMenu = new ContextMenu();
 
@@ -174,7 +275,9 @@ public class GsePane extends StackPane {
 
         MenuItem aboutMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("About") + "...");
         aboutMenuItem.setOnAction(event -> showAbout());
-        contextMenu.getItems().add(aboutMenuItem);
+        MenuItem shortcutMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Shortcuts") + "...");
+        shortcutMenuItem.setOnAction(event -> showShortcuts());
+        contextMenu.getItems().addAll(aboutMenuItem, shortcutMenuItem);
 
         appBar.getHelpButton().setOnAction(event -> contextMenu.show(appBar.getHelpButton(), Side.BOTTOM, 0, 0));
 
