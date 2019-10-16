@@ -13,7 +13,6 @@ import com.powsybl.afs.ext.base.ImportedCase;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileCreator;
 import com.powsybl.gse.spi.ProjectFileCreatorExtension;
-import com.powsybl.gse.util.Glyph;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
@@ -37,9 +36,7 @@ public class ImportedCaseCreatorExtension implements ProjectFileCreatorExtension
 
     @Override
     public Node getMenuGraphic() {
-        return new Glyph("powsybl-gse-font", '\ue901')
-                .size("1.4em")
-                .color("orangered");
+        return BaseExtNodeGraphicProvider.createIidmGlyph();
     }
 
     @Override

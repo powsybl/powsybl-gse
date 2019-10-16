@@ -17,6 +17,7 @@ import com.powsybl.gse.util.Glyph;
 import com.powsybl.iidm.xml.NetworkXml;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -29,6 +30,7 @@ import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
+import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 
 import java.io.*;
@@ -48,6 +50,8 @@ public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExten
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ProjectCaseExport");
 
     private final Preferences preferences = Preferences.userNodeForPackage(getClass());
+
+    private final Label fileAlreadyExistLabel = new Label();
 
     @Override
     public Class<ProjectFile> getProjectFileType() {
@@ -93,16 +97,19 @@ public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExten
             {
                 main.setVgap(5);
                 main.setHgap(5);
-                main.setPrefWidth(400);
+                main.setPrefWidth(530);
                 ColumnConstraints column0 = new ColumnConstraints();
                 ColumnConstraints column1 = new ColumnConstraints();
                 column1.setHgrow(Priority.ALWAYS);
-                fileTextField.setText(projectCase.getName() + ".xiidm");
+                fileTextField.setText(projectCase.getName() + ProjectCaseExportParameters.XIIDM_EXT);
+                fileAlreadyExistLabel.setText("");
+                fileAlreadyExistLabel.setTextFill(Color.RED);
                 main.getColumnConstraints().addAll(column0, column1);
                 main.add(new Label(RESOURCE_BUNDLE.getString("DestinationFile") + ":"), 0, 0);
                 main.add(fileTextField, 1, 0);
                 main.add(fileButton, 2, 0);
                 main.add(zipCheckBox, 1, 1);
+                main.add(fileAlreadyExistLabel, 0, 2, 2, 1);
 
                 // Add action events
                 fileButton.setOnAction(event -> {
@@ -120,7 +127,7 @@ public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExten
                 });
 
                 zipCheckBox.setSelected(config.isZipped());
-                zipCheckBox.setOnAction(event -> config.setZipped(zipCheckBox.isSelected()));
+                zipCheckBox.selectedProperty().addListener(zipCheckBoxSelectedPropertyListener(fileTextField, config, zipCheckBox, configProperty));
             }
 
             @Override
@@ -142,6 +149,35 @@ public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExten
                 // nothing to dispose
             }
         };
+    }
+
+    private ChangeListener<Boolean> zipCheckBoxSelectedPropertyListener(TextField fileTextField, ProjectCaseExportParameters config, CheckBox zipCheckBox, ObjectProperty<ProjectCaseExportParameters> configProperty) {
+        return (observable, oldvalue, newvalue) -> {
+            String fileName = fileTextField.getText();
+            if (newvalue) {
+                if (fileName != null && !fileName.isEmpty() && !fileName.endsWith(ProjectCaseExportParameters.GZ_EXT)) {
+                    fileTextField.setText(fileName + ProjectCaseExportParameters.GZ_EXT);
+                }
+            } else {
+                if (fileName != null && !fileName.isEmpty() && fileName.endsWith(ProjectCaseExportParameters.GZ_EXT)) {
+                    fileTextField.setText(fileName.replace(ProjectCaseExportParameters.GZ_EXT, ""));
+                }
+            }
+            config.setZipped(zipCheckBox.isSelected());
+            displayFileExistsMessage(fileTextField, configProperty, config);
+        };
+    }
+
+    private void displayFileExistsMessage(TextField fileTextField, ObjectProperty<ProjectCaseExportParameters> configProperty, ProjectCaseExportParameters config) {
+        String text = fileTextField.getText();
+        if (new File(text).exists()) {
+            String fileNameWithExtension = text.substring(text.lastIndexOf('/') + 1);
+            configProperty.set(null);
+            fileAlreadyExistLabel.setText(MessageFormat.format(RESOURCE_BUNDLE.getString("FileAlreadyExistsInThisFolder"), fileNameWithExtension));
+        } else {
+            configProperty.set(config.getFilePathText() != null ? config : null);
+            fileAlreadyExistLabel.setText("");
+        }
     }
 
     private void openLastDirectory(FileChooser fileChooser) {

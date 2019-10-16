@@ -11,6 +11,7 @@ import com.powsybl.afs.ProjectFolder;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileCreatorExtension;
 import com.powsybl.security.afs.SecurityAnalysisRunner;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
@@ -29,6 +30,11 @@ public class SecurityAnalysisRunnerCreatorExtension implements ProjectFileCreato
     @Override
     public Class<SecurityAnalysisRunner> getProjectFileType() {
         return SecurityAnalysisRunner.class;
+    }
+
+    @Override
+    public Node getMenuGraphic() {
+        return SecurityAnalysisNodeGraphicProvider.createSecurityAnalysisRunnerGlyph();
     }
 
     @Override
