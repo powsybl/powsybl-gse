@@ -1,0 +1,19 @@
+/**
+Misc Fixes
+**/
+
+/**
+Scrollpane background is grey
+https://stackoverflow.com/questions/22952531/scrollpanes-in-javafx-8-always-have-gray-background
+**/
+
+.scroll-pane > .viewport {
+   -fx-background-color: transparent;
+}
+
+.scroll-pane {
+   -fx-background-color: transparent;
+}
+
+/**
+**/

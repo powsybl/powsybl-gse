@@ -25,21 +25,27 @@ import com.powsybl.gse.util.editor.AbstractCodeEditor;
 import com.powsybl.gse.util.editor.AbstractCodeEditorFactoryService;
 import com.powsybl.gse.util.editor.impl.GroovyCodeEditor;
 import groovy.lang.GroovyShell;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
+import javafx.geometry.Pos;
+import javafx.geometry.Side;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
-import org.codehaus.groovy.control.MultipleCompilationErrorsException;
+import javafx.scene.text.TextAlignment;
+import javafx.scene.text.TextFlow;
+import org.controlsfx.control.MasterDetailPane;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,6 +60,8 @@ public class ModificationScriptEditor extends BorderPane
     private static final Logger LOGGER = LoggerFactory.getLogger(ModificationScriptEditor.class);
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ModificationScript");
+
+    private static final int VALIDATION_INFO_TIMEOUT = 3000;
 
     private static final ServiceLoaderCache<AbstractCodeEditorFactoryService> CODE_EDITOR_FACTORIES = new ServiceLoaderCache<>(AbstractCodeEditorFactoryService.class);
 
@@ -78,6 +86,8 @@ public class ModificationScriptEditor extends BorderPane
     private Label caretPositionDisplay;
 
     private final Button saveButton;
+
+    private final Button validateButton;
 
     private final ProgressIndicator progressIndicator = new ProgressIndicator();
 
@@ -127,18 +137,30 @@ public class ModificationScriptEditor extends BorderPane
         setUpEditor(codeEditor, suggestions);
         codeEditor.setTabSize(4);
 
+        MasterDetailPane codeWithSyntaxCheckPane = new MasterDetailPane();
+        codeWithSyntaxCheckPane.setAnimated(true);
+        codeWithSyntaxCheckPane.setDetailSide(Side.BOTTOM);
+        codeWithSyntaxCheckPane.setShowDetailNode(false);
+        codeWithSyntaxCheckPane.setMasterNode(splitPane);
+
         Text saveGlyph = Glyph.createAwesomeFont('\uf0c7').size("1.3em");
         saveButton = new Button("", saveGlyph);
         saveButton.getStyleClass().add("gse-toolbar-button");
         saveButton.disableProperty().bind(saved);
         saveButton.setOnAction(event -> save());
+
+        Image validateImage = new Image(ModificationScriptEditor.class.getResourceAsStream("/icons/spell-check-solid.png"));
+        validateButton = new Button("", new ImageView(validateImage));
+        validateButton.getStyleClass().add("gse-toolbar-button");
+        validateButton.setOnAction(event -> validateScript(codeWithSyntaxCheckPane));
+
         comboBox = new ComboBox(FXCollections.observableArrayList(2, 4, 8));
         comboBox.getSelectionModel().select(1);
         comboBox.getSelectionModel().selectedIndexProperty().addListener((observable, oldvalue, newvalue) -> codeEditor.setTabSize(comboBox.getItems().get((int) newvalue)));
         tabSizeLabel = new Label(RESOURCE_BUNDLE.getString("TabSize") + ": ");
         caretPositionDisplay = new Label(codeEditor.currentPosition());
 
-        toolBar = new ToolBar(saveButton);
+        toolBar = new ToolBar(saveButton, validateButton);
 
         Pane spacer = new Pane();
         bottomToolBar = new ToolBar(tabSizeLabel, comboBox, spacer, caretPositionDisplay);
@@ -147,7 +169,7 @@ public class ModificationScriptEditor extends BorderPane
         splitPane.setDividerPosition(0, 0.8);
         setTop(toolBar);
         setBottom(bottomToolBar);
-        setCenter(splitPane);
+        setCenter(codeWithSyntaxCheckPane);
 
         // listen to modifications
         storableScript.addListener(this);
@@ -168,21 +190,78 @@ public class ModificationScriptEditor extends BorderPane
         return GroovyCodeEditor.findAutoCompletionWordProviderExtensions(storableScript.getClass());
     }
 
+    private void validateScript(MasterDetailPane codeWithDetailPane) {
+        if (ScriptType.GROOVY.equals(storableScript.getScriptType())) {
+            try {
+                GroovyShell groovyShell = new GroovyShell();
+                groovyShell.parse(codeEditor.getCode());
+                codeWithDetailPane.setDetailNode(createScriptValidationOkNode(() -> Platform.runLater(() -> codeWithDetailPane.setShowDetailNode(false))));
+                codeWithDetailPane.resetDividerPosition();
+                codeWithDetailPane.setShowDetailNode(true);
+                Timer timer = new Timer();
+                timer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        Platform.runLater(() -> codeWithDetailPane.setShowDetailNode(false));
+                    }
+                }, VALIDATION_INFO_TIMEOUT);
+            } catch (Exception e) {
+                codeWithDetailPane.setDetailNode(createScriptValidationKoNode(e, () -> Platform.runLater(() -> codeWithDetailPane.setShowDetailNode(false))));
+                codeWithDetailPane.resetDividerPosition();
+                codeWithDetailPane.setShowDetailNode(true);
+            }
+        } else {
+            LOGGER.info("No validation process found for script type {}", storableScript.getScriptType());
+        }
+    }
+
+    private Node createScriptValidationNode(Text message, int prefHeight, TextAlignment alignment, Color backgroundColor, Runnable closeDetail) {
+        AnchorPane root = new AnchorPane();
+        Background background = new Background(new BackgroundFill(backgroundColor, CornerRadii.EMPTY, Insets.EMPTY));
+        root.setBackground(background);
+
+        TextFlow result = new TextFlow();
+        result.setBackground(background);
+        result.getChildren().add(message);
+        result.setTextAlignment(alignment);
+        ScrollPane scrollPane = new ScrollPane();
+        scrollPane.setContent(result);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setPadding(new Insets(5));
+        root.getChildren().add(scrollPane);
+        AnchorPane.setLeftAnchor(scrollPane, 0.0);
+        AnchorPane.setTopAnchor(scrollPane, 0.0);
+        AnchorPane.setRightAnchor(scrollPane, 30.0);
+        AnchorPane.setBottomAnchor(scrollPane, 0.0);
+
+        VBox box = new VBox();
+        box.setPrefWidth(30.0);
+        box.setAlignment(Pos.TOP_CENTER);
+        Button closeButton = new Button();
+        closeButton.getStyleClass().add("close-button");
+        closeButton.setOnAction(event -> closeDetail.run());
+        box.getChildren().add(closeButton);
+        root.getChildren().add(box);
+        AnchorPane.setTopAnchor(box, 0.0);
+        AnchorPane.setRightAnchor(box, 0.0);
+
+        root.setPrefHeight(prefHeight);
+
+        return root;
+    }
+
+    private Node createScriptValidationOkNode(Runnable closeDetail) {
+        Text message = new Text("Ok");
+        return createScriptValidationNode(message, 20, TextAlignment.CENTER, Color.web("#53e681"), closeDetail);
+    }
+
+    private Node createScriptValidationKoNode(Exception e, Runnable closeDetail) {
+        return createScriptValidationNode(new Text(e.getLocalizedMessage()), 110, TextAlignment.LEFT, Color.web("#e85f5f"), closeDetail);
+    }
+
     @Override
     public void save() {
         if (!saved.getValue()) {
-
-            if (ScriptType.GROOVY.equals(storableScript.getScriptType())) {
-                try {
-                    GroovyShell groovyShell = new GroovyShell();
-                    groovyShell.parse(codeEditor.getCode());
-                } catch (MultipleCompilationErrorsException e) {
-//                    e.getErrorCollector().getErrors()
-                } catch (Exception e) {
-                    LOGGER.error("failed to parse script", e);
-                }
-            }
-
             // write script but remove listener before to avoid double update
             storableScript.removeListener(this);
             storableScript.writeScript(codeEditor.getCode());
