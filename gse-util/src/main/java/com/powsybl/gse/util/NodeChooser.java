@@ -16,11 +16,7 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
-import javafx.scene.layout.ColumnConstraints;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.RowConstraints;
-import javafx.scene.layout.HBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Window;
 import javafx.util.Callback;
@@ -48,6 +44,12 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private boolean success;
     private Set<String> openedProjects = new HashSet<>();
     private SimpleBooleanProperty deleteMenuItemDisableProperty = new SimpleBooleanProperty(false);
+
+    private enum NodeChooserView {
+        ALL_STORAGES,
+        LOCAL_STORAGE_ONLY,
+        PROJECTS_STORAGE_ONLY
+    }
 
     public interface TreeModel<N, F, D> {
         Collection<N> getChildren(D folder);
@@ -234,7 +236,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private final GseContext context;
 
     public NodeChooser(Window window, TreeModel<N, F, D> treeModel, AppData appData, GseContext context,
-                       BiPredicate<N, TreeModel<N, F, D>> filter, Set<String>... openedProjectsList) {
+                       BiPredicate<N, TreeModel<N, F, D>> filter, NodeChooserView nodeChooserView, Set<String>... openedProjectsList) {
         this.window = Objects.requireNonNull(window);
         this.treeModel = Objects.requireNonNull(treeModel);
         this.appData = Objects.requireNonNull(appData);
@@ -341,7 +343,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 List<TreeItem<N>> nodes = new ArrayList<>();
                 for (D rootFolder : treeModel.getRootFolders()) {
                     TreeItem<N> node = createCollapsedFolderItem(rootFolder);
-                    node.setExpanded(true);
+                    setNodeChooserView(nodeChooserView, node);
                     nodes.add(node);
                 }
                 Platform.runLater(() -> {
@@ -363,6 +365,21 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 LOGGER.error(t.toString(), t);
             }
         });
+    }
+
+    private void setNodeChooserView(NodeChooserView nodeChooserView, TreeItem<N> node) {
+        if (nodeChooserView == NodeChooserView.PROJECTS_STORAGE_ONLY) {
+            if (node.getValue() instanceof Folder && ((Folder) node.getValue()).isWritable()) {
+                node.setExpanded(true);
+            }
+        } else if (nodeChooserView == NodeChooserView.LOCAL_STORAGE_ONLY) {
+            if (!(node.getValue() instanceof Folder && ((Folder) node.getValue()).isWritable())) {
+                node.setExpanded(true);
+
+            }
+        } else {
+            node.setExpanded(true);
+        }
     }
 
     public ReadOnlyObjectProperty<T> selectedNodeProperty() {
@@ -772,7 +789,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context,
                                                                  BiPredicate<Node, TreeModel<Node, File, Folder>> filter) {
-        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, filter);
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, filter,  NodeChooserView.PROJECTS_STORAGE_ONLY);
     }
 
     private static <N, T extends N> boolean testNode(N node, Class<T> filter, Class<?>... otherFilters) {
@@ -788,28 +805,28 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Class<T> filter, Class<?>... otherFilters) {
-        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters));
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters), NodeChooserView.LOCAL_STORAGE_ONLY);
     }
 
     public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Class<T> filter, Set<String> openedProjectsList, Class<?>... otherFilters) {
-        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters), openedProjectsList);
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters), NodeChooserView.PROJECTS_STORAGE_ONLY, openedProjectsList);
     }
 
     public static <T extends ProjectNode> Optional<T> showAndWaitDialog(Project project, Window window, GseContext context, BiPredicate<ProjectNode, TreeModel<ProjectNode, ProjectFile, ProjectFolder>> filter) {
-        return showAndWaitDialog(new TreeModelProjectImpl(project), window, project.getFileSystem().getData(), context, filter);
+        return showAndWaitDialog(new TreeModelProjectImpl(project), window, project.getFileSystem().getData(), context, filter, NodeChooserView.ALL_STORAGES);
     }
 
     public static <T extends ProjectNode> Optional<T> showAndWaitDialog(Project project, Window window, GseContext context, Class<T> filter,
                                                                         Class<?>... otherFilters) {
-        return showAndWaitDialog(new TreeModelProjectImpl(project), window, project.getFileSystem().getData(), context, (projectNode, treeModel) -> testNode(projectNode, filter, otherFilters));
+        return showAndWaitDialog(new TreeModelProjectImpl(project), window, project.getFileSystem().getData(), context, (projectNode, treeModel) -> testNode(projectNode, filter, otherFilters),  NodeChooserView.ALL_STORAGES);
     }
 
     public static <N, F extends N, D extends N, T extends N> Optional<T> showAndWaitDialog(
             TreeModel<N, F, D> treeModel, Window window, AppData appData, GseContext context,
-            BiPredicate<N, TreeModel<N, F, D>> filter, Set<String>... openedProjectsList) {
+            BiPredicate<N, TreeModel<N, F, D>> filter, NodeChooserView nodeChooserView,  Set<String>... openedProjectsList) {
         Dialog<T> dialog = null;
         try {
-            NodeChooser<N, F, D, T> nodeChooser = new NodeChooser<>(window, treeModel, appData, context, filter, openedProjectsList);
+            NodeChooser<N, F, D, T> nodeChooser = new NodeChooser<>(window, treeModel, appData, context, filter, nodeChooserView, openedProjectsList);
             Callback<ButtonType, T> resultConverter = buttonType -> buttonType == ButtonType.OK ? nodeChooser.selectedNodeProperty().get() : null;
             dialog = new GseDialog<>(RESOURCE_BUNDLE.getString("OpenFile"), nodeChooser, window, nodeChooser.selectedNodeProperty().isNull(), resultConverter);
             Button button = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
