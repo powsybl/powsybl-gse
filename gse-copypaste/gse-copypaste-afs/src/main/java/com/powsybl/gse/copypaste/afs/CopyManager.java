@@ -7,6 +7,7 @@
 package com.powsybl.gse.copypaste.afs;
 
 import com.powsybl.afs.*;
+import com.powsybl.commons.PowsyblException;
 import com.powsybl.computation.local.LocalComputationConfig;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
@@ -16,10 +17,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Paths;
+import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
@@ -28,15 +32,18 @@ public final class CopyManager {
 
     private final String storageDirectory;
 
-    private Map<String, CopyInfo> copy;
+    private static final int COPY_EXPIRATION_TIME = 12;
+
+    private ExecutorService tPool = Executors.newFixedThreadPool(3);
+    private Map<String, CopyInfo> copy =new HashMap<>();
 
     public CopyManager() {
         storageDirectory = getStorageDirectory();
     }
 
-    /**
+ /*   *//**
      * @param nodes the nodes to copy
-     */
+     *//*
     public void copy(List<? extends AbstractNodeBase> nodes) {
         StringBuilder copyParameters = new StringBuilder();
 
@@ -49,32 +56,57 @@ public final class CopyManager {
             copyParameters.append(CopyServiceConstants.PATH_LIST_SEPARATOR);
         }
         setClipboardContent(copyParameters.toString());
-    }
+    }*/
 
-    public Map<String, CopyInfo> copy2(List<? extends AbstractNodeBase> nodes) {
-        copy = new HashMap<>();
+    /**
+     * @param nodes the nodes to copy
+     */
+    public Map<String, CopyInfo> copy(List<? extends AbstractNodeBase> nodes) {
 
         for (AbstractNodeBase node : nodes) {
             CopyInfo copyInfo = new CopyInfo();
             copyInfo.nodeId = node.getId();
             copyInfo.nodeType = node.getClass().getSimpleName();
             copyInfo.archivePath = storageDirectory + node.getName() + node.getId();
+            copyInfo.archiveComplete = false;
+            tPool.execute(() -> {
+                // create task
+                try {
+                    archiveAndCopy(node);
+                } catch (Exception e) {
+                    throw new PowsyblException("The node " + node.getName() +" copy have encountered some problems! ");
+                }
+                // change completion status + end task
+                copyInfo.archiveComplete = true;
+            });
             //copyInfo.expirationDate =
-            //copyInfo.archiveComplete =
             copy.put(copyInfo.nodeId, copyInfo);
         }
         return copy;
     }
 
-    public void paste() {
+    public void paste(String nodeid, AbstractNodeBase folder) {
+        throwNodeIsNotAFolderException(folder);
+        CopyInfo copyInfo = copy.get(nodeid);
+        if (copyInfo != null && copyInfo.archiveComplete) {
+
+        } else {
+
+        }
 
     }
 
-    private void archiveAndCopy(StringBuilder copyPaths, AbstractNodeBase node) {
+   /* private void archiveAndCopy(StringBuilder copyPaths, AbstractNodeBase node) {
         String nodeId = node.getId();
         String archiveDirectory = storageDirectory + node.getName() + node.getId();
         archiveNode(node, nodeId, archiveDirectory);
         copyPaths.append(archiveDirectory).append(CopyServiceConstants.PATH_SEPARATOR).append(nodeId).append(CopyServiceConstants.PATH_SEPARATOR).append(node.getClass());
+    }*/
+
+    private void archiveAndCopy(AbstractNodeBase node) {
+        String nodeId = node.getId();
+        String archiveDirectory = storageDirectory + node.getName() + node.getId();
+        archiveNode(node, nodeId, archiveDirectory);
     }
 
     private static void archiveNode(AbstractNodeBase node, String nodeId, String parentPath) {
@@ -118,6 +150,12 @@ public final class CopyManager {
 
     private static String getStorageDirectory() {
         return LocalComputationConfig.load().getLocalDir() + CopyServiceConstants.PATH_SEPARATOR;
+    }
+
+    private static void throwNodeIsNotAFolderException(AbstractNodeBase folder) {
+        if (!(folder instanceof ProjectFolder || folder instanceof Folder)) {
+            throw new IllegalArgumentException("the parameter might be a folder");
+        }
     }
 
     private class CopyInfo {
