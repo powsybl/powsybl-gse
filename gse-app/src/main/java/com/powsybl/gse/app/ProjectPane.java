@@ -16,6 +16,7 @@ import com.powsybl.gse.util.*;
 import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -31,9 +32,12 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Callback;
+import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -45,171 +49,178 @@ import java.util.stream.Collectors;
 public class ProjectPane extends Tab {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProjectPane.class);
-
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ProjectPane");
-
     private static final ServiceLoaderCache<ProjectFileCreatorExtension> CREATOR_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileCreatorExtension.class);
-
     private static final ServiceLoaderCache<ProjectFileEditorExtension> EDITOR_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileEditorExtension.class);
-
     private static final ServiceLoaderCache<ProjectFileViewerExtension> VIEWER_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileViewerExtension.class);
-
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
-
-    private final KeyCombination saveKeyCombination = new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
-
-    private static class TabKey {
-
-        private final String nodeId;
-
-        private final Class<?> viewerClass;
-
-        public TabKey(String nodeId, Class<?> viewerClass) {
-            this.nodeId = Objects.requireNonNull(nodeId);
-            this.viewerClass = Objects.requireNonNull(viewerClass);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(nodeId, viewerClass);
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj instanceof TabKey) {
-                TabKey other = (TabKey) obj;
-                return nodeId.equals(other.nodeId) && viewerClass.equals(other.viewerClass);
-            }
-            return false;
-        }
-    }
-
-    public static class MyTab extends Tab {
-
-        private ProjectFileViewer viewer;
-
-        private final KeyCombination closeKeyCombination = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN);
-
-        private final KeyCombination closeAllKeyCombination = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
-
-        public MyTab(String text, ProjectFileViewer viewer) {
-            super(text, viewer.getContent());
-            this.viewer = viewer;
-            onKeyPressed();
-            setContextMenu(contextMenu());
-        }
-
-        private void onKeyPressed() {
-            getContent().setOnKeyPressed((KeyEvent ke) -> {
-                if (closeKeyCombination.match(ke)) {
-                    closeTab(ke, this);
-                    ke.consume();
-                } else if (closeAllKeyCombination.match(ke)) {
-                    List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
-                            .map(tab -> (MyTab) tab)
-                            .collect(Collectors.toList()));
-                    mytabs.forEach(mytab -> closeTab(ke, mytab));
-                    ke.consume();
-                }
-            });
-        }
-
-        private ContextMenu contextMenu() {
-            MenuItem closeMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Close"));
-            MenuItem closeAllMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("CloseAll"));
-            closeMenuItem.setOnAction(event -> closeTab(event, this));
-            closeAllMenuItem.setOnAction(event -> {
-                List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
-                        .map(tab -> (MyTab) tab)
-                        .collect(Collectors.toList()));
-                mytabs.forEach(mytab -> closeTab(event, mytab));
-            });
-            return new ContextMenu(closeMenuItem, closeAllMenuItem);
-        }
-
-        public ProjectFileViewer getViewer() {
-            return viewer;
-        }
-
-        public void requestClose() {
-            getTabPane().getTabs().remove(this);
-            if (getOnClosed() != null) {
-                Event.fireEvent(this, new Event(Tab.CLOSED_EVENT));
-            }
-        }
-
-        private static void closeTab(Event event, MyTab tab) {
-            if (!tab.getViewer().isClosable()) {
-                event.consume();
-            } else {
-                tab.getTabPane().getTabs().remove(tab);
-                tab.getViewer().dispose();
-            }
-        }
-    }
-
-    private boolean success;
-
-    private DragAndDropMove dragAndDropMove;
-
-    private final Project project;
-
-    private final GseContext context;
-
-    private final TreeView<Object> treeView;
-
-    private final StackPane viewPane;
-
-    private final TaskItemList taskItems;
-
-    private final TaskMonitorPane taskMonitorPane;
-
     private static final String STAR_NOTIFICATION = " *";
+    private final KeyCombination saveKeyCombination = new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
+    private boolean success;
+    private DragAndDropMove dragAndDropMove;
+    private final Project project;
+    private final GseContext context;
+    private final TreeTableView<Object> treeView;
+    private final StackPane viewPane;
+    private final TaskItemList taskItems;
+    private final TaskMonitorPane taskMonitorPane;
+    private final Map<String, ProjectPaneProjectFolderListener> lCache = new HashMap<>();
 
-    private static class CreationTaskList {
+    public ProjectPane(Scene scene, Project project, GseContext context) {
+        this.project = Objects.requireNonNull(project);
+        this.context = Objects.requireNonNull(context);
 
-        private final Multimap<String, String> tasks = HashMultimap.create();
+        taskItems = new TaskItemList(project, context);
+        taskMonitorPane = new TaskMonitorPane(taskItems);
+        treeView = createProjectTreeview();
 
-        private final Lock taskLock = new ReentrantLock();
+        DetachableTabPane ctrlTabPane1 = new DetachableTabPane();
+        DetachableTabPane ctrlTabPane2 = new DetachableTabPane();
+        ctrlTabPane1.setScope("Control");
+        ctrlTabPane2.setScope("Control");
+        Tab projectTab = new Tab(RESOURCE_BUNDLE.getString("Data"), treeView);
+        projectTab.setClosable(false);
+        Tab taskTab = new Tab(RESOURCE_BUNDLE.getString("Tasks"), taskMonitorPane);
+        taskTab.setClosable(false);
+        ctrlTabPane1.getTabs().add(projectTab);
+        ctrlTabPane2.getTabs().add(taskTab);
+        SplitPane ctrlSplitPane = new SplitPane(ctrlTabPane1, ctrlTabPane2);
+        ctrlSplitPane.setOrientation(Orientation.VERTICAL);
+        ctrlSplitPane.setDividerPositions(0.7);
 
-        private Collection<String> getTaskPreviewNames(ProjectFolder folder) {
-            taskLock.lock();
-            try {
-                return tasks.get(folder.getId());
-            } finally {
-                taskLock.unlock();
+        DetachableTabPane viewTabPane = new DetachableTabPane();
+        viewTabPane.setScope("View");
+        // register accelerators in the new scene
+        viewTabPane.setSceneFactory(tabPane -> {
+            FloatingScene floatingScene = new FloatingScene(tabPane, 400, 400);
+            GseUtil.registerAccelerators(floatingScene);
+            return floatingScene;
+        });
+        // same title and icon for detached windows
+        viewTabPane.setStageOwnerFactory(stage -> {
+            stage.setTitle(((Stage) scene.getWindow()).getTitle());
+            stage.getIcons().addAll(((Stage) scene.getWindow()).getIcons());
+            return scene.getWindow();
+        });
+        // !!! wrap detachable tab pane in a stack pane to avoid spurious resizing (tiwulfx issue?)
+        viewPane = new StackPane(viewTabPane);
+        StackPane ctrlPane = new StackPane(ctrlSplitPane);
+
+        SplitPane splitPane = new SplitPane();
+        splitPane.getItems().addAll(ctrlPane, viewPane);
+        splitPane.setDividerPositions(0.33);
+        SplitPane.setResizableWithParent(ctrlPane, Boolean.FALSE);
+        setText(project.getName());
+        setTooltip(new Tooltip(createProjectTooltip(project)));
+        setContent(splitPane);
+
+        createRootFolderTreeItem(project);
+
+        getContent().setOnKeyPressed((KeyEvent ke) -> {
+            if (saveKeyCombination.match(ke)) {
+                findDetachableTabPanes().stream()
+                        .flatMap(tabPane -> tabPane.getTabs().stream())
+                        .map(tab -> ((MyTab) tab).getViewer())
+                        .forEach(fileViewer -> {
+                            if (fileViewer instanceof Savable && !((Savable) fileViewer).savedProperty().get()) {
+                                ((Savable) fileViewer).save();
+                            }
+                        });
             }
-        }
-
-        private void add(ProjectFolder folder, String taskPreviewName) {
-            taskLock.lock();
-            try {
-                tasks.put(folder.getId(), taskPreviewName);
-            } finally {
-                taskLock.unlock();
-            }
-        }
-
-        private void remove(ProjectFolder folder, String taskPreviewName) {
-            taskLock.lock();
-            try {
-                tasks.remove(folder.getId(), taskPreviewName);
-            } finally {
-                taskLock.unlock();
-            }
-        }
+        });
     }
 
-    private static class FloatingScene extends Scene {
+    private TreeTableView<Object> createProjectTreeview() {
+        TreeTableView<Object> treeTableView = new TreeTableView<>();
 
-        public FloatingScene(Parent root, double width, double height) {
-            super(root, width, height);
-        }
+        // Main Column name
+        TreeTableColumn<Object, Object> nameColumn = new TreeTableColumn<>();
+        nameColumn.setPrefWidth(270);
+        nameColumn.setCellValueFactory(param -> {
+            Object data = null;
+            if (param != null && param.getValue() != null) {
+                data = param.getValue().getValue();
+            }
+            return new ReadOnlyObjectWrapper<>(data);
+        });
+        nameColumn.setCellFactory(new Callback<TreeTableColumn<Object, Object>, TreeTableCell<Object, Object>>() {
+            @Override
+            public TreeTableCell<Object, Object> call(TreeTableColumn<Object, Object> param) {
+                return new TreeTableCell<Object, Object>() {
+                    @Override
+                    protected void updateItem(Object item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (empty) {
+                            setText(null);
+                            setGraphic(null);
+                        } else if (item == null) {
+                            GseUtil.setWaitingText(this);
+                        } else {
+                            if (getTreeTableRow().getTreeItem() == null) {
+                                return;
+                            }
+                            setTextFill(Color.BLACK);
+                            if (item instanceof String) {
+                                setText((String) item);
+                                setOpacity(1);
+                            } else if (item instanceof ProjectNode) {
+                                ProjectNode node = (ProjectNode) item;
+                                setText(node.getName());
+                                setGraphic(NodeGraphics.getGraphic(item));
+                                setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
+                                setOnDragDetected(event -> dragDetectedEvent(getItem(), getTreeTableRow().getTreeItem(), event));
+                                setOnDragOver(event -> dragOverEvent(event, getItem(), getTreeTableRow().getTreeItem(), this));
+                                setOnDragDropped(event -> dragDroppedEvent(getItem(), getTreeTableRow().getTreeItem(), event, node));
+                                setOnDragExited(event -> getStyleClass().removeAll("treecell-drag-over"));
+                            } else {
+                                throw new NotImplementedException(String.format("Unkown type %s", item.getClass()));
+                            }
+                        }
+                    }
+                };
+            }
+        });
+
+        // Date column
+        TreeTableColumn<Object, ZonedDateTime> dateColumn = new TreeTableColumn<>();
+        dateColumn.setPrefWidth(120);
+        dateColumn.setCellValueFactory(param -> {
+            ZonedDateTime objectModificationDate = null;
+            if (param != null && param.getValue() != null && param.getValue().getValue() instanceof ProjectNode) {
+                objectModificationDate = ((ProjectNode) param.getValue().getValue()).getModificationDate();
+            }
+            return new ReadOnlyObjectWrapper<>(objectModificationDate);
+        });
+        dateColumn.setCellFactory(param -> {
+            return new TreeTableCell<Object, ZonedDateTime>() {
+                @Override
+                protected void updateItem(ZonedDateTime item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setText(null);
+                        setGraphic(null);
+                    } else {
+                        setText(item.format(DateTimeFormatter.ofPattern("d MMM yy, HH:mm")));
+                    }
+                }
+            };
+        });
+        treeTableView.getColumns().add(nameColumn);
+//        treeTableView.getColumns().add(dateColumn);
+        treeTableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        treeTableView.getSelectionModel().getSelectedItems().addListener(this::treeViewSelectionChangeListener);
+        treeTableView.setOnMouseClicked(this::treeViewMouseClickHandler);
+        treeTableView.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue) {
+                treeTableView.getSelectionModel().clearSelection();
+            }
+        });
+        return treeTableView;
     }
 
-    private void treeViewChangeListener(ListChangeListener.Change<? extends TreeItem<Object>> c) {
+    private void treeViewSelectionChangeListener(ListChangeListener.Change<? extends TreeItem<Object>> c) {
         if (c.getList().isEmpty()) {
-            treeView.setContextMenu(null);
+            treeView.setContextMenu(createFolderContextMenu(treeView.getRoot()));
         } else if (c.getList().size() == 1) {
             TreeItem<Object> selectedTreeItem = c.getList().get(0);
             Object value = selectedTreeItem.getValue();
@@ -231,53 +242,6 @@ public class ProjectPane extends Tab {
         } else {
             treeView.setContextMenu(createMultipleContextMenu(c.getList()));
         }
-    }
-
-    private TreeCell<Object> treeViewCellFactory(TreeView<Object> item) {
-
-        return new TreeCell<Object>() {
-
-            private void setForItemObject(Object value) {
-                if (value instanceof String) {
-                    setText((String) value);
-                    setGraphic(getTreeItem().getGraphic());
-                    setTextFill(Color.BLACK);
-                    setOpacity(1);
-                } else if (value instanceof ProjectNode) {
-                    ProjectNode node = (ProjectNode) value;
-                    setText(node.getName());
-                    setGraphic(getTreeItem().getGraphic());
-                    setTextFillColor(value, this);
-                    setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
-                    setOnDragDetected(event -> dragDetectedEvent(getItem(), getTreeItem(), event));
-                    setOnDragOver(event -> dragOverEvent(event, getItem(), getTreeItem(), this));
-                    setOnDragDropped(event -> dragDroppedEvent(getItem(), getTreeItem(), event, node));
-                    setOnDragExited(event -> getStyleClass().removeAll("treecell-drag-over"));
-                } else {
-                    throw new AssertionError();
-                }
-            }
-
-            private void updateNonEmptyItem(Object value) {
-                fillCellInfosForObject(value, this, getTreeItem());
-                if (value == null) {
-                    GseUtil.setWaitingText(this);
-                } else {
-                    setForItemObject(value);
-                }
-            }
-
-            @Override
-            protected void updateItem(Object value, boolean empty) {
-                super.updateItem(value, empty);
-                if (empty) {
-                    setText(null);
-                    setGraphic(null);
-                } else {
-                    updateNonEmptyItem(value);
-                }
-            }
-        };
     }
 
     private void runDefaultActionAfterDoubleClick(TreeItem<Object> selectedTreeItem) {
@@ -310,41 +274,8 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private static void setTextFillColor(Object value, TreeCell<Object> treeCell) {
-        if (value instanceof ProjectFile && ((ProjectFile) value).mandatoryDependenciesAreMissing()) {
-            treeCell.setTextFill(Color.RED);
-        } else {
-            treeCell.setTextFill(Color.BLACK);
-        }
-    }
-
-    private void setDragOverStyle(TreeCell<Object> treeCell) {
+    private void setDragOverStyle(TreeTableCell treeCell) {
         treeCell.getStyleClass().add("treecell-drag-over");
-    }
-
-    private void fillCellInfosForObject(Object value, TreeCell<Object> treecell, TreeItem<Object> treeItem) {
-        if (value == null) {
-            GseUtil.setWaitingText(treecell);
-        } else {
-            setsForObjects(value, treecell, treeItem);
-        }
-    }
-
-    private void setsForObjects(Object value, TreeCell<Object> treeCell, TreeItem<Object> treeItem) {
-        if (value instanceof String) {
-            treeCell.setText((String) value);
-            treeCell.setGraphic(treeItem.getGraphic());
-            treeCell.setTextFill(Color.BLACK);
-            treeCell.setOpacity(1);
-        } else if (value instanceof ProjectNode) {
-            ProjectNode node = (ProjectNode) value;
-            treeCell.setText(node.getName());
-            treeCell.setGraphic(treeItem.getGraphic());
-            treeCell.setTextFill(Color.BLACK);
-            treeCell.setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
-        } else {
-            throw new AssertionError("Unexpected type for value: " + value.getClass().getName());
-        }
     }
 
     private boolean isSourceAncestorOf(TreeItem<Object> targetTreeItem) {
@@ -378,7 +309,7 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeCell<Object> treeCell) {
+    private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeTableCell treeCell) {
         if (item instanceof ProjectNode && isMovable(item, treeItem)) {
             boolean nameExists = item instanceof ProjectFolder ? dragNodeNameAlreadyExists((ProjectFolder) treeItem.getValue()) : dragNodeNameAlreadyExists((ProjectFolder) treeItem.getParent().getValue());
             if (!nameExists) {
@@ -448,80 +379,6 @@ public class ProjectPane extends Tab {
 
     private final CreationTaskList tasks = new CreationTaskList();
 
-    public ProjectPane(Scene scene, Project project, GseContext context) {
-        this.project = Objects.requireNonNull(project);
-        this.context = Objects.requireNonNull(context);
-
-        taskItems = new TaskItemList(project, context);
-        taskMonitorPane = new TaskMonitorPane(taskItems);
-
-        treeView = new TreeView<>();
-        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        treeView.getSelectionModel().getSelectedItems().addListener(this::treeViewChangeListener);
-        treeView.setCellFactory(this::treeViewCellFactory);
-        treeView.setOnMouseClicked(this::treeViewMouseClickHandler);
-        treeView.focusedProperty().addListener((observable, oldValue, newValue) -> {
-            if (!newValue) {
-                treeView.getSelectionModel().clearSelection();
-            }
-        });
-
-        DetachableTabPane ctrlTabPane1 = new DetachableTabPane();
-        DetachableTabPane ctrlTabPane2 = new DetachableTabPane();
-        ctrlTabPane1.setScope("Control");
-        ctrlTabPane2.setScope("Control");
-        Tab projectTab = new Tab(RESOURCE_BUNDLE.getString("Data"), treeView);
-        projectTab.setClosable(false);
-        Tab taskTab = new Tab(RESOURCE_BUNDLE.getString("Tasks"), taskMonitorPane);
-        taskTab.setClosable(false);
-        ctrlTabPane1.getTabs().add(projectTab);
-        ctrlTabPane2.getTabs().add(taskTab);
-        SplitPane ctrlSplitPane = new SplitPane(ctrlTabPane1, ctrlTabPane2);
-        ctrlSplitPane.setOrientation(Orientation.VERTICAL);
-        ctrlSplitPane.setDividerPositions(0.7);
-
-        DetachableTabPane viewTabPane = new DetachableTabPane();
-        viewTabPane.setScope("View");
-        // register accelerators in the new scene
-        viewTabPane.setSceneFactory(tabPane -> {
-            FloatingScene floatingScene = new FloatingScene(tabPane, 400, 400);
-            GseUtil.registerAccelerators(floatingScene);
-            return floatingScene;
-        });
-        // same title and icon for detached windows
-        viewTabPane.setStageOwnerFactory(stage -> {
-            stage.setTitle(((Stage) scene.getWindow()).getTitle());
-            stage.getIcons().addAll(((Stage) scene.getWindow()).getIcons());
-            return scene.getWindow();
-        });
-        // !!! wrap detachable tab pane in a stack pane to avoid spurious resizing (tiwulfx issue?)
-        viewPane = new StackPane(viewTabPane);
-        StackPane ctrlPane = new StackPane(ctrlSplitPane);
-
-        SplitPane splitPane = new SplitPane();
-        splitPane.getItems().addAll(ctrlPane, viewPane);
-        splitPane.setDividerPositions(0.3);
-        SplitPane.setResizableWithParent(ctrlPane, Boolean.FALSE);
-        setText(project.getName());
-        setTooltip(new Tooltip(createProjectTooltip(project)));
-        setContent(splitPane);
-
-        createRootFolderTreeItem(project);
-
-        getContent().setOnKeyPressed((KeyEvent ke) -> {
-            if (saveKeyCombination.match(ke)) {
-                findDetachableTabPanes().stream()
-                        .flatMap(tabPane -> tabPane.getTabs().stream())
-                        .map(tab -> ((MyTab) tab).getViewer())
-                        .forEach(fileViewer -> {
-                            if (fileViewer instanceof Savable && !((Savable) fileViewer).savedProperty().get()) {
-                                ((Savable) fileViewer).save();
-                            }
-                        });
-            }
-        });
-    }
-
     public Project getProject() {
         return project;
     }
@@ -548,20 +405,19 @@ public class ProjectPane extends Tab {
 
     private void refresh(TreeItem<Object> item) {
         if (item.getValue() instanceof ProjectFolder) {
-            item.setExpanded(false);
-            item.setExpanded(true);
+            createOrUpdateFolderTreeItem((ProjectFolder) item.getValue(), item);
         }
     }
 
     private TreeItem<Object> createNodeTreeItem(ProjectNode node) {
-        return node.isFolder() ? createFolderTreeItem((ProjectFolder) node)
+        return node.isFolder() ? createOrUpdateFolderTreeItem((ProjectFolder) node, null)
                 : createFileTreeItem((ProjectFile) node);
     }
 
     private void createRootFolderTreeItem(Project project) {
         treeView.setRoot(createWaitingTreeItem());
         GseUtil.execute(context.getExecutor(), () -> {
-            TreeItem<Object> root = createFolderTreeItem(project.getRootFolder());
+            TreeItem<Object> root = createOrUpdateFolderTreeItem(project.getRootFolder(), null);
             Platform.runLater(() -> {
                 treeView.setRoot(root);
                 root.setExpanded(true);
@@ -569,47 +425,47 @@ public class ProjectPane extends Tab {
         });
     }
 
-    private TreeItem<Object> createFolderTreeItem(ProjectFolder folder) {
-        TreeItem<Object> item = new TreeItem<>(folder, NodeGraphics.getGraphic(folder));
-        item.setExpanded(false);
-        item.expandedProperty().addListener((observable, oldValue, newValue) -> {
-            folder.removeAllListeners();
-            if (Boolean.TRUE.equals(newValue)) {
-
-                GseUtil.execute(context.getExecutor(), () -> {
-                    List<ProjectNode> childNodes = folder.getChildren();
-
-                    List<TreeItem<Object>> childItems = childNodes.stream()
-                            .map(ProjectPane.this::createNodeTreeItem)
-                            .collect(Collectors.toList());
-
-                    Platform.runLater(() -> {
-                        if (item.isExpanded()) {
-                            childItems.addAll(tasks.getTaskPreviewNames(folder).stream()
-                                    .map(ProjectPane::createTaskTreeItem)
-                                    .collect(Collectors.toList()));
-
-                            List<TreeItem<Object>> sortedChildItems = childItems.stream()
-                                    .sorted(Comparator.comparing(childItem -> childItem.getValue().toString()))
-                                    .collect(Collectors.toList());
-
-                            item.getChildren().setAll(sortedChildItems);
-                        }
-                    });
-                });
-            } else {
-                // check it is not already a waiting item
-                if (item.getChildren().size() != 1 || item.getChildren().get(0).getValue() != null) {
-                    item.getChildren().setAll(Collections.singleton(createWaitingTreeItem()));
-                }
-            }
+    private void updateFolderListener(ProjectFolder folder, TreeItem folderItem) {
+        Optional.ofNullable(lCache.getOrDefault(folder.getId(), null)).ifPresent(prevListener -> {
+            folder.removeListener(prevListener);
+            lCache.remove(folder.getId());
         });
-        item.getChildren().add(createWaitingTreeItem());
-        return item;
+        ProjectPaneProjectFolderListener l = new ProjectPaneProjectFolderListener(folderItem);
+        folder.addListener(l);
+        lCache.put(folder.getId(), l);
+    }
+
+    private TreeItem<Object> createOrUpdateFolderTreeItem(ProjectFolder folder, TreeItem<Object> item) {
+        TreeItem<Object> folderItem = item != null ? item : new TreeItem<>(folder);
+        if (item == null) {
+            folderItem.getChildren().add(createWaitingTreeItem());
+        }
+
+        updateFolderListener(folder, folderItem);
+
+        Platform.runLater(() -> {
+            List<ProjectNode> childNodes = folder.getChildren();
+
+            List<TreeItem<Object>> childItems = childNodes.stream()
+                    .map(ProjectPane.this::createNodeTreeItem)
+                    .collect(Collectors.toList());
+
+            childItems.addAll(tasks.getTaskPreviewNames(folder).stream()
+                    .map(ProjectPane::createTaskTreeItem)
+                    .collect(Collectors.toList()));
+
+            List<TreeItem<Object>> sortedChildItems = childItems.stream()
+                    .sorted(Comparator.comparing(childItem -> childItem.getValue().toString()))
+                    .collect(Collectors.toList());
+
+            folderItem.getChildren().setAll(sortedChildItems);
+        });
+
+        return folderItem;
     }
 
     private TreeItem<Object> createFileTreeItem(ProjectFile file) {
-        return new TreeItem<>(file, NodeGraphics.getGraphic(file));
+        return new TreeItem<>(file);
     }
 
     private static TreeItem<Object> createWaitingTreeItem() {
@@ -661,22 +517,23 @@ public class ProjectPane extends Tab {
     }
 
     private void deleteNodesAlert(List<? extends TreeItem<Object>> selectedTreeItems) {
-        GseAlerts.deleteNodesAlert(selectedTreeItems).showAndWait().ifPresent(buttonType -> {
+        List<? extends TreeItem> selection = new ArrayList<>(selectedTreeItems);
+        GseAlerts.deleteNodesAlert(selection).showAndWait().ifPresent(buttonType -> {
             if (buttonType == ButtonType.OK) {
-                List<TreeItem<Object>> parentTreeItems = new ArrayList<>();
-                for (TreeItem<Object> selectedTreeItem : selectedTreeItems) {
-                    ProjectNode node = (ProjectNode) selectedTreeItem.getValue();
+                selection.stream()
+                        .peek(selectedTreeItem -> {
+                            ProjectNode node = (ProjectNode) selectedTreeItem.getValue();
 
-                    // close views on this node before deleting the node
-                    closeViews(node.getId());
+                            // close views on this node before deleting the node
+                            closeViews(node.getId());
 
-                    node.delete();
-
-                    parentTreeItems.add(selectedTreeItem.getParent());
-                }
-                for (TreeItem<Object> parentTreeItem : parentTreeItems) {
-                    refresh(parentTreeItem);
-                }
+                            node.delete();
+                        })
+                        .collect(Collectors.groupingBy(TreeItem::getParent))
+                        .forEach((parent, items) -> parent.getChildren().removeAll(items));
+//                for (TreeItem<Object> parentTreeItem : parentTreeItems) {
+//                    refresh(parentTreeItem);
+//                }
             }
         });
     }
@@ -1011,5 +868,154 @@ public class ProjectPane extends Tab {
             }
         }
         return true;
+    }
+
+    private class ProjectPaneProjectFolderListener implements ProjectFolderListener {
+        private final TreeItem ref;
+
+        public ProjectPaneProjectFolderListener(TreeItem ref) {
+            this.ref = ref;
+        }
+
+        @Override
+        public void childAdded(String nodeId) {
+            refresh(ref);
+        }
+
+        @Override
+        public void childRemoved(String nodeId) {
+            refresh(ref);
+        }
+    }
+
+    private static class TabKey {
+
+        private final String nodeId;
+
+        private final Class<?> viewerClass;
+
+        public TabKey(String nodeId, Class<?> viewerClass) {
+            this.nodeId = Objects.requireNonNull(nodeId);
+            this.viewerClass = Objects.requireNonNull(viewerClass);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(nodeId, viewerClass);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj instanceof TabKey) {
+                TabKey other = (TabKey) obj;
+                return nodeId.equals(other.nodeId) && viewerClass.equals(other.viewerClass);
+            }
+            return false;
+        }
+    }
+
+    public static class MyTab extends Tab {
+
+        private ProjectFileViewer viewer;
+
+        private final KeyCombination closeKeyCombination = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN);
+
+        private final KeyCombination closeAllKeyCombination = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
+
+        public MyTab(String text, ProjectFileViewer viewer) {
+            super(text, viewer.getContent());
+            this.viewer = viewer;
+            onKeyPressed();
+            setContextMenu(contextMenu());
+        }
+
+        private void onKeyPressed() {
+            getContent().setOnKeyPressed((KeyEvent ke) -> {
+                if (closeKeyCombination.match(ke)) {
+                    closeTab(ke, this);
+                    ke.consume();
+                } else if (closeAllKeyCombination.match(ke)) {
+                    List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
+                            .map(tab -> (MyTab) tab)
+                            .collect(Collectors.toList()));
+                    mytabs.forEach(mytab -> closeTab(ke, mytab));
+                    ke.consume();
+                }
+            });
+        }
+
+        private ContextMenu contextMenu() {
+            MenuItem closeMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Close"));
+            MenuItem closeAllMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("CloseAll"));
+            closeMenuItem.setOnAction(event -> closeTab(event, this));
+            closeAllMenuItem.setOnAction(event -> {
+                List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
+                        .map(tab -> (MyTab) tab)
+                        .collect(Collectors.toList()));
+                mytabs.forEach(mytab -> closeTab(event, mytab));
+            });
+            return new ContextMenu(closeMenuItem, closeAllMenuItem);
+        }
+
+        public ProjectFileViewer getViewer() {
+            return viewer;
+        }
+
+        public void requestClose() {
+            getTabPane().getTabs().remove(this);
+            if (getOnClosed() != null) {
+                Event.fireEvent(this, new Event(Tab.CLOSED_EVENT));
+            }
+        }
+
+        private static void closeTab(Event event, MyTab tab) {
+            if (!tab.getViewer().isClosable()) {
+                event.consume();
+            } else {
+                tab.getTabPane().getTabs().remove(tab);
+                tab.getViewer().dispose();
+            }
+        }
+    }
+
+    private static class CreationTaskList {
+
+        private final Multimap<String, String> tasks = HashMultimap.create();
+
+        private final Lock taskLock = new ReentrantLock();
+
+        private Collection<String> getTaskPreviewNames(ProjectFolder folder) {
+            taskLock.lock();
+            try {
+                return tasks.get(folder.getId());
+            } finally {
+                taskLock.unlock();
+            }
+        }
+
+        private void add(ProjectFolder folder, String taskPreviewName) {
+            taskLock.lock();
+            try {
+                tasks.put(folder.getId(), taskPreviewName);
+            } finally {
+                taskLock.unlock();
+            }
+        }
+
+        private void remove(ProjectFolder folder, String taskPreviewName) {
+            taskLock.lock();
+            try {
+                tasks.remove(folder.getId(), taskPreviewName);
+            } finally {
+                taskLock.unlock();
+            }
+        }
+    }
+
+    private static class FloatingScene extends Scene {
+
+        public FloatingScene(Parent root, double width, double height) {
+            super(root, width, height);
+        }
     }
 }
