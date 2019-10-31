@@ -6,6 +6,7 @@
  */
 package com.powsybl.gse.copypaste.afs.server;
 
+import com.powsybl.afs.AbstractNodeBase;
 import com.powsybl.afs.ws.server.utils.AppDataBean;
 import com.powsybl.afs.ws.server.utils.JwtTokenNeeded;
 import com.powsybl.gse.copypaste.afs.CopyManager;
@@ -20,6 +21,8 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
@@ -29,22 +32,28 @@ import javax.ws.rs.core.Response;
 @Path("copypaste")
 @JwtTokenNeeded
 public class CopyServer {
-/*
-    private CopyManager copyManager;
+
     @Inject
-    private AppDataBean appDataBean;
+    private CopyManager copyManager;
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("fileSystems/{fileSystemName}/nodes/{nodeId}/copy")
-    public Response copy(@PathParam("fileSystemName") String fileSystemName, @PathParam("nodeId") String nodeId, MappingAnalysisParameters parameters) {
-        //appDataBean.getProjectFile(fileSystemName, nodeId, MultiCaseConfig.class).run(parameters);
-        //copyManager.copy()
+    public Map<String, CopyManager.CopyInfo> copy(List<? extends AbstractNodeBase> nodes) {
+        return copyManager.copy(nodes);
+    }
+
+
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("fileSystems/{fileSystemName}/nodes/{nodeId}/paste")
+    public Response paste(String nodeId, AbstractNodeBase folder) {
+        copyManager.paste(nodeId, folder);
         return Response.ok().build();
     }
 
     @PostConstruct
     private void init(){
         copyManager = new CopyManager();
-    }*/
+    }
 }

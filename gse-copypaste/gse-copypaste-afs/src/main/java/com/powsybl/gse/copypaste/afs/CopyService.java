@@ -17,5 +17,5 @@ public interface CopyService {
 
     void copy(List<? extends AbstractNodeBase> nodes);
 
-    void paste(String uuid);
+    void paste(String nodeId, AbstractNodeBase folder);
 }
