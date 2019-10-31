@@ -655,25 +655,25 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         pasteMenuItem.setOnAction(event -> {
             if (selectedTreeItem.getValue() instanceof Folder) {
                 Folder destinationFolder = (Folder) selectedTreeItem.getValue();
-                unarchiveNode(destinationFolder);
+                // unarchiveNode(destinationFolder);
                 refresh(selectedTreeItem);
                 event.consume();
             }
         });
         final Clipboard systemClipboard = Clipboard.getSystemClipboard();
         if (systemClipboard != null && systemClipboard.hasString() && systemClipboard.getString() != null) {
-            pasteMenuItem.setDisable(!systemClipboard.getString().contains(CopyServiceConstants.COPY_SIGNATURE) || clipboardContainsNodes(systemClipboard));
+          //  pasteMenuItem.setDisable(!systemClipboard.getString().contains(CopyServiceConstants.COPY_SIGNATURE) || clipboardContainsNodes(systemClipboard));
         } else {
             pasteMenuItem.setDisable(true);
         }
         return pasteMenuItem;
     }
 
-    private static boolean clipboardContainsNodes(Clipboard systemClipboard) {
+  /*  private static boolean clipboardContainsNodes(Clipboard systemClipboard) {
         return !systemClipboard.getString().contains(CopyServiceConstants.PROJECT_TYPE) && !systemClipboard.getString().contains(CopyServiceConstants.FOLDER_TYPE);
-    }
+    }*/
 
-    private void unarchiveNode(Folder destinationFolder) {
+  /*  private void unarchiveNode(Folder destinationFolder) {
         final Clipboard clipboard = Clipboard.getSystemClipboard();
         if (clipboard.hasString()) {
             String copyInfos = clipboard.getString();
@@ -687,7 +687,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 }
             }
         }
-    }
+    }*/
 
     private void findCopyService(List<? extends TreeItem<N>> selectedTreeItems) {
         List<Node> nodes = selectedTreeItems.stream()

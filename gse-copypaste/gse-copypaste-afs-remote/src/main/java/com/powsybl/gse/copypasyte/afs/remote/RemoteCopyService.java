@@ -26,7 +26,7 @@ public class RemoteCopyService implements CopyService {
     }
 
     @Override
-    public void paste(String uuid) {
+    public void paste(String nodeId, AbstractNodeBase folder) {
 
     }
 
