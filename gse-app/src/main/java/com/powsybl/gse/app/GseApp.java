@@ -11,6 +11,7 @@ import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.computation.local.LocalComputationManager;
 import com.powsybl.gse.spi.FontLoader;
 import com.powsybl.gse.spi.GseContext;
+import com.powsybl.gse.spi.Initializer;
 import com.powsybl.gse.spi.StyleSheetLoader;
 import com.powsybl.gse.util.GseUtil;
 import javafx.application.Application;
@@ -69,6 +70,9 @@ public class GseApp extends Application {
         super.init();
         for (FontLoader loader : new ServiceLoaderCache<>(FontLoader.class).getServices()) {
             loader.load();
+        }
+        for (Initializer initializer : new ServiceLoaderCache<>(Initializer.class).getServices()) {
+            initializer.run();
         }
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
             LOGGER.error("Uncaught exception in thread {}", t.getName());
