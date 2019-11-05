@@ -11,8 +11,6 @@ import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.ext.base.ScriptListener;
 import com.powsybl.afs.ext.base.ScriptType;
 import com.powsybl.afs.ext.base.StorableScript;
-import com.powsybl.commons.config.ModuleConfig;
-import com.powsybl.commons.config.PlatformConfig;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.GseContext;
@@ -106,26 +104,22 @@ public class ModificationScriptEditor extends BorderPane
     public ModificationScriptEditor(StorableScript storableScript, Scene scene, GseContext context) {
         this.storableScript = storableScript;
         this.context = context;
-        Optional<ModuleConfig> codeEditorConfig = PlatformConfig.defaultConfig().getOptionalModuleConfig("code-editor");
 
-        if (codeEditorConfig.isPresent() && codeEditorConfig.get().hasProperty("editorClass")) {
-            Optional<AbstractCodeEditorFactoryService> preferredCodeEditor = CODE_EDITOR_FACTORIES.getServices()
-                    .stream()
-                    .filter(codeEditorService -> codeEditorService.getEditorClass() != null && codeEditorService.getEditorClass().getName().equals(codeEditorConfig.get().getStringProperty("editorClass")))
-                    .findAny();
-            codeEditor = preferredCodeEditor
-                    .map(codeEditorFactoryService -> {
-                        try {
-                            return codeEditorFactoryService.build();
-                        } catch (Exception e) {
-                            LOGGER.error("Failed to instanciate editor {}", codeEditorFactoryService.getEditorClass(), e);
-                        }
-                        return null;
-                    })
-                    .orElse(new GroovyCodeEditor());
-        } else {
-            codeEditor = new GroovyCodeEditor();
-        }
+        Optional<AbstractCodeEditorFactoryService> preferredCodeEditor = CODE_EDITOR_FACTORIES.getServices()
+                .stream()
+                .findAny();
+
+        codeEditor = preferredCodeEditor
+                .map(codeEditorFactoryService -> {
+                    try {
+                        LOGGER.info("Trying to use custom editor {}", codeEditorFactoryService.getEditorClass());
+                        return codeEditorFactoryService.build();
+                    } catch (Exception e) {
+                        LOGGER.error("Failed to instanciate editor {}", codeEditorFactoryService.getEditorClass(), e);
+                    }
+                    return null;
+                })
+                .orElse(new GroovyCodeEditor());
 
         //Adding  autocompletion keywords suggestions depending the context
         List<String> suggestions = new ArrayList<>(STANDARD_SUGGESTIONS);

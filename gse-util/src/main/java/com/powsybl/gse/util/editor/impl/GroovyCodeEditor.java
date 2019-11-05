@@ -7,7 +7,6 @@
  */
 package com.powsybl.gse.util.editor.impl;
 
-import com.google.auto.service.AutoService;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.powsybl.commons.exceptions.UncheckedClassNotFoundException;
@@ -16,7 +15,6 @@ import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.KeywordsProvider;
 import com.powsybl.gse.util.EquipmentInfo;
 import com.powsybl.gse.util.editor.AbstractCodeEditor;
-import com.powsybl.gse.util.editor.AbstractCodeEditorFactoryService;
 import com.powsybl.gse.util.editor.SearchBar;
 import com.powsybl.gse.util.editor.Searchable;
 import com.powsybl.iidm.network.Country;
@@ -38,7 +36,10 @@ import org.codehaus.groovy.antlr.UnicodeLexerSharedInputState;
 import org.codehaus.groovy.antlr.parser.GroovyLexer;
 import org.codehaus.groovy.antlr.parser.GroovyTokenTypes;
 import org.fxmisc.flowless.VirtualizedScrollPane;
-import org.fxmisc.richtext.*;
+import org.fxmisc.richtext.Caret;
+import org.fxmisc.richtext.CharacterHit;
+import org.fxmisc.richtext.CodeArea;
+import org.fxmisc.richtext.LineNumberFactory;
 import org.fxmisc.richtext.model.StyleSpans;
 import org.fxmisc.richtext.model.StyleSpansBuilder;
 import org.slf4j.Logger;
@@ -50,16 +51,7 @@ import java.io.StringReader;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Scanner;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -780,10 +772,4 @@ public class GroovyCodeEditor extends AbstractCodeEditor {
         return spansBuilder.create();
     }
 
-    @AutoService(AbstractCodeEditorFactoryService.class)
-    public static class GroovyCodeEditorFactory extends AbstractCodeEditorFactoryService<GroovyCodeEditor> {
-        public GroovyCodeEditorFactory() {
-            super(GroovyCodeEditor.class);
-        }
-    }
 }
