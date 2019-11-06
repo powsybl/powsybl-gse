@@ -7,6 +7,7 @@
 package com.powsybl.gse.copypaste.afs.server;
 
 import com.powsybl.afs.AbstractNodeBase;
+import com.powsybl.afs.FolderBase;
 import com.powsybl.afs.ws.server.utils.AppDataBean;
 import com.powsybl.afs.ws.server.utils.JwtTokenNeeded;
 import com.powsybl.gse.copypaste.afs.CopyManager;
@@ -47,7 +48,7 @@ public class CopyServer {
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("fileSystems/{fileSystemName}/nodes/{nodeId}/paste")
-    public Response paste(String nodeId, AbstractNodeBase folder) {
+    public Response paste(@PathParam("nodeId")String nodeId, FolderBase folder) {
         copyManager.paste(nodeId, folder);
         return Response.ok().build();
     }

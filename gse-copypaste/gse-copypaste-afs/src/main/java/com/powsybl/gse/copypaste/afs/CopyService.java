@@ -7,6 +7,7 @@
 package com.powsybl.gse.copypaste.afs;
 
 import com.powsybl.afs.AbstractNodeBase;
+import com.powsybl.afs.FolderBase;
 
 import java.util.List;
 
@@ -17,5 +18,5 @@ public interface CopyService {
 
     void copy(List<? extends AbstractNodeBase> nodes);
 
-    void paste(String nodeId, AbstractNodeBase folder);
+    void paste(String nodeId, FolderBase folder);
 }

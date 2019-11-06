@@ -26,7 +26,7 @@ public class LocalCopyService implements CopyService {
     }
 
     @Override
-    public void paste(String nodeId, AbstractNodeBase folder) {
+    public void paste(String nodeId, FolderBase folder) {
         copyManager.paste(nodeId, folder);
     }
 
