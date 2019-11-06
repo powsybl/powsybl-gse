@@ -244,6 +244,53 @@ public class ProjectPane extends Tab {
         }
     }
 
+    private TreeCell<Object> treeViewCellFactory(TreeView<Object> item) {
+
+        return new TreeCell<Object>() {
+
+            private void setForItemObject(Object value) {
+                if (value instanceof String) {
+                    setText((String) value);
+                    setGraphic(getTreeItem().getGraphic());
+                    setTextFill(Color.BLACK);
+                    setOpacity(1);
+                } else if (value instanceof ProjectNode) {
+                    ProjectNode node = (ProjectNode) value;
+                    setText(node.getName());
+                    setGraphic(getTreeItem().getGraphic());
+                    setTextFillColor(value, this);
+                    setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
+                    setOnDragDetected(event -> dragDetectedEvent(getItem(), getTreeItem(), event));
+                    setOnDragOver(event -> dragOverEvent(event, getItem(), getTreeItem(), this));
+                    setOnDragDropped(event -> dragDroppedEvent(getItem(), getTreeItem(), event, node));
+                    setOnDragExited(event -> getStyleClass().removeAll("treecell-drag-over"));
+                } else {
+                    throw new AssertionError();
+                }
+            }
+
+            private void updateNonEmptyItem(Object value) {
+                fillCellInfosForObject(value, this, getTreeItem());
+                if (value == null) {
+                    GseUtil.setWaitingText(this);
+                } else {
+                    setForItemObject(value);
+                }
+            }
+
+            @Override
+            protected void updateItem(Object value, boolean empty) {
+                super.updateItem(value, empty);
+                if (empty) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    updateNonEmptyItem(value);
+                }
+            }
+        };
+    }
+
     private void runDefaultActionAfterDoubleClick(TreeItem<Object> selectedTreeItem) {
         Objects.requireNonNull(selectedTreeItem);
         Object value = selectedTreeItem.getValue();
@@ -274,7 +321,15 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private void setDragOverStyle(TreeTableCell treeCell) {
+    private static void setTextFillColor(Object value, TreeCell<Object> treeCell) {
+        if (value instanceof ProjectFile && ((ProjectFile) value).mandatoryDependenciesAreMissing()) {
+            treeCell.setTextFill(Color.RED);
+        } else {
+            treeCell.setTextFill(Color.BLACK);
+        }
+    }
+
+    private void setDragOverStyle(TreeCell<Object> treeCell) {
         treeCell.getStyleClass().add("treecell-drag-over");
     }
 
