@@ -6,14 +6,21 @@
  */
 package com.powsybl.gse.app;
 
-import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
-import javafx.scene.control.ListView;
-import javafx.scene.control.ProgressBar;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.geometry.Pos;
+import javafx.scene.Cursor;
+import javafx.scene.control.*;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ResourceBundle;
+import java.util.function.Consumer;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -21,17 +28,18 @@ import java.util.ResourceBundle;
 public class TaskMonitorPane extends BorderPane {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.TaskMonitorPane");
+    private static final Logger LOGGER = LoggerFactory.getLogger(TaskMonitorPane.class);
 
     private static class TaskListCell extends ListCell<TaskItem> {
 
         private final Label label = new Label("");
+        private final Pane content;
+        private final Button closeButton = new Button();
+        private final Consumer<TaskItem> onCloseAction;
 
-        private final ProgressBar progressBar = new ProgressBar();
-
-        private final VBox vBox = new VBox(label, progressBar);
-
-        public TaskListCell() {
-            progressBar.setMaxWidth(Double.MAX_VALUE);
+        public TaskListCell(Consumer<TaskItem> onClose) {
+            content = createLayout();
+            onCloseAction = onClose;
         }
 
         @Override
@@ -41,18 +49,63 @@ public class TaskMonitorPane extends BorderPane {
                 setGraphic(null);
             } else {
                 label.setText(item.getName() + System.lineSeparator() + item.getMessage().getValue());
-                setGraphic(vBox);
+                closeButton.setOnAction(event -> onCloseAction.accept(item));
+                setGraphic(content);
             }
+        }
+
+        private AnchorPane createLayout() {
+            AnchorPane root = new AnchorPane();
+
+            ProgressBar progressBar = new ProgressBar();
+            progressBar.setMaxWidth(Double.MAX_VALUE);
+            VBox vBox = new VBox(label, progressBar);
+            root.getChildren().add(vBox);
+            AnchorPane.setLeftAnchor(vBox, 0.0);
+            AnchorPane.setTopAnchor(vBox, 0.0);
+            AnchorPane.setRightAnchor(vBox, 30.0);
+            AnchorPane.setBottomAnchor(vBox, 0.0);
+
+            VBox box = new VBox();
+            box.setPrefWidth(30.0);
+            box.setAlignment(Pos.TOP_CENTER);
+            closeButton.getStyleClass().add("close-button");
+            box.getChildren().add(closeButton);
+            root.getChildren().add(box);
+            AnchorPane.setTopAnchor(box, 0.0);
+            AnchorPane.setRightAnchor(box, 0.0);
+
+            return root;
         }
     }
 
-    private final ListView<TaskItem> taskList;
+    private final ListView<TaskItem> taskList = new ListView<>();
 
     public TaskMonitorPane(TaskItemList items) {
-        taskList = new ListView<>();
-        taskList.itemsProperty().bind(items.getItems());
+        taskList.itemsProperty().bind(items.getDisplayItems());
         taskList.setPlaceholder(new Label(RESOURCE_BUNDLE.getString("NoTaskRunning")));
         setCenter(taskList);
-        taskList.setCellFactory(param -> new TaskListCell());
+        taskList.setCellFactory(param -> new TaskListCell(items::hideTask));
+        renderHiddenItemsHint(items);
+        items.hiddenTaskCountProperty().addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable observable) {
+                renderHiddenItemsHint(items);
+            }
+        });
     }
+
+    private void renderHiddenItemsHint(TaskItemList items) {
+        if (items.hiddenTaskCountProperty().get() > 0) {
+            Text text = new Text(String.format(RESOURCE_BUNDLE.getString("HiddenTaskHint"), items.hiddenTaskCountProperty().get()));
+            text.setOnMouseEntered(event -> text.setUnderline(true));
+            text.setOnMouseExited(event -> text.setUnderline(false));
+            text.setCursor(Cursor.HAND);
+            text.setOnMouseClicked(event -> items.showAll());
+            setBottom(text);
+        } else {
+            setBottom(null);
+        }
+    }
+
 }
