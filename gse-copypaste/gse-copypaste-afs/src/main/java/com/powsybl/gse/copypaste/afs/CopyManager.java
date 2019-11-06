@@ -50,21 +50,29 @@ public final class CopyManager {
 
         for (AbstractNodeBase node : nodes) {
             CopyInfo copyInfo = new CopyInfo();
+            copyInfo.archiveSuccess = false;
+
+            tPool.execute(() -> {
+                // create task
+
+                synchronized (copyLock) {
+                    try {
+                        archiveAndCopy(node);
+                    } catch (Exception e) {
+                        copyInfo.archiveSuccess = null;
+                        LOGGER.error(e.toString(), e);
+                    }
+
+                    // change completion status + end task
+                    copyInfo.archiveSuccess = true;
+                }
+
+            });
+
             copyInfo.nodeId = node.getId();
             copyInfo.node = node;
             copyInfo.archivePath = Paths.get(storageDirectory + node.getName() + node.getId());
-            copyInfo.archiveIsCompleted = false;
             copyInfo.expirationDate = ZonedDateTime.now().plusHours(CopyServiceConstants.COPY_EXPIRATION_TIME);
-            tPool.execute(() -> {
-                // create task
-                try {
-                    archiveAndCopy(node);
-                } catch (Exception e) {
-                    LOGGER.error(e.toString(), e);
-                }
-                // change completion status + end task
-                copyInfo.archiveIsCompleted = true;
-            });
             currentCopies.put(copyInfo.nodeId, copyInfo);
         }
         return currentCopies;
@@ -74,24 +82,21 @@ public final class CopyManager {
      * @param nodeId the copied node's id
      * @param folder the archive destination's folder
      */
-    public void paste(String nodeId, AbstractNodeBase folder) {
-        throwNodeIsNotAFolderException(folder);
+    public void paste(String nodeId, FolderBase folder) {
 
         boolean nodeNameAlreadyExists = false;
         CopyInfo copyInfo = currentCopies.get(nodeId);
 
-        if (copyInfo != null && copyInfo.archiveIsCompleted) {
-            if (folder instanceof ProjectFolder) {
-                List<ProjectNode> children = ((ProjectFolder) folder).getChildren();
-                nodeNameAlreadyExists = children.stream().anyMatch(child -> copyInfo.node.getName().equals(child.getName()));
-            } else if (folder instanceof Folder) {
-                List<Node> children = ((Folder) folder).getChildren();
-                nodeNameAlreadyExists = children.stream().anyMatch(child -> copyInfo.node.getName().equals(child.getName()));
-            }
-            if (nodeNameAlreadyExists) {
-                renameAndPaste(folder, copyInfo);
-            } else {
-                folder.unarchive(copyInfo.archivePath);
+        synchronized (copyLock) {
+            if (copyInfo != null && copyInfo.archiveSuccess) {
+                List children = folder.getChildren();
+                nodeNameAlreadyExists = ((List<AbstractNodeBase>) children).stream().anyMatch(child -> copyInfo.node.getName().equals(child.getName()));
+
+                if (nodeNameAlreadyExists) {
+                    renameAndPaste(folder, copyInfo);
+                } else {
+                    ((AbstractNodeBase) folder).unarchive(copyInfo.archivePath.resolve(copyInfo.nodeId));
+                }
             }
         }
     }
@@ -118,15 +123,15 @@ public final class CopyManager {
         }, CopyServiceConstants.CLEANUP_DELAY, CopyServiceConstants.CLEANUP_PERIOD);
     }
 
-    private void renameAndPaste(AbstractNodeBase folder, CopyInfo info) {
+    private void renameAndPaste(FolderBase folder, CopyInfo info) {
 
         if (folder instanceof ProjectFolder) {
             //Rename and Paste into a ProjectFolder
-            List<ProjectNode> children = ((ProjectFolder) folder).getChildren();
-            for (ProjectNode child : children) {
+            List children =  folder.getChildren();
+            for (AbstractNodeBase child : (List<AbstractNodeBase>) children) {
                 String name = child.getName();
                 if (info.node.getName().equals(name)) {
-                    if (info.node.getClass().equals(child.getClass().toString())) {
+                    if (info.node.getClass().equals(child.getClass())) {
                         renameSameTypeNode((ProjectFolder) folder, child, info);
                     } else {
                         //GseAlerts.showDraggingError();
@@ -139,11 +144,12 @@ public final class CopyManager {
         }
     }
 
-    private void renameSameTypeNode(ProjectFolder projectFolder, ProjectNode child, CopyInfo info) {
+    private void renameSameTypeNode(ProjectFolder projectFolder, AbstractNodeBase child, CopyInfo info) {
         child.rename(CopyServiceConstants.TEMPORARY_NAME);
+
         String copyDuplicated = " - " + RESOURCE_BUNDLE.getString("Copy");
         String name = info.node.getName();
-        projectFolder.unarchive(Paths.get(info.archivePath.toString()));
+        projectFolder.unarchive(info.archivePath.resolve(info.nodeId));
         projectFolder.getChild(name).ifPresent(pNode -> {
             if (!name.contains(copyDuplicated) && !projectFolder.getChild(name + copyDuplicated).isPresent()) {
                 pNode.rename(name + copyDuplicated);
@@ -158,7 +164,7 @@ public final class CopyManager {
         });
     }
 
-    private static void renameCopiedNode(ProjectFolder projectFolder, String copy, ProjectNode child, String name, ProjectNode projectNode) {
+    private static void renameCopiedNode(ProjectFolder projectFolder, String copy, AbstractNodeBase child, String name, ProjectNode projectNode) {
         String lastCopiedNode = projectFolder.getChildren().stream()
                 .map(ProjectNode::getName)
                 .filter(n -> n.startsWith(name + copy))
@@ -215,17 +221,11 @@ public final class CopyManager {
         return LocalComputationConfig.load().getLocalDir() + CopyServiceConstants.PATH_SEPARATOR;
     }
 
-    private static void throwNodeIsNotAFolderException(AbstractNodeBase folder) {
-        if (!(folder instanceof ProjectFolder || folder instanceof Folder)) {
-            throw new IllegalArgumentException("the parameter must be a folder");
-        }
-    }
-
     public static class CopyInfo {
         String nodeId;
         AbstractNodeBase node;
         Path archivePath;
-        boolean archiveIsCompleted;
+        Boolean archiveSuccess;
         ZonedDateTime expirationDate;
     }
 }

@@ -734,6 +734,8 @@ public class ProjectPane extends Tab {
 
     private MenuItem createPasteProjectNodeItem(TreeItem<Object> selectedTreeItem) {
         MenuItem pasteMenuItem = GseMenuItem.createPasteMenuItem();
+        BooleanProperty copyListIsEmpty = new SimpleBooleanProperty(copiedNodes.isEmpty());
+        pasteMenuItem.disableProperty().bind(copyListIsEmpty);
         pasteMenuItem.setOnAction(event -> {
             if (selectedTreeItem.getValue() instanceof ProjectFolder) {
                 ProjectFolder projectFolder = (ProjectFolder) selectedTreeItem.getValue();
@@ -742,9 +744,8 @@ public class ProjectPane extends Tab {
                 }
             }
             event.consume();
+            refresh(selectedTreeItem);
         });
-        BooleanProperty copyListIsEmpty = new SimpleBooleanProperty(copiedNodes.isEmpty());
-        pasteMenuItem.disableProperty().bind(copyListIsEmpty);
         return pasteMenuItem;
     }
 
