@@ -63,14 +63,6 @@ public class ModificationScriptEditor extends BorderPane
 
     private static final ServiceLoaderCache<AbstractCodeEditorFactoryService> CODE_EDITOR_FACTORIES = new ServiceLoaderCache<>(AbstractCodeEditorFactoryService.class);
 
-    private static final List<String> STANDARD_SUGGESTIONS = ImmutableList.of("as", "assert", "boolean", "break", "breaker", "byte",
-            "case", "catch", "char", "class", "continue", "def", "default", "double", "else", "enum",
-            "extends", "false", "finally", "float", "for", "generator", "if", "implements", "import", "in",
-            "instanceof", "int", "interface", "load", "long", "native", "network", "new", "null", "package", "private",
-            "protected", "public", "return", "short", "static", "substation", "super", "switch", "synchronized", "this",
-            "threadsafe", "throw", "throws", "transient", "true", "try", "void", "volatile", "voltageLevel", "while"
-    );
-
     private final GseContext context;
 
     private final ToolBar toolBar;
@@ -122,7 +114,7 @@ public class ModificationScriptEditor extends BorderPane
                 .orElse(new GroovyCodeEditor());
 
         //Adding  autocompletion keywords suggestions depending the context
-        List<String> suggestions = new ArrayList<>(STANDARD_SUGGESTIONS);
+        List<String> suggestions = new ArrayList<>();
         List<AutoCompletionWordsProvider> completionWordsProviderExtensions = findCompletionWordsProviderExtensions(storableScript);
         completionWordsProviderExtensions.forEach(extension -> suggestions.addAll(extension.completionKeyWords()));
 
