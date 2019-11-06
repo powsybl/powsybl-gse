@@ -340,12 +340,11 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         add(scrollPane, 0, 1, 2, 1);
         context.getExecutor().submit(() -> {
             try {
-                List<TreeItem<N>> nodes = new ArrayList<>();
-                for (D rootFolder : treeModel.getRootFolders()) {
-                    TreeItem<N> node = createCollapsedFolderItem(rootFolder);
-                    setNodeChooserView(nodeChooserView, node);
-                    nodes.add(node);
-                }
+                List<TreeItem<N>> nodes = treeModel.getRootFolders().stream()
+                        .map(this::createCollapsedFolderItem)
+                        .peek(node -> setNodeChooserView(nodeChooserView, node))
+                        .sorted(Comparator.comparing(node -> !node.isExpanded()))
+                        .collect(Collectors.toList());
                 Platform.runLater(() -> {
                     rootItem.getChildren().setAll(nodes);
                     // select first root
@@ -369,13 +368,12 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private void setNodeChooserView(NodeChooserView nodeChooserView, TreeItem<N> node) {
         if (nodeChooserView == NodeChooserView.PROJECTS_STORAGE_ONLY) {
-            if (node.getValue() instanceof Folder && ((Folder) node.getValue()).isWritable()) {
+            if (((Folder) node.getValue()).isWritable()) {
                 node.setExpanded(true);
             }
         } else if (nodeChooserView == NodeChooserView.LOCAL_STORAGE_ONLY) {
-            if (!(node.getValue() instanceof Folder && ((Folder) node.getValue()).isWritable())) {
+            if (!(((Folder) node.getValue()).isWritable())) {
                 node.setExpanded(true);
-
             }
         } else {
             node.setExpanded(true);
