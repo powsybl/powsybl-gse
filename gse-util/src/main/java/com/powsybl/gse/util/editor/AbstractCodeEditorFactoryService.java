@@ -8,15 +8,17 @@
 
 package com.powsybl.gse.util.editor;
 
+import java.util.Objects;
+
 /**
  * @author Paul Bui-Quang <paul.buiquang at rte-france.com>
  */
 public abstract class AbstractCodeEditorFactoryService<T extends AbstractCodeEditor> {
 
-    private Class<T> editorClass;
+    private final Class<T> editorClass;
 
     public AbstractCodeEditorFactoryService(Class<T> editorClass) {
-        this.editorClass = editorClass;
+        this.editorClass = Objects.requireNonNull(editorClass);
     }
 
     /**
