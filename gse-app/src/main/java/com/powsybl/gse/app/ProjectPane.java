@@ -214,8 +214,10 @@ public class ProjectPane extends Tab {
             TreeItem<Object> selectedTreeItem = c.getList().get(0);
             Object value = selectedTreeItem.getValue();
             treeView.setOnKeyPressed((KeyEvent ke) -> {
-                if (ke.getCode() == KeyCode.F2) {
+                if (new KeyCodeCombination(KeyCode.F2).match(ke)) {
                     renameProjectNode(selectedTreeItem);
+                } else if (new KeyCodeCombination(KeyCode.ENTER).match(ke)) {
+                    runDefaultActionAfterDoubleClick(selectedTreeItem);
                 }
             });
             if (value instanceof ProjectFolder) {
@@ -245,7 +247,7 @@ public class ProjectPane extends Tab {
                     ProjectNode node = (ProjectNode) value;
                     setText(node.getName());
                     setGraphic(getTreeItem().getGraphic());
-                    setTextFill(Color.BLACK);
+                    setTextFillColor(value, this);
                     setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
                     setOnDragDetected(event -> dragDetectedEvent(getItem(), getTreeItem(), event));
                     setOnDragOver(event -> dragOverEvent(event, getItem(), getTreeItem(), this));
@@ -305,6 +307,14 @@ public class ProjectPane extends Tab {
             if (selectedTreeItem != null) {
                 runDefaultActionAfterDoubleClick(selectedTreeItem);
             }
+        }
+    }
+
+    private static void setTextFillColor(Object value, TreeCell<Object> treeCell) {
+        if (value instanceof ProjectFile && ((ProjectFile) value).mandatoryDependenciesAreMissing()) {
+            treeCell.setTextFill(Color.RED);
+        } else {
+            treeCell.setTextFill(Color.BLACK);
         }
     }
 
@@ -450,6 +460,11 @@ public class ProjectPane extends Tab {
         treeView.getSelectionModel().getSelectedItems().addListener(this::treeViewChangeListener);
         treeView.setCellFactory(this::treeViewCellFactory);
         treeView.setOnMouseClicked(this::treeViewMouseClickHandler);
+        treeView.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue) {
+                treeView.getSelectionModel().clearSelection();
+            }
+        });
 
         DetachableTabPane ctrlTabPane1 = new DetachableTabPane();
         DetachableTabPane ctrlTabPane2 = new DetachableTabPane();
@@ -682,6 +697,7 @@ public class ProjectPane extends Tab {
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
         MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
+        menuItem.setAccelerator(new KeyCodeCombination(KeyCode.F2));
         menuItem.setOnAction(event -> renameProjectNode(selectedTreeItem));
         return menuItem;
     }
@@ -812,9 +828,12 @@ public class ProjectPane extends Tab {
         viewer.view();
     }
 
-    private MenuItem initMenuItem(ProjectFileMenuConfigurableExtension menuConfigurable, ProjectFile file) {
+    private static MenuItem initMenuItem(ProjectFileMenuConfigurableExtension menuConfigurable, ProjectFile file) {
         Node graphic = menuConfigurable.getMenuGraphic(file);
         MenuItem menuItem = new MenuItem(menuConfigurable.getMenuText(file), graphic);
+        if (menuConfigurable.getMenuKeyCode() != null) {
+            menuItem.setAccelerator(menuConfigurable.getMenuKeyCode());
+        }
         menuItem.setDisable(!menuConfigurable.isMenuEnabled(file));
         return menuItem;
     }
@@ -894,6 +913,7 @@ public class ProjectPane extends Tab {
                     selectedTreeItem.setExpanded(true);
                 })
         );
+        menuItem.setAccelerator(new KeyCodeCombination(KeyCode.D, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
         return menuItem;
     }
 
@@ -961,6 +981,7 @@ public class ProjectPane extends Tab {
                 if (creatorExtension != null) {
                     MenuItem menuItem = new MenuItem(creatorExtension.getMenuText());
                     menuItem.setGraphic(creatorExtension.getMenuGraphic());
+                    menuItem.setAccelerator(creatorExtension.getMenuKeycode());
                     menuItem.setOnAction(event -> showProjectItemCreatorDialog(selectedTreeItem, creatorExtension));
                     items.add(menuItem);
                 }
