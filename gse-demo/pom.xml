@@ -219,6 +219,7 @@
             <scope>runtime</scope>
         </dependency>
 
+
         <!-- Security analysis -->
         <dependency>
             <groupId>com.powsybl</groupId>
