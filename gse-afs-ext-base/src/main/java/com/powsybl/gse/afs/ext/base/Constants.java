@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * @author Paul Bui-Quang <paul.buiquang at rte-france.com>
  */
-public class Constants {
+public final class Constants {
 
     public static final List<String> STANDARD_SUGGESTIONS = ImmutableList.of("as", "assert", "boolean", "break", "breaker", "byte",
             "case", "catch", "char", "class", "continue", "def", "default", "double", "else", "enum",
@@ -24,5 +24,9 @@ public class Constants {
             "protected", "public", "return", "short", "static", "substation", "super", "switch", "synchronized", "this",
             "threadsafe", "throw", "throws", "transient", "true", "try", "void", "volatile", "voltageLevel", "while"
     );
+
+    private Constants() throws IllegalAccessException {
+        throw new IllegalAccessException("Can't instanciate an utility class");
+    }
 
 }

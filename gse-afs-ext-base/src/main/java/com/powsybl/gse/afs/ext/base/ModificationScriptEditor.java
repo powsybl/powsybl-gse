@@ -6,7 +6,6 @@
  */
 package com.powsybl.gse.afs.ext.base;
 
-import com.google.common.collect.ImmutableList;
 import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.ext.base.ScriptListener;
 import com.powsybl.afs.ext.base.ScriptType;
