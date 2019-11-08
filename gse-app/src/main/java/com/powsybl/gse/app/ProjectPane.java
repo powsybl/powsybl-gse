@@ -11,10 +11,10 @@ import com.google.common.collect.Multimap;
 import com.panemu.tiwulfx.control.DetachableTabPane;
 import com.powsybl.afs.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
-import com.powsybl.gse.copypaste.afs.CopyServiceConstants;
+import com.powsybl.gse.copypaste.afs.*;
+import com.powsybl.gse.copypaste.afs.copyExceptions.*;
 import com.powsybl.gse.spi.*;
 import com.powsybl.gse.util.*;
-import com.powsybl.gse.copypaste.afs.CopyService;
 import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
@@ -35,6 +35,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Callback;
+import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,9 +61,7 @@ public class ProjectPane extends Tab {
 
     private BooleanProperty copied = new SimpleBooleanProperty(false);
 
-    private List<ProjectNode> copiedNodes = new ArrayList<>();
-
-    private CopyService copyService;
+    private Optional<CopyService> copyService;
 
     private static class TabKey {
 
@@ -483,7 +482,8 @@ public class ProjectPane extends Tab {
 
         taskItems = new TaskItemList(project, context);
         taskMonitorPane = new TaskMonitorPane(taskItems);
-        copyService = project.getRootFolder().findService(CopyService.class);
+
+        copyService = Optional.of(project.getRootFolder().findService(CopyService.class));
 
         treeView = new TreeView<>();
         treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
@@ -551,7 +551,9 @@ public class ProjectPane extends Tab {
             @Override
             public void contentChanged() {
                 if (systemClipboard != null && systemClipboard.hasString() && systemClipboard.getString() != null) {
-                    copied.set(systemClipboard.getString().contains(CopyServiceConstants.COPY_SIGNATURE));
+                    String clipBoard = systemClipboard.getString();
+                    copied.set(clipBoard.contains(CopyServiceConstants.COPY_SIGNATURE) && !clipBoard.contains(CopyServiceConstants.PROJECT_TYPE)
+                            && !clipBoard.contains(CopyServiceConstants.FOLDER_TYPE));
                 }
             }
         };
@@ -734,28 +736,46 @@ public class ProjectPane extends Tab {
 
     private MenuItem createPasteProjectNodeItem(TreeItem<Object> selectedTreeItem) {
         MenuItem pasteMenuItem = GseMenuItem.createPasteMenuItem();
-        BooleanProperty copyListIsEmpty = new SimpleBooleanProperty(copiedNodes.isEmpty());
-        pasteMenuItem.disableProperty().bind(copyListIsEmpty);
+        final Clipboard clipboard = Clipboard.getSystemClipboard();
+        pasteMenuItem.disableProperty().bind(copied.not());
         pasteMenuItem.setOnAction(event -> {
             if (selectedTreeItem.getValue() instanceof ProjectFolder) {
                 ProjectFolder projectFolder = (ProjectFolder) selectedTreeItem.getValue();
-                for (ProjectNode projectNode : copiedNodes) {
-                    copyService.paste(projectNode.getId(), projectFolder);
+                if (clipboard.hasString()) {
+                    String copyInfos = clipboard.getString();
+                    String[] copyNodesIdArray = copyInfos.split(CopyServiceConstants.PATH_SEPARATOR);
+
+                    // the first index {0} represents the copy signature, the second one represents the copy type
+                    String[] nodeIdArray = ArrayUtils.remove(ArrayUtils.remove(copyNodesIdArray, 0), 0);
+                    Arrays.stream(nodeIdArray).forEach(nodeId ->
+                            copyService.ifPresent(cpService -> {
+                                try {
+                                    cpService.paste(projectFolder.getFileSystem().getName(), nodeId, projectFolder);
+                                } catch (CopyFailedException ex1) {
+
+                                } catch (CopyNotFinishedException ex2) {
+
+                                } catch (CopyPasteException ex) {
+
+                                }
+                            }));
+                    refresh(selectedTreeItem);
                 }
             }
             event.consume();
-            refresh(selectedTreeItem);
         });
         return pasteMenuItem;
     }
 
+    private static boolean clipboardContainsProjectNodes(Clipboard systemClipboard) {
+        return systemClipboard.getString().contains(CopyServiceConstants.PROJECTFILE_TYPE) || systemClipboard.getString().contains(CopyServiceConstants.PROJECTFOLDER_TYPE);
+    }
+
     private void findCopyService(List<? extends TreeItem<Object>> selectedTreeItems) {
-        copiedNodes.clear();
         List<ProjectNode> projectNodes = selectedTreeItems.stream()
                 .map(item -> (ProjectNode) item.getValue())
-                .peek(node -> copiedNodes.add(node))
                 .collect(Collectors.toList());
-        copyService.copy(projectNodes);
+        copyService.ifPresent(cpService -> cpService.copy(projectNodes));
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {

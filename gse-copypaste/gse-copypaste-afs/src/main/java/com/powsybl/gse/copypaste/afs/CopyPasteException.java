@@ -6,16 +6,13 @@
  */
 package com.powsybl.gse.copypaste.afs;
 
-import com.powsybl.afs.AbstractNodeBase;
-
-import java.util.List;
 
 /**
  * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
  */
-public interface CopyService {
+public class CopyPasteException extends Exception {
 
-    void copy(List<? extends AbstractNodeBase> nodes);
-
-    void paste(String fileSystemName, String nodeId, AbstractNodeBase folder) throws CopyPasteException;
+    public CopyPasteException(String msg) {
+        super(msg);
+    }
 }
