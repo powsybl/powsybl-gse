@@ -16,8 +16,10 @@ public final class CopyServiceConstants {
     public static final String PATH_SEPARATOR = FileSystems.getDefault().getSeparator();
     public static final String PATH_LIST_SEPARATOR = "@PATH_LIST_SEPARATOR@";
     public static final String COPY_SIGNATURE = "@COPY_SIGNATURE@";
-    public static final String  PROJECT_TYPE = "com.powsybl.afs.Project";
-    public static final String  FOLDER_TYPE = "com.powsybl.afs.Folder";
+    public static final String PROJECT_TYPE = "com.powsybl.afs.Project";
+    public static final String FOLDER_TYPE = "com.powsybl.afs.Folder";
+    public static final String PROJECTFILE_TYPE = "com.powsybl.afs.ProjectFile";
+    public static final String PROJECTFOLDER_TYPE = "com.powsybl.afs.ProjectFolder";
     public static final long COPY_EXPIRATION_TIME = 12;
     public static final long CLEANUP_DELAY = 36000;
     public static final long CLEANUP_PERIOD = 180000;

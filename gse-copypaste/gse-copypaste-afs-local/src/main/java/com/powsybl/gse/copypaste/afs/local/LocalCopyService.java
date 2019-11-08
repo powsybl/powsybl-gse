@@ -11,6 +11,7 @@ import com.powsybl.gse.copypaste.afs.CopyManager;
 import com.powsybl.gse.copypaste.afs.CopyService;
 
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -26,8 +27,8 @@ public class LocalCopyService implements CopyService {
     }
 
     @Override
-    public void paste(String nodeId, FolderBase folder) {
-        copyManager.paste(nodeId, folder);
+    public void paste(String fileSystemName, String nodeId, AbstractNodeBase folder) {
+        copyManager.paste(fileSystemName, nodeId, folder);
     }
 
 }

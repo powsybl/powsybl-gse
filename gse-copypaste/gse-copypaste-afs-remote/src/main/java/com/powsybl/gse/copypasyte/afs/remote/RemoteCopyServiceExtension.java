@@ -40,6 +40,6 @@ public class RemoteCopyServiceExtension implements ServiceExtension<CopyService>
 
     @Override
     public CopyService createService(ServiceCreationContext context) {
-        return new RemoteCopyService();
+        return new RemoteCopyService(configSupplier, context.getToken());
     }
 }

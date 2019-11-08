@@ -4,18 +4,17 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.gse.copypaste.afs;
+package com.powsybl.gse.copypaste.afs.copyExceptions;
 
-import com.powsybl.afs.AbstractNodeBase;
-
-import java.util.List;
+import com.powsybl.gse.copypaste.afs.CopyPasteException;
 
 /**
  * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
  */
-public interface CopyService {
+public class CopyNotFinishedException extends CopyPasteException {
 
-    void copy(List<? extends AbstractNodeBase> nodes);
+    public CopyNotFinishedException(String msg) {
+        super(msg);
+    }
 
-    void paste(String fileSystemName, String nodeId, AbstractNodeBase folder) throws CopyPasteException;
 }

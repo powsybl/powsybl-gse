@@ -48,13 +48,13 @@ public class CopyServer {
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("fileSystems/{fileSystemName}/nodes/{nodeId}/paste")
-    public Response paste(@PathParam("nodeId")String nodeId, FolderBase folder) {
-        copyManager.paste(nodeId, folder);
+    public Response paste(@PathParam("fileSystemName") String fileSystemName, @PathParam("nodeId") String nodeId, AbstractNodeBase folder) {
+        copyManager.paste(fileSystemName, nodeId, folder);
         return Response.ok().build();
     }
 
     @PostConstruct
-    private void init(){
+    private void init() {
         copyManager = new CopyManager();
     }
 }

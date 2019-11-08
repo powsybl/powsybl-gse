@@ -8,6 +8,9 @@ package com.powsybl.gse.copypaste.afs;
 
 import com.powsybl.afs.*;
 import com.powsybl.computation.local.LocalComputationConfig;
+import javafx.scene.control.Alert;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +40,7 @@ public final class CopyManager {
     private final Object copyLock = new Object();
     private ExecutorService tPool = Executors.newFixedThreadPool(3);
     private Map<String, CopyInfo> currentCopies = new HashMap<>();
+    private StringBuilder copyParameters;
 
     public CopyManager() {
         init();
@@ -47,10 +51,16 @@ public final class CopyManager {
      * @param nodes the nodes to copy
      */
     public Map<String, CopyInfo> copy(List<? extends AbstractNodeBase> nodes) {
+        copyParameters = new StringBuilder();
+        copyParameters.append(CopyServiceConstants.COPY_SIGNATURE)
+                .append(CopyServiceConstants.PATH_SEPARATOR)
+                .append(nodes.get(0).getClass().toString())
+                .append(CopyServiceConstants.PATH_SEPARATOR);
 
         for (AbstractNodeBase node : nodes) {
+            copyParameters.append(node.getId()).append(CopyServiceConstants.PATH_SEPARATOR);
             CopyInfo copyInfo = new CopyInfo();
-            copyInfo.archiveSuccess = false;
+            copyInfo.archiveSuccess = null;
 
             tPool.execute(() -> {
                 // create task
@@ -58,13 +68,13 @@ public final class CopyManager {
                 synchronized (copyLock) {
                     try {
                         archiveAndCopy(node);
+                        copyInfo.archiveSuccess = true;
                     } catch (Exception e) {
-                        copyInfo.archiveSuccess = null;
-                        LOGGER.error(e.toString(), e);
+                        copyInfo.archiveSuccess = false;
+                        LOGGER.error("copy failed", e);
                     }
 
-                    // change completion status + end task
-                    copyInfo.archiveSuccess = true;
+                    // end task
                 }
 
             });
@@ -75,6 +85,7 @@ public final class CopyManager {
             copyInfo.expirationDate = ZonedDateTime.now().plusHours(CopyServiceConstants.COPY_EXPIRATION_TIME);
             currentCopies.put(copyInfo.nodeId, copyInfo);
         }
+        setClipboardContent(copyParameters.toString());
         return currentCopies;
     }
 
@@ -82,20 +93,28 @@ public final class CopyManager {
      * @param nodeId the copied node's id
      * @param folder the archive destination's folder
      */
-    public void paste(String nodeId, FolderBase folder) {
+    public void paste(String fileSystemName, String nodeId, AbstractNodeBase folder) {
+        throwNodeIsNotAFolderException(folder);
 
-        boolean nodeNameAlreadyExists = false;
+        // throw an exception if folder filesystem != fileSystemName
+
+        boolean nodeNameAlreadyExists;
         CopyInfo copyInfo = currentCopies.get(nodeId);
-
+        List children;
         synchronized (copyLock) {
             if (copyInfo != null && copyInfo.archiveSuccess) {
-                List children = folder.getChildren();
+
+                if (folder instanceof ProjectFolder) {
+                    children = ((ProjectFolder) folder).getChildren();
+                } else {
+                    children = ((Folder) folder).getChildren();
+                }
                 nodeNameAlreadyExists = ((List<AbstractNodeBase>) children).stream().anyMatch(child -> copyInfo.node.getName().equals(child.getName()));
 
                 if (nodeNameAlreadyExists) {
-                    renameAndPaste(folder, copyInfo);
+                    renameAndPaste(folder, children, copyInfo);
                 } else {
-                    ((AbstractNodeBase) folder).unarchive(copyInfo.archivePath.resolve(copyInfo.nodeId));
+                    folder.unarchive(copyInfo.archivePath.resolve(copyInfo.nodeId));
                 }
             }
         }
@@ -123,24 +142,22 @@ public final class CopyManager {
         }, CopyServiceConstants.CLEANUP_DELAY, CopyServiceConstants.CLEANUP_PERIOD);
     }
 
-    private void renameAndPaste(FolderBase folder, CopyInfo info) {
+    private void renameAndPaste(AbstractNodeBase folder, List<AbstractNodeBase> children, CopyInfo info) {
 
-        if (folder instanceof ProjectFolder) {
-            //Rename and Paste into a ProjectFolder
-            List children =  folder.getChildren();
-            for (AbstractNodeBase child : (List<AbstractNodeBase>) children) {
-                String name = child.getName();
-                if (info.node.getName().equals(name)) {
-                    if (info.node.getClass().equals(child.getClass())) {
-                        renameSameTypeNode((ProjectFolder) folder, child, info);
-                    } else {
-                        //GseAlerts.showDraggingError();
-                    }
-                    break;
+        for (AbstractNodeBase child : children) {
+            String name = child.getName();
+            if (info.node.getName().equals(name)) {
+                if (info.node.getClass().equals(child.getClass())) {
+                    renameSameTypeNode((ProjectFolder) folder, child, info);
+                } else {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle(RESOURCE_BUNDLE.getString("CopyError"));
+                    alert.setHeaderText(null);
+                    alert.setContentText(RESOURCE_BUNDLE.getString("FileExists"));
+                    alert.showAndWait();
                 }
+                break;
             }
-        } else {
-            //Rename and Paste into a Folder
         }
     }
 
@@ -221,11 +238,33 @@ public final class CopyManager {
         return LocalComputationConfig.load().getLocalDir() + CopyServiceConstants.PATH_SEPARATOR;
     }
 
+    private static void setClipboardContent(String copyParameters) {
+        final Clipboard clipboard = Clipboard.getSystemClipboard();
+        final ClipboardContent content = new ClipboardContent();
+        content.putString(copyParameters);
+        clipboard.setContent(content);
+    }
+
+    private static void throwNodeIsNotAFolderException(AbstractNodeBase folder) {
+        if (!(folder instanceof ProjectFolder || folder instanceof Folder)) {
+            throw new IllegalArgumentException("the parameter must be a folder");
+        }
+    }
+
+    public Map<String, CopyInfo> getCurrentCopies() {
+        return currentCopies;
+    }
+
     public static class CopyInfo {
         String nodeId;
         AbstractNodeBase node;
         Path archivePath;
         Boolean archiveSuccess;
         ZonedDateTime expirationDate;
+
+        public AbstractNodeBase getNode() {
+            return node;
+        }
+
     }
 }
