@@ -57,7 +57,7 @@
         <module>gse-util</module>
         <module>gse-network-explorer</module>
         <module>gse-security-analysis</module>
-        <module>gse-copypaste</module>
+        <module>gse-copy-paste-afs</module>
     </modules>
 
     <properties>

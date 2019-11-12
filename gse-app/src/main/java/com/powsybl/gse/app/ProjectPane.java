@@ -11,8 +11,11 @@ import com.google.common.collect.Multimap;
 import com.panemu.tiwulfx.control.DetachableTabPane;
 import com.powsybl.afs.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
-import com.powsybl.gse.copypaste.afs.*;
-import com.powsybl.gse.copypaste.afs.copyExceptions.*;
+import com.powsybl.gse.copy_paste.afs.CopyPasteException;
+import com.powsybl.gse.copy_paste.afs.CopyService;
+import com.powsybl.gse.copy_paste.afs.CopyServiceConstants;
+import com.powsybl.gse.copy_paste.afs.exceptions.CopyFailedException;
+import com.powsybl.gse.copy_paste.afs.exceptions.CopyNotFinishedException;
 import com.powsybl.gse.spi.*;
 import com.powsybl.gse.util.*;
 import com.sun.javafx.stage.StageHelper;
@@ -730,7 +733,7 @@ public class ProjectPane extends Tab {
         MenuItem copyMenuItem = GseMenuItem.createCopyMenuItem();
         List<TreeItem<Object>> selectedItems = new ArrayList<>(selectedTreeItems);
         copyMenuItem.setDisable(ancestorsExistIn(selectedItems) || selectedItems.contains(treeView.getRoot()));
-        copyMenuItem.setOnAction(event -> findCopyService(selectedTreeItems));
+        copyMenuItem.setOnAction(event -> copy(selectedTreeItems));
         return copyMenuItem;
     }
 
@@ -746,14 +749,16 @@ public class ProjectPane extends Tab {
                     String[] copyNodesIdArray = copyInfos.split(CopyServiceConstants.PATH_SEPARATOR);
 
                     // the first index {0} represents the copy signature, the second one represents the copy type
-                    String[] nodeIdArray = ArrayUtils.remove(ArrayUtils.remove(copyNodesIdArray, 0), 0);
+                    String[] nodeIdArray = ArrayUtils.removeAll(copyNodesIdArray, 0, 1, 2);
                     Arrays.stream(nodeIdArray).forEach(nodeId ->
                             copyService.ifPresent(cpService -> {
                                 try {
-                                    cpService.paste(projectFolder.getFileSystem().getName(), nodeId, projectFolder);
+                                    cpService.paste(copyNodesIdArray[2], nodeId, projectFolder);
                                 } catch (CopyFailedException ex1) {
+                                    //
 
                                 } catch (CopyNotFinishedException ex2) {
+                                    //
 
                                 } catch (CopyPasteException ex) {
 
@@ -771,11 +776,27 @@ public class ProjectPane extends Tab {
         return systemClipboard.getString().contains(CopyServiceConstants.PROJECTFILE_TYPE) || systemClipboard.getString().contains(CopyServiceConstants.PROJECTFOLDER_TYPE);
     }
 
-    private void findCopyService(List<? extends TreeItem<Object>> selectedTreeItems) {
+    private void copy(List<? extends TreeItem<Object>> selectedTreeItems) {
+        StringBuilder copyParameters = new StringBuilder();
+
         List<ProjectNode> projectNodes = selectedTreeItems.stream()
                 .map(item -> (ProjectNode) item.getValue())
                 .collect(Collectors.toList());
         copyService.ifPresent(cpService -> cpService.copy(projectNodes));
+
+        copyParameters.append(CopyServiceConstants.COPY_SIGNATURE)
+                .append(CopyServiceConstants.PATH_SEPARATOR)
+                .append(projectNodes.get(0).getClass().toString())
+                .append(CopyServiceConstants.PATH_SEPARATOR)
+                .append(projectNodes.get(0).getFileSystem().getName())
+                .append(CopyServiceConstants.PATH_SEPARATOR);
+
+        projectNodes.forEach(node -> copyParameters.append(node.getId()).append(CopyServiceConstants.PATH_SEPARATOR));
+
+        final Clipboard clipboard = Clipboard.getSystemClipboard();
+        final ClipboardContent content = new ClipboardContent();
+        content.putString(copyParameters.toString());
+        clipboard.setContent(content);
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
