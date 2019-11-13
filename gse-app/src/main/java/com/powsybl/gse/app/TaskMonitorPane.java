@@ -6,6 +6,7 @@
  */
 package com.powsybl.gse.app;
 
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.geometry.Pos;
@@ -96,16 +97,18 @@ public class TaskMonitorPane extends BorderPane {
     }
 
     private void renderHiddenItemsHint(TaskItemList items) {
-        if (items.hiddenTaskCountProperty().get() > 0) {
-            Text text = new Text(String.format(RESOURCE_BUNDLE.getString("HiddenTaskHint"), items.hiddenTaskCountProperty().get()));
-            text.setOnMouseEntered(event -> text.setUnderline(true));
-            text.setOnMouseExited(event -> text.setUnderline(false));
-            text.setCursor(Cursor.HAND);
-            text.setOnMouseClicked(event -> items.showAll());
-            setBottom(text);
-        } else {
-            setBottom(null);
-        }
+        Platform.runLater(() -> {
+            if (items.hiddenTaskCountProperty().get() > 0) {
+                Text text = new Text(String.format(RESOURCE_BUNDLE.getString("HiddenTaskHint"), items.hiddenTaskCountProperty().get()));
+                text.setOnMouseEntered(event -> text.setUnderline(true));
+                text.setOnMouseExited(event -> text.setUnderline(false));
+                text.setCursor(Cursor.HAND);
+                text.setOnMouseClicked(event -> items.showAll());
+                setBottom(text);
+            } else {
+                setBottom(null);
+            }
+        });
     }
 
 }
