@@ -101,6 +101,7 @@
                             <skipJNLP>true</skipJNLP>
                             <jvmProperties>
                                 <app.root>$APPDIR</app.root>
+                                <http.agent>Powsybl-Gse</http.agent>
                                 <powsybl.config.dirs>${user_home}/.powsybl:${app.root}/app</powsybl.config.dirs>
                                 <javafx.preloader>com.powsybl.gse.app.GsePreloader</javafx.preloader>
                             </jvmProperties>
@@ -218,6 +219,7 @@
             <version>${project.version}</version>
             <scope>runtime</scope>
         </dependency>
+
 
         <!-- Security analysis -->
         <dependency>

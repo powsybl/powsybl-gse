@@ -20,5 +20,6 @@ public class DefaultStyleSheetLoader implements StyleSheetLoader {
     public void load(Scene scene) {
         scene.getStylesheets().add(getClass().getResource("/css/groovy-keywords.css").toExternalForm());
         scene.getStylesheets().add(getClass().getResource("/css/searchbar.css").toExternalForm());
+        scene.getStylesheets().add(getClass().getResource("/css/fixes.css").toExternalForm());
     }
 }
