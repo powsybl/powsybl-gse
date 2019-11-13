@@ -531,9 +531,6 @@ public class ProjectPane extends Tab {
                         })
                         .collect(Collectors.groupingBy(TreeItem::getParent))
                         .forEach((parent, items) -> parent.getChildren().removeAll(items));
-//                for (TreeItem<Object> parentTreeItem : parentTreeItems) {
-//                    refresh(parentTreeItem);
-//                }
             }
         });
     }
