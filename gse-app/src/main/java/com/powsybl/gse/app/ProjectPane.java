@@ -244,53 +244,6 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private TreeCell<Object> treeViewCellFactory(TreeView<Object> item) {
-
-        return new TreeCell<Object>() {
-
-            private void setForItemObject(Object value) {
-                if (value instanceof String) {
-                    setText((String) value);
-                    setGraphic(getTreeItem().getGraphic());
-                    setTextFill(Color.BLACK);
-                    setOpacity(1);
-                } else if (value instanceof ProjectNode) {
-                    ProjectNode node = (ProjectNode) value;
-                    setText(node.getName());
-                    setGraphic(getTreeItem().getGraphic());
-                    setTextFillColor(value, this);
-                    setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
-                    setOnDragDetected(event -> dragDetectedEvent(getItem(), getTreeItem(), event));
-                    setOnDragOver(event -> dragOverEvent(event, getItem(), getTreeItem(), this));
-                    setOnDragDropped(event -> dragDroppedEvent(getItem(), getTreeItem(), event, node));
-                    setOnDragExited(event -> getStyleClass().removeAll("treecell-drag-over"));
-                } else {
-                    throw new AssertionError();
-                }
-            }
-
-            private void updateNonEmptyItem(Object value) {
-                fillCellInfosForObject(value, this, getTreeItem());
-                if (value == null) {
-                    GseUtil.setWaitingText(this);
-                } else {
-                    setForItemObject(value);
-                }
-            }
-
-            @Override
-            protected void updateItem(Object value, boolean empty) {
-                super.updateItem(value, empty);
-                if (empty) {
-                    setText(null);
-                    setGraphic(null);
-                } else {
-                    updateNonEmptyItem(value);
-                }
-            }
-        };
-    }
-
     private void runDefaultActionAfterDoubleClick(TreeItem<Object> selectedTreeItem) {
         Objects.requireNonNull(selectedTreeItem);
         Object value = selectedTreeItem.getValue();
@@ -321,15 +274,7 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private static void setTextFillColor(Object value, TreeCell<Object> treeCell) {
-        if (value instanceof ProjectFile && ((ProjectFile) value).mandatoryDependenciesAreMissing()) {
-            treeCell.setTextFill(Color.RED);
-        } else {
-            treeCell.setTextFill(Color.BLACK);
-        }
-    }
-
-    private void setDragOverStyle(TreeCell<Object> treeCell) {
+    private void setDragOverStyle(TreeTableCell treeCell) {
         treeCell.getStyleClass().add("treecell-drag-over");
     }
 
@@ -433,80 +378,6 @@ public class ProjectPane extends Tab {
     }
 
     private final CreationTaskList tasks = new CreationTaskList();
-
-    public ProjectPane(Scene scene, Project project, GseContext context) {
-        this.project = Objects.requireNonNull(project);
-        this.context = Objects.requireNonNull(context);
-
-        taskItems = new TaskItemList(project, context);
-        taskMonitorPane = new TaskMonitorPane(taskItems);
-
-        treeView = new TreeView<>();
-        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        treeView.getSelectionModel().getSelectedItems().addListener(this::treeViewChangeListener);
-        treeView.setCellFactory(this::treeViewCellFactory);
-        treeView.setOnMouseClicked(this::treeViewMouseClickHandler);
-        treeView.focusedProperty().addListener((observable, oldValue, newValue) -> {
-            if (!newValue) {
-                treeView.getSelectionModel().clearSelection();
-            }
-        });
-
-        DetachableTabPane ctrlTabPane1 = new DetachableTabPane();
-        DetachableTabPane ctrlTabPane2 = new DetachableTabPane();
-        ctrlTabPane1.setScope("Control");
-        ctrlTabPane2.setScope("Control");
-        Tab projectTab = new Tab(RESOURCE_BUNDLE.getString("Data"), treeView);
-        projectTab.setClosable(false);
-        Tab taskTab = new Tab(RESOURCE_BUNDLE.getString("Tasks"), taskMonitorPane);
-        taskTab.setClosable(false);
-        ctrlTabPane1.getTabs().add(projectTab);
-        ctrlTabPane2.getTabs().add(taskTab);
-        SplitPane ctrlSplitPane = new SplitPane(ctrlTabPane1, ctrlTabPane2);
-        ctrlSplitPane.setOrientation(Orientation.VERTICAL);
-        ctrlSplitPane.setDividerPositions(0.7);
-
-        DetachableTabPane viewTabPane = new DetachableTabPane();
-        viewTabPane.setScope("View");
-        // register accelerators in the new scene
-        viewTabPane.setSceneFactory(tabPane -> {
-            FloatingScene floatingScene = new FloatingScene(tabPane, 400, 400);
-            GseUtil.registerAccelerators(floatingScene);
-            return floatingScene;
-        });
-        // same title and icon for detached windows
-        viewTabPane.setStageOwnerFactory(stage -> {
-            stage.setTitle(((Stage) scene.getWindow()).getTitle());
-            stage.getIcons().addAll(((Stage) scene.getWindow()).getIcons());
-            return scene.getWindow();
-        });
-        // !!! wrap detachable tab pane in a stack pane to avoid spurious resizing (tiwulfx issue?)
-        viewPane = new StackPane(viewTabPane);
-        StackPane ctrlPane = new StackPane(ctrlSplitPane);
-
-        SplitPane splitPane = new SplitPane();
-        splitPane.getItems().addAll(ctrlPane, viewPane);
-        splitPane.setDividerPositions(0.3);
-        SplitPane.setResizableWithParent(ctrlPane, Boolean.FALSE);
-        setText(project.getName());
-        setTooltip(new Tooltip(createProjectTooltip(project)));
-        setContent(splitPane);
-
-        createRootFolderTreeItem(project);
-
-        getContent().setOnKeyPressed((KeyEvent ke) -> {
-            if (saveKeyCombination.match(ke)) {
-                findDetachableTabPanes().stream()
-                        .flatMap(tabPane -> tabPane.getTabs().stream())
-                        .map(tab -> ((MyTab) tab).getViewer())
-                        .forEach(fileViewer -> {
-                            if (fileViewer instanceof Savable && !((Savable) fileViewer).savedProperty().get()) {
-                                ((Savable) fileViewer).save();
-                            }
-                        });
-            }
-        });
-    }
 
     public Project getProject() {
         return project;
