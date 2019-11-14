@@ -11,11 +11,10 @@ import com.google.common.collect.Multimap;
 import com.panemu.tiwulfx.control.DetachableTabPane;
 import com.powsybl.afs.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
+import com.powsybl.gse.copy_paste.afs.CopyManager;
 import com.powsybl.gse.copy_paste.afs.CopyPasteException;
 import com.powsybl.gse.copy_paste.afs.CopyService;
 import com.powsybl.gse.copy_paste.afs.CopyServiceConstants;
-import com.powsybl.gse.copy_paste.afs.exceptions.CopyFailedException;
-import com.powsybl.gse.copy_paste.afs.exceptions.CopyNotFinishedException;
 import com.powsybl.gse.spi.*;
 import com.powsybl.gse.util.*;
 import com.sun.javafx.stage.StageHelper;
@@ -38,7 +37,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Callback;
-import org.apache.commons.lang3.ArrayUtils;
+import javafx.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -739,64 +738,53 @@ public class ProjectPane extends Tab {
 
     private MenuItem createPasteProjectNodeItem(TreeItem<Object> selectedTreeItem) {
         MenuItem pasteMenuItem = GseMenuItem.createPasteMenuItem();
-        final Clipboard clipboard = Clipboard.getSystemClipboard();
         pasteMenuItem.disableProperty().bind(copied.not());
-        pasteMenuItem.setOnAction(event -> {
-            if (selectedTreeItem.getValue() instanceof ProjectFolder) {
-                ProjectFolder projectFolder = (ProjectFolder) selectedTreeItem.getValue();
-                if (clipboard.hasString()) {
-                    String copyInfos = clipboard.getString();
-                    String[] copyNodesIdArray = copyInfos.split(CopyServiceConstants.PATH_SEPARATOR);
-
-                    // the first index {0} represents the copy signature, the second one represents the copy type
-                    String[] nodeIdArray = ArrayUtils.removeAll(copyNodesIdArray, 0, 1, 2);
-                    Arrays.stream(nodeIdArray).forEach(nodeId ->
-                            copyService.ifPresent(cpService -> {
-                                try {
-                                    cpService.paste(copyNodesIdArray[2], nodeId, projectFolder);
-                                } catch (CopyFailedException ex1) {
-                                    //
-
-                                } catch (CopyNotFinishedException ex2) {
-                                    //
-
-                                } catch (CopyPasteException ex) {
-
-                                }
-                            }));
-                    refresh(selectedTreeItem);
-                }
-            }
-            event.consume();
-        });
+        pasteMenuItem.setOnAction(event -> paste(selectedTreeItem));
         return pasteMenuItem;
     }
 
-    private static boolean clipboardContainsProjectNodes(Clipboard systemClipboard) {
-        return systemClipboard.getString().contains(CopyServiceConstants.PROJECTFILE_TYPE) || systemClipboard.getString().contains(CopyServiceConstants.PROJECTFOLDER_TYPE);
+    private void copy(List<? extends TreeItem<Object>> selectedTreeItems) {
+        if (copyService.isPresent()) {
+            CopyService cpService = copyService.get();
+
+            List<ProjectNode> projectNodes = selectedTreeItems.stream()
+                    .map(item -> (ProjectNode) item.getValue())
+                    .collect(Collectors.toList());
+            cpService.copy(projectNodes.get(0).getFileSystem().getName(), projectNodes);
+
+            final Clipboard clipboard = Clipboard.getSystemClipboard();
+            final ClipboardContent content = new ClipboardContent();
+            content.putString(CopyManager.copyParameters(projectNodes).toString());
+            clipboard.setContent(content);
+
+        } else {
+            throw new AfsException("copy service not found");
+        }
     }
 
-    private void copy(List<? extends TreeItem<Object>> selectedTreeItems) {
-        StringBuilder copyParameters = new StringBuilder();
+    private void paste(TreeItem<Object> selectedTreeItem) {
+        if (copyService.isPresent()) {
+            CopyService cpService = copyService.get();
 
-        List<ProjectNode> projectNodes = selectedTreeItems.stream()
-                .map(item -> (ProjectNode) item.getValue())
-                .collect(Collectors.toList());
-        copyService.ifPresent(cpService -> cpService.copy(projectNodes));
+            Optional<Pair<List<String>, String>> copyInfo = getCopyInfo();
+            copyInfo.ifPresent(cpInfo -> {
+                List<String> nodesIds = cpInfo.getKey();
+                String fileSystemName = cpInfo.getValue();
+                try {
+                    cpService.paste(fileSystemName, nodesIds, (ProjectFolder) selectedTreeItem.getValue());
+                } catch (CopyPasteException ex) {
+                    GseAlerts.showDialogError(ex.getMessage());
+                }
+            });
+        } else {
+            throw new AfsException("copy service not found");
+        }
+    }
 
-        copyParameters.append(CopyServiceConstants.COPY_SIGNATURE)
-                .append(CopyServiceConstants.PATH_SEPARATOR)
-                .append(projectNodes.get(0).getClass().toString())
-                .append(CopyServiceConstants.PATH_SEPARATOR)
-                .append(projectNodes.get(0).getFileSystem().getName())
-                .append(CopyServiceConstants.PATH_SEPARATOR);
-
-        projectNodes.forEach(node -> copyParameters.append(node.getId()).append(CopyServiceConstants.PATH_SEPARATOR));
-
+    private static Optional<Pair<List<String>, String>> getCopyInfo() {
         final Clipboard clipboard = Clipboard.getSystemClipboard();
-        final ClipboardContent content = new ClipboardContent();
-        content.putString(copyParameters.toString());
-        clipboard.setContent(content);
+        String clipboardStringContent = clipboard.getString();
+        return CopyManager.getCopyInfo(clipboard, clipboardStringContent);
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {

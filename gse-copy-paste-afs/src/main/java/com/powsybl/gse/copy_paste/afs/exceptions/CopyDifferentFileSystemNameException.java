@@ -13,7 +13,9 @@ import com.powsybl.gse.copy_paste.afs.CopyPasteException;
  */
 public class CopyDifferentFileSystemNameException extends CopyPasteException {
 
-    public CopyDifferentFileSystemNameException(String msg) {
-        super(msg);
+    private static final String MESSAGE = "The copy and paste functions are performed in two different file systems";
+
+    public CopyDifferentFileSystemNameException() {
+        super(MESSAGE);
     }
 }

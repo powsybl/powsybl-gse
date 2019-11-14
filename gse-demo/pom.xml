@@ -175,11 +175,11 @@
             <artifactId>powsybl-afs-local</artifactId>
             <scope>runtime</scope>
         </dependency>
-        <dependency>
+     <!--   <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>powsybl-gse-copypaste-afs-local</artifactId>
             <version>${project.version}</version>
-        </dependency>
+        </dependency>-->
 
         <!-- Converters -->
         <dependency>
@@ -221,12 +221,6 @@
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-gse-network-map</artifactId>
-            <version>${project.version}</version>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-gse-copypaste-afs-local</artifactId>
             <version>${project.version}</version>
             <scope>runtime</scope>
         </dependency>

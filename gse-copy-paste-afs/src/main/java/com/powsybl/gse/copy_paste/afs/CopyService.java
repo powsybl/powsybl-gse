@@ -15,7 +15,7 @@ import java.util.List;
  */
 public interface CopyService {
 
-    void copy(List<? extends AbstractNodeBase> nodes);
+    void copy(String fileSystemName, List<? extends AbstractNodeBase> nodes);
 
-    void paste(String fileSystemName, String nodeId, AbstractNodeBase folder) throws CopyPasteException;
+    void paste(String fileSystemName, List<String> nodesIds, AbstractNodeBase folder) throws CopyPasteException;
 }

@@ -13,7 +13,9 @@ import com.powsybl.gse.copy_paste.afs.CopyPasteException;
  */
 public class CopyFailedException extends CopyPasteException {
 
-    public CopyFailedException(String msg) {
-        super(msg);
+    private static final String MESSAGE = "copying Nodes failed";
+
+    public CopyFailedException() {
+        super(MESSAGE);
     }
 }
