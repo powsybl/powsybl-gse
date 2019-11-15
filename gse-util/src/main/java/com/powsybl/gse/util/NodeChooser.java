@@ -235,6 +235,11 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     public NodeChooser(Window window, TreeModel<N, F, D> treeModel, AppData appData, GseContext context,
                        BiPredicate<N, TreeModel<N, F, D>> filter, Set<String>... openedProjectsList) {
+        this(window, treeModel, appData, context, filter, null, openedProjectsList);
+    }
+
+    public NodeChooser(Window window, TreeModel<N, F, D> treeModel, AppData appData, GseContext context,
+                       BiPredicate<N, TreeModel<N, F, D>> filter, Boolean writableFsDisplayPriority, Set<String>... openedProjectsList) {
         this.window = Objects.requireNonNull(window);
         this.treeModel = Objects.requireNonNull(treeModel);
         this.appData = Objects.requireNonNull(appData);
@@ -338,12 +343,18 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         add(scrollPane, 0, 1, 2, 1);
         context.getExecutor().submit(() -> {
             try {
-                List<TreeItem<N>> nodes = new ArrayList<>();
-                for (D rootFolder : treeModel.getRootFolders()) {
-                    TreeItem<N> node = createCollapsedFolderItem(rootFolder);
-                    node.setExpanded(true);
-                    nodes.add(node);
-                }
+                List<TreeItem<N>> nodes = treeModel
+                        .getRootFolders()
+                        .stream()
+                        .map(rootFolder -> {
+                            TreeItem<N> node = createCollapsedFolderItem(rootFolder);
+                            if (writableFsDisplayPriority == null || writableFsDisplayPriority == treeModel.isWritable(rootFolder)) {
+                                node.setExpanded(true);
+                            }
+                            return node;
+                        })
+                        .sorted(Comparator.comparing(item -> !item.isExpanded()))
+                        .collect(Collectors.toList());
                 Platform.runLater(() -> {
                     rootItem.getChildren().setAll(nodes);
                     // select first root
@@ -770,11 +781,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         }
     }
 
-    public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context,
-                                                                 BiPredicate<Node, TreeModel<Node, File, Folder>> filter) {
-        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, filter);
-    }
-
     private static <N, T extends N> boolean testNode(N node, Class<T> filter, Class<?>... otherFilters) {
         if (!filter.isAssignableFrom(node.getClass())) {
             return false;
@@ -787,12 +793,30 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         return true;
     }
 
+    public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Boolean writableFsPriorityDisplay, Class<T> filter, Class<?>... otherFilters) {
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, writableFsPriorityDisplay, (node, treeModel) -> testNode(node, filter, otherFilters));
+    }
+
     public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Class<T> filter, Class<?>... otherFilters) {
         return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters));
     }
 
+    public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Boolean writableFsPriorityDisplay, Class<T> filter, Set<String> openedProjectsList, Class<?>... otherFilters) {
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, writableFsPriorityDisplay, (node, treeModel) -> testNode(node, filter, otherFilters), openedProjectsList);
+    }
+
     public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Class<T> filter, Set<String> openedProjectsList, Class<?>... otherFilters) {
         return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters), openedProjectsList);
+    }
+
+    public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Boolean writableFsPriorityDisplay,
+                                                                 BiPredicate<Node, TreeModel<Node, File, Folder>> filter) {
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, writableFsPriorityDisplay, filter);
+    }
+
+    public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context,
+                                                                 BiPredicate<Node, TreeModel<Node, File, Folder>> filter) {
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, filter);
     }
 
     public static <T extends ProjectNode> Optional<T> showAndWaitDialog(Project project, Window window, GseContext context, BiPredicate<ProjectNode, TreeModel<ProjectNode, ProjectFile, ProjectFolder>> filter) {
@@ -807,9 +831,15 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     public static <N, F extends N, D extends N, T extends N> Optional<T> showAndWaitDialog(
             TreeModel<N, F, D> treeModel, Window window, AppData appData, GseContext context,
             BiPredicate<N, TreeModel<N, F, D>> filter, Set<String>... openedProjectsList) {
+        return showAndWaitDialog(treeModel, window, appData, context, null, filter, openedProjectsList);
+    }
+
+    public static <N, F extends N, D extends N, T extends N> Optional<T> showAndWaitDialog(
+            TreeModel<N, F, D> treeModel, Window window, AppData appData, GseContext context, Boolean writableFsPriorityDisplay,
+            BiPredicate<N, TreeModel<N, F, D>> filter, Set<String>... openedProjectsList) {
         Dialog<T> dialog = null;
         try {
-            NodeChooser<N, F, D, T> nodeChooser = new NodeChooser<>(window, treeModel, appData, context, filter, openedProjectsList);
+            NodeChooser<N, F, D, T> nodeChooser = new NodeChooser<>(window, treeModel, appData, context, filter, writableFsPriorityDisplay, openedProjectsList);
             Callback<ButtonType, T> resultConverter = buttonType -> buttonType == ButtonType.OK ? nodeChooser.selectedNodeProperty().get() : null;
             dialog = new GseDialog<>(RESOURCE_BUNDLE.getString("OpenFile"), nodeChooser, window, nodeChooser.selectedNodeProperty().isNull(), resultConverter);
             Button button = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
