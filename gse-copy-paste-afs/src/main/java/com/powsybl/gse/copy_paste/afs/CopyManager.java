@@ -58,7 +58,12 @@ public final class CopyManager {
 
             tPool.execute(() -> {
                 // create task
-
+                TaskMonitor.Task task;
+                if (node instanceof ProjectNode) {
+                    task = ((ProjectNode) node).getFileSystem().getTaskMonitor().startTask(node.getName(), ((ProjectNode) node).getProject());
+                } else {
+                    task = null;
+                }
                 synchronized (copyLock) {
                     try {
                         archiveAndCopy(node);
@@ -69,6 +74,9 @@ public final class CopyManager {
                     }
 
                     // end task
+                    if (node instanceof ProjectNode) {
+                        ((ProjectNode) node).getFileSystem().getTaskMonitor().stopTask(task.getId());
+                    }
                 }
             });
 

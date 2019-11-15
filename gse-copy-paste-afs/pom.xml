@@ -5,18 +5,18 @@
     <parent>
         <artifactId>powsybl-gse</artifactId>
         <groupId>com.powsybl</groupId>
-        <version>1.7.0-SNAPSHOT</version>
+        <version>1.8.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>powsybl-gse-copy-paste-afs</artifactId>
+    <name>Copy paste manager</name>
 
 
     <dependencies>
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-afs-core</artifactId>
-            <version>${powsyblcore.version}</version>
         </dependency>
     </dependencies>
 
