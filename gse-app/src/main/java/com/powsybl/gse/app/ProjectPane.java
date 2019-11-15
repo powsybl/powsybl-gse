@@ -11,17 +11,12 @@ import com.google.common.collect.Multimap;
 import com.panemu.tiwulfx.control.DetachableTabPane;
 import com.powsybl.afs.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
-import com.powsybl.gse.copy_paste.afs.CopyManager;
-import com.powsybl.gse.copy_paste.afs.CopyPasteException;
-import com.powsybl.gse.copy_paste.afs.CopyService;
-import com.powsybl.gse.copy_paste.afs.CopyServiceConstants;
 import com.powsybl.gse.spi.*;
 import com.powsybl.gse.util.*;
 import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -37,10 +32,12 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Callback;
-import javafx.util.Pair;
+import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -56,105 +53,9 @@ public class ProjectPane extends Tab {
     private static final ServiceLoaderCache<ProjectFileCreatorExtension> CREATOR_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileCreatorExtension.class);
     private static final ServiceLoaderCache<ProjectFileEditorExtension> EDITOR_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileEditorExtension.class);
     private static final ServiceLoaderCache<ProjectFileViewerExtension> VIEWER_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileViewerExtension.class);
-
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
     private static final String STAR_NOTIFICATION = " *";
     private final KeyCombination saveKeyCombination = new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
-
-    private BooleanProperty copied = new SimpleBooleanProperty(false);
-
-    private Optional<CopyService> copyService;
-
-    private static class TabKey {
-
-        private final String nodeId;
-
-        private final Class<?> viewerClass;
-
-        public TabKey(String nodeId, Class<?> viewerClass) {
-            this.nodeId = Objects.requireNonNull(nodeId);
-            this.viewerClass = Objects.requireNonNull(viewerClass);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(nodeId, viewerClass);
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj instanceof TabKey) {
-                TabKey other = (TabKey) obj;
-                return nodeId.equals(other.nodeId) && viewerClass.equals(other.viewerClass);
-            }
-            return false;
-        }
-    }
-
-    public static class MyTab extends Tab {
-
-        private ProjectFileViewer viewer;
-
-        private final KeyCombination closeKeyCombination = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN);
-
-        private final KeyCombination closeAllKeyCombination = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
-
-        public MyTab(String text, ProjectFileViewer viewer) {
-            super(text, viewer.getContent());
-            this.viewer = viewer;
-            onKeyPressed();
-            setContextMenu(contextMenu());
-        }
-
-        private void onKeyPressed() {
-            getContent().setOnKeyPressed((KeyEvent ke) -> {
-                if (closeKeyCombination.match(ke)) {
-                    closeTab(ke, this);
-                    ke.consume();
-                } else if (closeAllKeyCombination.match(ke)) {
-                    List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
-                            .map(tab -> (MyTab) tab)
-                            .collect(Collectors.toList()));
-                    mytabs.forEach(mytab -> closeTab(ke, mytab));
-                    ke.consume();
-                }
-            });
-        }
-
-        private ContextMenu contextMenu() {
-            MenuItem closeMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Close"));
-            MenuItem closeAllMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("CloseAll"));
-            closeMenuItem.setOnAction(event -> closeTab(event, this));
-            closeAllMenuItem.setOnAction(event -> {
-                List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()
-                        .map(tab -> (MyTab) tab)
-                        .collect(Collectors.toList()));
-                mytabs.forEach(mytab -> closeTab(event, mytab));
-            });
-            return new ContextMenu(closeMenuItem, closeAllMenuItem);
-        }
-
-        public ProjectFileViewer getViewer() {
-            return viewer;
-        }
-
-        public void requestClose() {
-            getTabPane().getTabs().remove(this);
-            if (getOnClosed() != null) {
-                Event.fireEvent(this, new Event(Tab.CLOSED_EVENT));
-            }
-        }
-
-        private static void closeTab(Event event, MyTab tab) {
-            if (!tab.getViewer().isClosable()) {
-                event.consume();
-            } else {
-                tab.getTabPane().getTabs().remove(tab);
-                tab.getViewer().dispose();
-            }
-        }
-    }
-
     private boolean success;
     private DragAndDropMove dragAndDropMove;
     private final Project project;
@@ -478,89 +379,6 @@ public class ProjectPane extends Tab {
 
     private final CreationTaskList tasks = new CreationTaskList();
 
-    public ProjectPane(Scene scene, Project project, GseContext context) {
-        this.project = Objects.requireNonNull(project);
-        this.context = Objects.requireNonNull(context);
-
-        taskItems = new TaskItemList(project, context);
-        taskMonitorPane = new TaskMonitorPane(taskItems);
-
-        copyService = Optional.of(project.getRootFolder().findService(CopyService.class));
-
-        treeView = new TreeView<>();
-        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        treeView.getSelectionModel().getSelectedItems().addListener(this::treeViewChangeListener);
-        treeView.setCellFactory(this::treeViewCellFactory);
-        treeView.setOnMouseClicked(this::treeViewMouseClickHandler);
-
-        DetachableTabPane ctrlTabPane1 = new DetachableTabPane();
-        DetachableTabPane ctrlTabPane2 = new DetachableTabPane();
-        ctrlTabPane1.setScope("Control");
-        ctrlTabPane2.setScope("Control");
-        Tab projectTab = new Tab(RESOURCE_BUNDLE.getString("Data"), treeView);
-        projectTab.setClosable(false);
-        Tab taskTab = new Tab(RESOURCE_BUNDLE.getString("Tasks"), taskMonitorPane);
-        taskTab.setClosable(false);
-        ctrlTabPane1.getTabs().add(projectTab);
-        ctrlTabPane2.getTabs().add(taskTab);
-        SplitPane ctrlSplitPane = new SplitPane(ctrlTabPane1, ctrlTabPane2);
-        ctrlSplitPane.setOrientation(Orientation.VERTICAL);
-        ctrlSplitPane.setDividerPositions(0.7);
-
-        DetachableTabPane viewTabPane = new DetachableTabPane();
-        viewTabPane.setScope("View");
-        // register accelerators in the new scene
-        viewTabPane.setSceneFactory(tabPane -> {
-            FloatingScene floatingScene = new FloatingScene(tabPane, 400, 400);
-            GseUtil.registerAccelerators(floatingScene);
-            return floatingScene;
-        });
-        // same title and icon for detached windows
-        viewTabPane.setStageOwnerFactory(stage -> {
-            stage.setTitle(((Stage) scene.getWindow()).getTitle());
-            stage.getIcons().addAll(((Stage) scene.getWindow()).getIcons());
-            return scene.getWindow();
-        });
-        // !!! wrap detachable tab pane in a stack pane to avoid spurious resizing (tiwulfx issue?)
-        viewPane = new StackPane(viewTabPane);
-        StackPane ctrlPane = new StackPane(ctrlSplitPane);
-
-        SplitPane splitPane = new SplitPane();
-        splitPane.getItems().addAll(ctrlPane, viewPane);
-        splitPane.setDividerPositions(0.3);
-        SplitPane.setResizableWithParent(ctrlPane, Boolean.FALSE);
-        setText(project.getName());
-        setTooltip(new Tooltip(createProjectTooltip(project)));
-        setContent(splitPane);
-
-        createRootFolderTreeItem(project);
-
-        getContent().setOnKeyPressed((KeyEvent ke) -> {
-            if (saveKeyCombination.match(ke)) {
-                findDetachableTabPanes().stream()
-                        .flatMap(tabPane -> tabPane.getTabs().stream())
-                        .map(tab -> ((MyTab) tab).getViewer())
-                        .forEach(fileViewer -> {
-                            if (fileViewer instanceof Savable && !((Savable) fileViewer).savedProperty().get()) {
-                                ((Savable) fileViewer).save();
-                            }
-                        });
-            }
-        });
-
-        final Clipboard systemClipboard = Clipboard.getSystemClipboard();
-        new com.sun.glass.ui.ClipboardAssistance(com.sun.glass.ui.Clipboard.SYSTEM) {
-            @Override
-            public void contentChanged() {
-                if (systemClipboard != null && systemClipboard.hasString() && systemClipboard.getString() != null) {
-                    String clipBoard = systemClipboard.getString();
-                    copied.set(clipBoard.contains(CopyServiceConstants.COPY_SIGNATURE) && !clipBoard.contains(CopyServiceConstants.PROJECT_TYPE)
-                            && !clipBoard.contains(CopyServiceConstants.FOLDER_TYPE));
-                }
-            }
-        };
-    }
-
     public Project getProject() {
         return project;
     }
@@ -690,7 +508,7 @@ public class ProjectPane extends Tab {
     // contextual menu
 
     private MenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
-        MenuItem deleteMenuItem = GseMenuItem.createDeleteMenuItem();
+        MenuItem deleteMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size("1.1em"));
         deleteMenuItem.setOnAction(event -> deleteNodesAlert(selectedTreeItems));
         return deleteMenuItem;
     }
@@ -726,65 +544,6 @@ public class ProjectPane extends Tab {
             }
         }
         return found;
-    }
-
-    private MenuItem createCopyProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
-        MenuItem copyMenuItem = GseMenuItem.createCopyMenuItem();
-        List<TreeItem<Object>> selectedItems = new ArrayList<>(selectedTreeItems);
-        copyMenuItem.setDisable(ancestorsExistIn(selectedItems) || selectedItems.contains(treeView.getRoot()));
-        copyMenuItem.setOnAction(event -> copy(selectedTreeItems));
-        return copyMenuItem;
-    }
-
-    private MenuItem createPasteProjectNodeItem(TreeItem<Object> selectedTreeItem) {
-        MenuItem pasteMenuItem = GseMenuItem.createPasteMenuItem();
-        pasteMenuItem.disableProperty().bind(copied.not());
-        pasteMenuItem.setOnAction(event -> paste(selectedTreeItem));
-        return pasteMenuItem;
-    }
-
-    private void copy(List<? extends TreeItem<Object>> selectedTreeItems) {
-        if (copyService.isPresent()) {
-            CopyService cpService = copyService.get();
-
-            List<ProjectNode> projectNodes = selectedTreeItems.stream()
-                    .map(item -> (ProjectNode) item.getValue())
-                    .collect(Collectors.toList());
-            cpService.copy(projectNodes.get(0).getFileSystem().getName(), projectNodes);
-
-            final Clipboard clipboard = Clipboard.getSystemClipboard();
-            final ClipboardContent content = new ClipboardContent();
-            content.putString(CopyManager.copyParameters(projectNodes).toString());
-            clipboard.setContent(content);
-
-        } else {
-            throw new AfsException("copy service not found");
-        }
-    }
-
-    private void paste(TreeItem<Object> selectedTreeItem) {
-        if (copyService.isPresent()) {
-            CopyService cpService = copyService.get();
-
-            Optional<Pair<List<String>, String>> copyInfo = getCopyInfo();
-            copyInfo.ifPresent(cpInfo -> {
-                List<String> nodesIds = cpInfo.getKey();
-                String fileSystemName = cpInfo.getValue();
-                try {
-                    cpService.paste(fileSystemName, nodesIds, (ProjectFolder) selectedTreeItem.getValue());
-                } catch (CopyPasteException ex) {
-                    GseAlerts.showDialogError(ex.getMessage());
-                }
-            });
-        } else {
-            throw new AfsException("copy service not found");
-        }
-    }
-
-    private static Optional<Pair<List<String>, String>> getCopyInfo() {
-        final Clipboard clipboard = Clipboard.getSystemClipboard();
-        String clipboardStringContent = clipboard.getString();
-        return CopyManager.getCopyInfo(clipboard, clipboardStringContent);
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
@@ -992,7 +751,6 @@ public class ProjectPane extends Tab {
         contextMenu.getItems().add(menu);
         contextMenu.getItems().add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         contextMenu.getItems().add(createRenameProjectNodeItem(selectedTreeItem));
-        contextMenu.getItems().add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         return contextMenu;
     }
 
@@ -1013,7 +771,6 @@ public class ProjectPane extends Tab {
     private ContextMenu createMultipleContextMenu(List<? extends TreeItem<Object>> selectedTreeItems) {
         ContextMenu contextMenu = new ContextMenu();
         contextMenu.getItems().add(createDeleteProjectNodeItem(selectedTreeItems));
-        contextMenu.getItems().add(createCopyProjectNodeItem(selectedTreeItems));
         return contextMenu;
     }
 
@@ -1075,6 +832,7 @@ public class ProjectPane extends Tab {
                 if (creatorExtension != null) {
                     MenuItem menuItem = new MenuItem(creatorExtension.getMenuText());
                     menuItem.setGraphic(creatorExtension.getMenuGraphic());
+                    menuItem.setAccelerator(creatorExtension.getMenuKeycode());
                     menuItem.setOnAction(event -> showProjectItemCreatorDialog(selectedTreeItem, creatorExtension));
                     items.add(menuItem);
                 }
@@ -1083,9 +841,7 @@ public class ProjectPane extends Tab {
         if (selectedTreeItem != treeView.getRoot()) {
             items.add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
             items.add(createRenameProjectNodeItem(selectedTreeItem));
-            items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         }
-        items.add(createPasteProjectNodeItem(selectedTreeItem));
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
                 .collect(Collectors.toList()));
