@@ -12,9 +12,9 @@ import com.panemu.tiwulfx.control.DetachableTabPane;
 import com.powsybl.afs.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.copy_paste.afs.CopyManager;
-import com.powsybl.gse.copy_paste.afs.CopyPasteException;
 import com.powsybl.gse.copy_paste.afs.CopyService;
 import com.powsybl.gse.copy_paste.afs.CopyServiceConstants;
+import com.powsybl.gse.copy_paste.afs.exceptions.CopyPasteException;
 import com.powsybl.gse.spi.*;
 import com.powsybl.gse.util.*;
 import com.sun.javafx.stage.StageHelper;
@@ -576,12 +576,20 @@ public class ProjectPane extends Tab {
             List<ProjectNode> projectNodes = selectedTreeItems.stream()
                     .map(item -> (ProjectNode) item.getValue())
                     .collect(Collectors.toList());
-            cpService.copy(projectNodes.get(0).getFileSystem().getName(), projectNodes);
+            try {
+                cpService.copy(projectNodes.get(0).getFileSystem().getName(), projectNodes);
+                final Clipboard clipboard = Clipboard.getSystemClipboard();
+                final ClipboardContent content = new ClipboardContent();
+                content.putString(CopyManager.copyParameters(projectNodes).toString());
+                clipboard.setContent(content);
 
-            final Clipboard clipboard = Clipboard.getSystemClipboard();
-            final ClipboardContent content = new ClipboardContent();
-            content.putString(CopyManager.copyParameters(projectNodes).toString());
-            clipboard.setContent(content);
+            } catch (CopyPasteException e) {
+                LOGGER.error("Failed to copy nodes {}", projectNodes, e);
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle(RESOURCE_BUNDLE.getString("CopyErrorTitle"));
+                alert.setContentText(RESOURCE_BUNDLE.getString("CopyErrorGeneric"));
+                alert.showAndWait();
+            }
 
         } else {
             throw new AfsException("copy service not found");
@@ -833,7 +841,9 @@ public class ProjectPane extends Tab {
         contextMenu.getItems().add(menu);
         contextMenu.getItems().add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         contextMenu.getItems().add(createRenameProjectNodeItem(selectedTreeItem));
-        contextMenu.getItems().add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+        if (copyService.isPresent()) {
+            contextMenu.getItems().add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+        }
         return contextMenu;
     }
 
@@ -854,7 +864,9 @@ public class ProjectPane extends Tab {
     private ContextMenu createMultipleContextMenu(List<? extends TreeItem<Object>> selectedTreeItems) {
         ContextMenu contextMenu = new ContextMenu();
         contextMenu.getItems().add(createDeleteProjectNodeItem(selectedTreeItems));
-        contextMenu.getItems().add(createCopyProjectNodeItem(selectedTreeItems));
+        if (copyService.isPresent()) {
+            contextMenu.getItems().add(createCopyProjectNodeItem(selectedTreeItems));
+        }
         return contextMenu;
     }
 
@@ -925,9 +937,13 @@ public class ProjectPane extends Tab {
         if (selectedTreeItem != treeView.getRoot()) {
             items.add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
             items.add(createRenameProjectNodeItem(selectedTreeItem));
-            items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+            if (copyService.isPresent()) {
+                items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+            }
         }
-        items.add(createPasteProjectNodeItem(selectedTreeItem));
+        if (copyService.isPresent()) {
+            items.add(createPasteProjectNodeItem(selectedTreeItem));
+        }
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
                 .collect(Collectors.toList()));

@@ -6,14 +6,12 @@
  */
 package com.powsybl.gse.copy_paste.afs.exceptions;
 
-import com.powsybl.gse.copy_paste.afs.CopyPasteException;
-
 /**
  * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
  */
 public class CopyNotFinishedException extends CopyPasteException {
 
-    private static final String MESSAGE = "Nodes copying are still ongoing";
+    public static final String MESSAGE = "Nodes copying are still ongoing";
 
     public CopyNotFinishedException() {
         super(MESSAGE);

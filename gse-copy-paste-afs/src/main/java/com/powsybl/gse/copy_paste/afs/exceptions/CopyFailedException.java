@@ -6,16 +6,18 @@
  */
 package com.powsybl.gse.copy_paste.afs.exceptions;
 
-import com.powsybl.gse.copy_paste.afs.CopyPasteException;
-
 /**
  * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
  */
 public class CopyFailedException extends CopyPasteException {
 
-    private static final String MESSAGE = "copying Nodes failed";
+    public static final String MESSAGE = "copying Nodes failed";
 
     public CopyFailedException() {
         super(MESSAGE);
+    }
+
+    public CopyFailedException(Throwable throwable) {
+        super(MESSAGE, throwable);
     }
 }

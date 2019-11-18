@@ -15,8 +15,6 @@ public final class CopyServiceConstants {
     public static final String PROJECT_TYPE = "com.powsybl.afs.Project";
     public static final String FOLDER_TYPE = "com.powsybl.afs.Folder";
     public static final long COPY_EXPIRATION_TIME = 12;
-    public static final long CLEANUP_DELAY = 36000;
-    public static final long CLEANUP_PERIOD = 180000;
     public static final String TEMPORARY_NAME = "temporaryName";
 
     private CopyServiceConstants() {

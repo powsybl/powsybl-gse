@@ -8,10 +8,10 @@ package com.powsybl.gse.util;
 
 import com.powsybl.afs.*;
 import com.powsybl.gse.copy_paste.afs.CopyManager;
-import com.powsybl.gse.copy_paste.afs.CopyPasteException;
 import com.powsybl.gse.copy_paste.afs.CopyService;
 import com.powsybl.gse.copy_paste.afs.CopyServiceConstants;
 import com.powsybl.gse.copy_paste.afs.exceptions.CopyDifferentFileSystemNameException;
+import com.powsybl.gse.copy_paste.afs.exceptions.CopyPasteException;
 import com.powsybl.gse.spi.GseContext;
 import impl.org.controlsfx.skin.BreadCrumbBarSkin;
 import javafx.application.Platform;
@@ -253,7 +253,8 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         tree.setShowRoot(false);
         rootItem.getChildren().add(new TreeItem<>());
 
-        copyService = Optional.of(((Folder) treeModel.getRootFolders().toArray()[0]).findService(CopyService.class));
+        copyService = treeModel.getRootFolders().stream().filter(el -> el instanceof Folder).findAny().map(root -> ((Folder) root).findService(CopyService.class));
+
         TreeTableColumn<N, N> fileColumn = new TreeTableColumn<>(RESOURCE_BUNDLE.getString("File"));
         fileColumn.setPrefWidth(415);
         fileColumn.setCellValueFactory((TreeTableColumn.CellDataFeatures<N, N> callback) -> {
@@ -585,7 +586,9 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private ContextMenu createMultipleContextMenu(List<? extends TreeItem<N>> selectedTreeItems) {
         ContextMenu contextMenu = new ContextMenu();
         contextMenu.getItems().add(createDeleteNodeMenuItem(selectedTreeItems));
-        contextMenu.getItems().add(createCopyProjectNodeItem(selectedTreeItems));
+        if (copyService.isPresent()) {
+            contextMenu.getItems().add(createCopyProjectNodeItem(selectedTreeItems));
+        }
         return contextMenu;
     }
 
@@ -596,8 +599,10 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         items.add(createRenameProjectMenuItem());
         items.add(createCreateFolderMenuItem());
         if (value instanceof Folder && ((Folder) value).isWritable()) {
-            items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
-            items.add(createPasteProjectNodeItem(selectedTreeItem));
+            if (copyService.isPresent()) {
+                items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+                items.add(createPasteProjectNodeItem(selectedTreeItem));
+            }
             items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
         }
         contextMenu.getItems().addAll(items.stream()
@@ -610,7 +615,9 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         ContextMenu contextMenu = new ContextMenu();
         List<MenuItem> items = new ArrayList<>();
         items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
-        items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+        if (copyService.isPresent()) {
+            items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+        }
         items.add(createRenameProjectMenuItem());
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
@@ -654,7 +661,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         copyMenuItem.setOnAction(event -> {
             try {
                 copy(selectedTreeItems);
-            } catch (CopyDifferentFileSystemNameException ex) {
+            } catch (CopyPasteException ex) {
                 GseAlerts.showDialogError(ex.getMessage());
             }
         });
@@ -668,7 +675,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         return pasteMenuItem;
     }
 
-    private void copy(List<? extends TreeItem<N>> selectedTreeItems) throws CopyDifferentFileSystemNameException {
+    private void copy(List<? extends TreeItem<N>> selectedTreeItems) throws CopyPasteException {
         if (copyService.isPresent()) {
             CopyService cpService = copyService.get();
 
@@ -678,7 +685,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
             // check if all selected nodes have the same file system and throw an exception if not
             long count = nodes.stream().map(node -> node.getFileSystem().getName()).distinct().count();
-            if (count <= 1) {
+            if (count == 1) {
                 cpService.copy(nodes.get(0).getFileSystem().getName(), nodes);
             } else {
                 throw new CopyDifferentFileSystemNameException();
