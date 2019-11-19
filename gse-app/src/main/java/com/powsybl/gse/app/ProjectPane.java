@@ -616,11 +616,7 @@ public class ProjectPane extends Tab {
                     try {
                         cpService.paste(fileSystemName, nodesIds, projectFolder);
                         Platform.runLater(() -> {
-                            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                            alert.setTitle(RESOURCE_BUNDLE.getString("PasteComplete"));
-                            alert.setResizable(false);
-                            alert.setContentText(String.format(RESOURCE_BUNDLE.getString("PasteCompleteDetails"), nodesIds.size(), projectFolder.getName()));
-                            alert.showAndWait();
+                            GseAlerts.showPasteCompleteInfo(nodesIds.size(), projectFolder.getName());
                         });
                     } catch (CopyPasteException ex) {
                         Platform.runLater(() -> GseAlerts.showDialogError(ex.getMessage()));
