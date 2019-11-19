@@ -6,22 +6,28 @@
  */
 package com.powsybl.gse.afs.ext.base;
 
+import com.google.common.io.Files;
+import com.powsybl.afs.AfsException;
 import com.powsybl.afs.ProjectFolder;
-import com.powsybl.afs.ext.base.Case;
 import com.powsybl.afs.ext.base.ImportedCaseBuilder;
+import com.powsybl.commons.datasource.FileDataSource;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectCreationTask;
 import com.powsybl.gse.spi.ProjectFileCreator;
-import com.powsybl.gse.util.NodeSelectionPane;
+import com.powsybl.gse.util.GseUtil;
 import com.powsybl.iidm.parameters.Parameter;
 import javafx.beans.binding.BooleanBinding;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.stage.FileChooser;
 
+import java.io.File;
 import java.util.*;
+import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
 
 /**
@@ -35,15 +41,21 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
 
     private final VBox parametersBox = new VBox(10);
 
-    private final NodeSelectionPane<Case> caseSelectionPane;
+    private final Preferences preferences;
+
+    private final TextField caseFileTextField = new TextField();
+
+    private final Button caseFileButton = new Button("...");
+
+    private final SimpleObjectProperty<File> caseFileProperty = new SimpleObjectProperty<>();
 
     private final Map<String, String> parametersValue = new HashMap<>();
 
     ImportedCaseCreator(ProjectFolder folder, Scene scene, GseContext context) {
         this.folder = Objects.requireNonNull(folder);
         Objects.requireNonNull(scene);
-        caseSelectionPane = new NodeSelectionPane<>(folder.getFileSystem().getData(), RESOURCE_BUNDLE.getString("Case"),
-                                                    scene.getWindow(), context, Case.class);
+        preferences = Preferences.userNodeForPackage(getClass());
+
         setVgap(5);
         setHgap(5);
         setPrefWidth(450);
@@ -56,9 +68,9 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
         RowConstraints row2 = new RowConstraints();
         row2.setVgrow(Priority.ALWAYS);
         getRowConstraints().addAll(row0, row1, row2);
-        add(caseSelectionPane.getLabel(), 0, 0);
-        add(caseSelectionPane.getTextField(), 1, 0);
-        add(caseSelectionPane.getButton(), 2, 0);
+        add(new Label(RESOURCE_BUNDLE.getString("XiidmFile") + ":"), 0, 0);
+        add(caseFileTextField, 1, 0);
+        add(caseFileButton, 2, 0);
         add(new Label(RESOURCE_BUNDLE.getString("Parameters")), 0, 1, 1, 1);
         add(new Separator(), 1, 1, 2, 1);
         ScrollPane scrollPane = new ScrollPane();
@@ -68,7 +80,30 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
         parametersBox.setPrefHeight(250);
         parametersBox.setPadding(new Insets(5, 5, 5, 5));
         add(scrollPane, 0, 2, 3, 1);
-        caseSelectionPane.nodeProperty().addListener((observable, oldCase, newCase) -> {
+        caseFileButton.setOnAction(event -> {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle(RESOURCE_BUNDLE.getString("SelectXiidmFile"));
+            String lastPath = preferences.get("caseLastSelectedPath", "");
+            File lastPathFile = new File(lastPath);
+            if (!lastPath.isEmpty() && lastPathFile.exists()) {
+                fileChooser.setInitialDirectory(lastPathFile);
+            }
+            File file = fileChooser.showOpenDialog(scene.getWindow());
+            if (file != null) {
+                caseFileTextField.setText(file.toString());
+                caseFileProperty.setValue(file);
+
+                context.getExecutor().execute(() -> {
+                    String name = Files.getNameWithoutExtension(caseFileProperty.getValue().toString());
+
+                    if (folder.getChild(name).isPresent()) {
+                        GseUtil.showDialogError(new AfsException(String.format(RESOURCE_BUNDLE.getString("NodeAlreadyExists"), name)));
+                    }
+                });
+                preferences.put("caseLastSelectedPath", file.getParent());
+            }
+        });
+        /*caseSelectionPane.nodeProperty().addListener((observable, oldCase, newCase) -> {
             if (newCase != null) {
                 List<javafx.scene.Node> parameterNodes = new ArrayList<>();
                 for (Parameter parameter : newCase.getImporter().getParameters()) {
@@ -90,7 +125,7 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
             } else {
                 parametersBox.getChildren().clear();
             }
-        });
+        });*/
     }
 
     private javafx.scene.Node createBooleanComponent(Parameter parameter) {
@@ -121,18 +156,21 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
 
     @Override
     public ProjectCreationTask createTask() {
-        Case aCase = caseSelectionPane.nodeProperty().getValue();
+        String name = Files.getNameWithoutExtension(caseFileProperty.getValue().toString());
+        FileDataSource fileDataSource = new FileDataSource(caseFileProperty.getValue().toPath().getParent(), name);
+
         return new ProjectCreationTask() {
 
             @Override
             public String getNamePreview() {
-                return aCase.getName();
+                return name;
             }
 
             @Override
             public void run() {
                 folder.fileBuilder(ImportedCaseBuilder.class)
-                        .withCase(aCase)
+                        .withDatasource(fileDataSource)
+                        .withName(name)
                         .withParameters(parametersValue)
                         .build();
             }
@@ -151,13 +189,13 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
 
     @Override
     public Node getContent() {
-        caseSelectionPane.nodeProperty().setValue(null);
+        caseFileProperty.setValue(null);
         return this;
     }
 
     @Override
     public BooleanBinding okProperty() {
-        return caseSelectionPane.nodeProperty().isNotNull();
+        return caseFileProperty.isNotNull();
     }
 
     @Override
