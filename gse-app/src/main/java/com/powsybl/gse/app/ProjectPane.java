@@ -81,7 +81,7 @@ public class ProjectPane extends Tab {
 
         taskItems = new TaskItemList(project, context);
         taskMonitorPane = new TaskMonitorPane(taskItems);
-        copyService = Optional.of(project.getRootFolder().findService(CopyService.class));
+        copyService = initCopyService();
         treeView = createProjectTreeview();
 
         DetachableTabPane ctrlTabPane1 = new DetachableTabPane();
@@ -150,6 +150,15 @@ public class ProjectPane extends Tab {
                 }
             }
         };
+    }
+
+    private Optional<CopyService> initCopyService() {
+        try {
+            return Optional.of(project.getRootFolder().findService(CopyService.class));
+        } catch (AfsException e) {
+            LOGGER.warn("Failed to initiate copy service", e);
+        }
+        return Optional.empty();
     }
 
     private TreeTableView<Object> createProjectTreeview() {
@@ -585,10 +594,7 @@ public class ProjectPane extends Tab {
 
             } catch (CopyPasteException e) {
                 LOGGER.error("Failed to copy nodes {}", projectNodes, e);
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle(RESOURCE_BUNDLE.getString("CopyErrorTitle"));
-                alert.setContentText(RESOURCE_BUNDLE.getString("CopyErrorGeneric"));
-                alert.showAndWait();
+                Platform.runLater(() -> GseAlerts.showDialogCopyError(e));
             }
 
         } else {
@@ -597,23 +603,35 @@ public class ProjectPane extends Tab {
     }
 
     private void paste(TreeItem<Object> selectedTreeItem) {
-        if (copyService.isPresent()) {
-            CopyService cpService = copyService.get();
+        Optional<Pair<List<String>, String>> copyInfo = getCopyInfo();
+        context.getExecutor().execute(() -> {
+            if (copyService.isPresent()) {
+                CopyService cpService = copyService.get();
 
-            Optional<Pair<List<String>, String>> copyInfo = getCopyInfo();
-            copyInfo.ifPresent(cpInfo -> {
-                List<String> nodesIds = cpInfo.getKey();
-                String fileSystemName = cpInfo.getValue();
-                try {
-                    cpService.paste(fileSystemName, nodesIds, (ProjectFolder) selectedTreeItem.getValue());
-                } catch (CopyPasteException ex) {
-                    GseAlerts.showDialogError(ex.getMessage());
-                }
-                refresh(selectedTreeItem);
-            });
-        } else {
-            throw new AfsException("copy service not found");
-        }
+                copyInfo.ifPresent(cpInfo -> {
+                    List<String> nodesIds = cpInfo.getKey();
+                    String fileSystemName = cpInfo.getValue();
+                    ProjectFolder projectFolder = (ProjectFolder) selectedTreeItem.getValue();
+                    TaskMonitor.Task task = projectFolder.getFileSystem().getTaskMonitor().startTask("Collage : ", projectFolder.getProject());
+                    try {
+                        cpService.paste(fileSystemName, nodesIds, projectFolder);
+                        Platform.runLater(() -> {
+                            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                            alert.setTitle(RESOURCE_BUNDLE.getString("PasteComplete"));
+                            alert.setResizable(false);
+                            alert.setContentText(String.format(RESOURCE_BUNDLE.getString("PasteCompleteDetails"), nodesIds.size(), projectFolder.getName()));
+                            alert.showAndWait();
+                        });
+                    } catch (CopyPasteException ex) {
+                        Platform.runLater(() -> GseAlerts.showDialogError(ex.getMessage()));
+                    } finally {
+                        projectFolder.getFileSystem().getTaskMonitor().stopTask(task.getId());
+                        Platform.runLater(() -> refresh(selectedTreeItem));
+                    }
+
+                });
+            }
+        });
     }
 
     private static Optional<Pair<List<String>, String>> getCopyInfo() {

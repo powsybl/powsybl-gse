@@ -253,7 +253,15 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         tree.setShowRoot(false);
         rootItem.getChildren().add(new TreeItem<>());
 
-        copyService = treeModel.getRootFolders().stream().filter(el -> el instanceof Folder).findAny().map(root -> ((Folder) root).findService(CopyService.class));
+        copyService = treeModel
+                .getRootFolders()
+                .stream()
+                .filter(el -> el instanceof Folder)
+                .map(el -> (Folder) el)
+                .filter(el -> el.getFileSystem().isRemotelyAccessible())
+                .map(this::initCopyService)
+                .filter(Objects::nonNull)
+                .findAny();
 
         TreeTableColumn<N, N> fileColumn = new TreeTableColumn<>(RESOURCE_BUNDLE.getString("File"));
         fileColumn.setPrefWidth(415);
@@ -379,6 +387,15 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 copiedChangedListener(systemClipboard);
             }
         };
+    }
+
+    private CopyService initCopyService(Folder folder) {
+        try {
+            return folder.findService(CopyService.class);
+        } catch (AfsException e) {
+            LOGGER.warn("Failed to initiate copy service", e);
+        }
+        return null;
     }
 
     private void copiedChangedListener(Clipboard systemClipboard) {
@@ -662,7 +679,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             try {
                 copy(selectedTreeItems);
             } catch (CopyPasteException ex) {
-                GseAlerts.showDialogError(ex.getMessage());
+                GseAlerts.showDialogCopyError(ex);
             }
         });
         return copyMenuItem;
@@ -707,13 +724,24 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
             Optional<Pair<List<String>, String>> copyInfo = getCopyInfo();
             copyInfo.ifPresent(cpInfo -> {
-                List<String> nodesIds = cpInfo.getKey();
-                String fileSystemName = cpInfo.getValue();
-                try {
-                    cpService.paste(fileSystemName, nodesIds, (Folder) selectedTreeItem.getValue());
-                } catch (CopyPasteException ex) {
-                    GseAlerts.showDialogError(ex.getMessage());
-                }
+                context.getExecutor().execute(() -> {
+                    List<String> nodesIds = cpInfo.getKey();
+                    String fileSystemName = cpInfo.getValue();
+                    try {
+                        cpService.paste(fileSystemName, nodesIds, (Folder) selectedTreeItem.getValue());
+                        Platform.runLater(() -> {
+                            GseAlerts.showPasteCompleteInfo(nodesIds.size(), ((Folder) selectedTreeItem.getValue()).getName());
+                        });
+                    } catch (CopyPasteException ex) {
+                        Platform.runLater(() -> {
+                            GseAlerts.showDialogError(ex.getMessage());
+                        });
+                    } finally {
+                        Platform.runLater(() -> {
+                            refresh(selectedTreeItem);
+                        });
+                    }
+                });
             });
         } else {
             throw new AfsException("copy service not found");

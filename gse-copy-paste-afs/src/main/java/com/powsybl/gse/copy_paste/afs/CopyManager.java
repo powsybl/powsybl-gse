@@ -53,7 +53,7 @@ public final class CopyManager {
             for (AbstractNodeBase node : nodes) {
                 if (currentCopies.containsKey(node.getId()) && (currentCopies.get(node.getId()).archiveSuccess == null || currentCopies.get(node.getId()).archiveSuccess)) {
                     LOGGER.info("Skipping archiving of already ongoing copy {}", currentCopies.get(node.getId()));
-                    currentCopies.get(node.getId()).expirationDate  = ZonedDateTime.now().plusHours(CopyServiceConstants.COPY_EXPIRATION_TIME);
+                    currentCopies.get(node.getId()).expirationDate = ZonedDateTime.now().plusHours(CopyServiceConstants.COPY_EXPIRATION_TIME);
                     continue;
                 }
 
@@ -66,7 +66,7 @@ public final class CopyManager {
 
                 // create task
                 Optional<ProjectNode> projectNode = (node instanceof ProjectNode) ? Optional.of((ProjectNode) node) : Optional.empty();
-                Optional<TaskMonitor.Task> task = projectNode.map(pn -> pn.getFileSystem().getTaskMonitor().startTask(node.getName(), pn.getProject()));
+                Optional<TaskMonitor.Task> task = projectNode.map(pn -> pn.getFileSystem().getTaskMonitor().startTask("Copy : " + node.getName(), pn.getProject()));
                 task.ifPresent(t -> copyInfo.taskId = t.getId());
 
                 currentCopies.put(copyInfo.nodeId, copyInfo);
