@@ -313,7 +313,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private void refreshSubstationDetailView(IdAndName substationIdAndName) {
         if (substationIdAndName != null && substationIdAndName != LIST_BUSY) {
             substationDetailedView.setRoot(new TreeItem<>(TREEVIEW_BUSY));
-            String query = processTemplate(voltageLevelTemplate, ImmutableMap.of("substationId", substationIdAndName.getId()));
+            String query = processTemplate(voltageLevelTemplate, ImmutableMap.of("substationId", substationIdAndName.getId().replace("'","\\'")));
             queryNetwork(query, voltageLevelQueryResultListType,
                 (List<VoltageLevelQueryResult> voltageLevelQueryResults) -> fillSubstationDetailViewWithQueryResults(substationIdAndName, voltageLevelQueryResults),
                 substationDetailsExecutor);
@@ -325,7 +325,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private void refreshLineView(EquipmentInfo equipment) {
         equipmentTabs.getTabs().setAll(linePiModelTab);
 
-        String lineQuery = processTemplate(lineTemplate, ImmutableMap.of("lineId", equipment.getIdAndName().getId()));
+        String lineQuery = processTemplate(lineTemplate, ImmutableMap.of("lineId", equipment.getIdAndName().getId().replace("'","\\'")));
         queryNetwork(lineQuery, lineType, (LineQueryResult result) -> {
             linePiModelDiagram.rProperty().set(result.getR());
             linePiModelDiagram.xProperty().set(result.getX());
