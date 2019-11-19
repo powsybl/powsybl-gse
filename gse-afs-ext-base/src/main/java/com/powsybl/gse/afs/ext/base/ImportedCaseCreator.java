@@ -83,6 +83,7 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
         caseFileButton.setOnAction(event -> {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle(RESOURCE_BUNDLE.getString("SelectXiidmFile"));
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("XIIDM", "*.xiidm", "*.xiidm.gz"));
             String lastPath = preferences.get("caseLastSelectedPath", "");
             File lastPathFile = new File(lastPath);
             if (!lastPath.isEmpty() && lastPathFile.exists()) {
