@@ -36,6 +36,7 @@ import javafx.scene.input.*;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.Pair;
@@ -74,6 +75,7 @@ public class ProjectPane extends Tab {
     private final TaskItemList taskItems;
     private final TaskMonitorPane taskMonitorPane;
     private final Map<String, ProjectPaneProjectFolderListener> lCache = new HashMap<>();
+    private final CopyManager localArchiveManager = CopyManager.getInstance();
 
     public ProjectPane(Scene scene, Project project, GseContext context) {
         this.project = Objects.requireNonNull(project);
@@ -338,12 +340,10 @@ public class ProjectPane extends Tab {
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeTableCell treeCell) {
-        LOGGER.info("movable {}", isMovable(item, treeItem));
         if (item instanceof ProjectNode && isMovable(item, treeItem)) {
             boolean nameExists = (item instanceof ProjectFolder) ?
                     treeItem.getChildren().stream().anyMatch(child -> getName(dragAndDropMove.getSourceTreeItem()).equals(getName(child))) :
                     treeItem.getParent() != null && treeItem.getParent().getChildren().stream().anyMatch(child -> getName(dragAndDropMove.getSourceTreeItem()).equals(getName(child)));
-            LOGGER.info("name exist {}", nameExists);
             if (!nameExists) {
                 setDragOverStyle(treeCell);
             }
@@ -572,6 +572,55 @@ public class ProjectPane extends Tab {
         });
     }
 
+    private MenuItem createArchiveMenuItem(TreeItem<Object> selectedTreeItem) {
+        MenuItem archiveMenuItem = GseMenuItem.createArchiveMenuItem();
+        archiveMenuItem.setDisable(!(selectedTreeItem.getValue() instanceof AbstractNodeBase));
+        archiveMenuItem.setOnAction(event -> archive((AbstractNodeBase) selectedTreeItem.getValue()));
+        return archiveMenuItem;
+    }
+
+    private MenuItem createUnarchiveMenuItem(TreeItem<Object> selectedTreeItem) {
+        MenuItem unarchiveMenuItem = GseMenuItem.createUnarchiveMenuItem();
+        unarchiveMenuItem.setOnAction(event -> unarchiveItems(selectedTreeItem));
+        return unarchiveMenuItem;
+    }
+
+    private void archive(AbstractNodeBase item) {
+        DirectoryChooser directoryChooser = new DirectoryChooser();
+        java.io.File selectedDirectory = directoryChooser.showDialog(getContent().getScene().getWindow());
+        if (selectedDirectory != null) {
+            try {
+                localArchiveManager.copy(Collections.singletonList(item), selectedDirectory);
+            } catch (CopyPasteException e) {
+                GseAlerts.showDialogError(e.getMessage());
+            }
+        }
+    }
+
+    private void unarchiveItems(TreeItem<Object> folderItem) {
+        Object folder = folderItem.getValue();
+        if (!(folder instanceof ProjectFolder)) {
+            throw new IllegalStateException("Can't unarchive item if target is not a project folder!");
+        }
+
+        DirectoryChooser directoryChooser = new DirectoryChooser();
+        java.io.File selectedDirectory = directoryChooser.showDialog(getContent().getScene().getWindow());
+        if (selectedDirectory != null) {
+            ProjectFolder targetFolder = (ProjectFolder) folder;
+            context.getExecutor().execute(() -> {
+                TaskMonitor.Task task = project.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("UnarchiveTask"), targetFolder.getName()), project);
+                try {
+                    ((ProjectFolder) folder).unarchive(selectedDirectory.toPath());
+                    Platform.runLater(() -> refresh(folderItem));
+                } catch (Exception e) {
+                    Platform.runLater(() -> GseAlerts.showDialogError(e.getMessage()));
+                } finally {
+                    project.getFileSystem().getTaskMonitor().stopTask(task.getId());
+                }
+            });
+        }
+    }
+
     private MenuItem createCopyProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
         MenuItem copyMenuItem = GseMenuItem.createCopyMenuItem();
         List<TreeItem<Object>> selectedItems = new ArrayList<>(selectedTreeItems);
@@ -621,7 +670,7 @@ public class ProjectPane extends Tab {
                     List<String> nodesIds = cpInfo.getKey();
                     String fileSystemName = cpInfo.getValue();
                     ProjectFolder projectFolder = (ProjectFolder) selectedTreeItem.getValue();
-                    TaskMonitor.Task task = projectFolder.getFileSystem().getTaskMonitor().startTask("Collage : ", projectFolder.getProject());
+                    TaskMonitor.Task task = projectFolder.getFileSystem().getTaskMonitor().startTask(RESOURCE_BUNDLE.getString("UnarchiveTask"), projectFolder.getProject());
                     try {
                         cpService.paste(fileSystemName, nodesIds, projectFolder);
                         Platform.runLater(() -> {
@@ -837,6 +886,15 @@ public class ProjectPane extends Tab {
         // create menu
         Menu menu = new Menu(RESOURCE_BUNDLE.getString("Open"));
 
+        // add viewer extensions
+        List<ProjectFileViewerExtension> viewerExtensions = findViewerExtensions(file);
+        for (ProjectFileViewerExtension viewerExtension : viewerExtensions) {
+            MenuItem menuItem = initMenuItem(viewerExtension, file);
+            String tabName = getTabName(selectedTreeItem);
+            menuItem.setOnAction(event -> viewFile(file, viewerExtension, tabName));
+            menu.getItems().add(menuItem);
+        }
+
         // add editor extensions
         List<ProjectFileEditorExtension> editorExtensions = findEditorExtensions(file);
         for (ProjectFileEditorExtension editorExtension : editorExtensions) {
@@ -844,15 +902,6 @@ public class ProjectPane extends Tab {
             String tabName = getTabName(selectedTreeItem);
             menuItem.setOnAction(event -> showProjectItemEditorDialog(file, editorExtension, tabName));
             menuItem.setDisable(!editorExtension.isMenuEnabled(file));
-            menu.getItems().add(menuItem);
-        }
-
-        // add viewer extensions
-        List<ProjectFileViewerExtension> viewerExtensions = findViewerExtensions(file);
-        for (ProjectFileViewerExtension viewerExtension : viewerExtensions) {
-            MenuItem menuItem = initMenuItem(viewerExtension, file);
-            String tabName = getTabName(selectedTreeItem);
-            menuItem.setOnAction(event -> viewFile(file, viewerExtension, tabName));
             menu.getItems().add(menuItem);
         }
 
@@ -868,11 +917,12 @@ public class ProjectPane extends Tab {
 
         ContextMenu contextMenu = new ContextMenu();
         contextMenu.getItems().add(menu);
-        contextMenu.getItems().add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         contextMenu.getItems().add(createRenameProjectNodeItem(selectedTreeItem));
         if (copyService.isPresent()) {
             contextMenu.getItems().add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         }
+        contextMenu.getItems().add(createArchiveMenuItem(selectedTreeItem));
+        contextMenu.getItems().add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         return contextMenu;
     }
 
@@ -892,10 +942,10 @@ public class ProjectPane extends Tab {
 
     private ContextMenu createMultipleContextMenu(List<? extends TreeItem<Object>> selectedTreeItems) {
         ContextMenu contextMenu = new ContextMenu();
-        contextMenu.getItems().add(createDeleteProjectNodeItem(selectedTreeItems));
         if (copyService.isPresent()) {
             contextMenu.getItems().add(createCopyProjectNodeItem(selectedTreeItems));
         }
+        contextMenu.getItems().add(createDeleteProjectNodeItem(selectedTreeItems));
         return contextMenu;
     }
 
@@ -963,19 +1013,19 @@ public class ProjectPane extends Tab {
                 }
             }
         }
+        if (copyService.isPresent()) {
+            items.add(createPasteProjectNodeItem(selectedTreeItem));
+        }
+        items.add(createUnarchiveMenuItem(selectedTreeItem));
         if (selectedTreeItem != treeView.getRoot()) {
-            items.add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
             items.add(createRenameProjectNodeItem(selectedTreeItem));
             if (copyService.isPresent()) {
                 items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
             }
+            items.add(createArchiveMenuItem(selectedTreeItem));
+            items.add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         }
-        if (copyService.isPresent()) {
-            items.add(createPasteProjectNodeItem(selectedTreeItem));
-        }
-        contextMenu.getItems().addAll(items.stream()
-                .sorted(Comparator.comparing(MenuItem::getText))
-                .collect(Collectors.toList()));
+        contextMenu.getItems().addAll(items);
         return contextMenu;
     }
 

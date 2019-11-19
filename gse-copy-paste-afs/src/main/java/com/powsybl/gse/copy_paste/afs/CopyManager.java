@@ -15,6 +15,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
@@ -36,17 +37,30 @@ public final class CopyManager {
     private static final long CLEANUP_DELAY = 36000;
     private static final long CLEANUP_PERIOD = 180000;
 
+    private static CopyManager INSTANCE = null;
+
     private ExecutorService tPool = Executors.newCachedThreadPool();
     private Map<String, CopyInfo> currentCopies = new HashMap<>();
 
-    public CopyManager() {
+    public static CopyManager getInstance() {
+        if (INSTANCE == null) {
+            INSTANCE = new CopyManager();
+        }
+        return INSTANCE;
+    }
+
+    private CopyManager() {
         init();
+    }
+
+    public Map<String, CopyInfo> copy(List<? extends AbstractNodeBase> nodes) throws CopyPasteException {
+        return copy(nodes, null);
     }
 
     /**
      * @param nodes the nodes to copy
      */
-    public Map<String, CopyInfo> copy(List<? extends AbstractNodeBase> nodes) throws CopyFailedException {
+    public Map<String, CopyInfo> copy(List<? extends AbstractNodeBase> nodes, @Nullable File targetDirectory) throws CopyPasteException {
         Objects.requireNonNull(nodes);
 
         try {
@@ -61,7 +75,7 @@ public final class CopyManager {
                 copyInfo.archiveSuccess = null;
                 copyInfo.nodeId = node.getId();
                 copyInfo.node = node;
-                copyInfo.archivePath = Files.createTempDirectory(TEMP_DIR_PREFIX);
+                copyInfo.archivePath = resolveArchiveTargetDirectory(targetDirectory);
                 copyInfo.expirationDate = ZonedDateTime.now().plusHours(CopyServiceConstants.COPY_EXPIRATION_TIME);
 
                 // create task
@@ -133,6 +147,23 @@ public final class CopyManager {
                 folder.unarchive(copyInfo.archivePath.resolve(copyInfo.nodeId));
             }
         }
+    }
+
+    private Path resolveArchiveTargetDirectory(File directoryProp) throws IOException, CopyNotEmptyArchiveDirectoryException {
+        if (directoryProp == null) {
+            return Files.createTempDirectory(TEMP_DIR_PREFIX);
+        }
+
+        if (!directoryProp.exists() || !directoryProp.canWrite() || !directoryProp.isDirectory()) {
+            throw new IOException();
+        }
+
+        File[] children = directoryProp.listFiles();
+        if (children != null && children.length != 0) {
+            throw new CopyNotEmptyArchiveDirectoryException();
+        }
+
+        return directoryProp.toPath();
     }
 
     private void init() {

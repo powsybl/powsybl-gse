@@ -28,6 +28,14 @@ public class GseMenuItem extends MenuItem {
         setAccelerator(shortcut);
     }
 
+    public static MenuItem createArchiveMenuItem() {
+        return new GseMenuItem(RESOURCE_BUNDLE.getString("Archive"), createGraphic('\uf0ed'), null);
+    }
+
+    public static MenuItem createUnarchiveMenuItem() {
+        return new GseMenuItem(RESOURCE_BUNDLE.getString("Unarchive"), createGraphic('\uf0ee'), null);
+    }
+
     public static MenuItem createCopyMenuItem() {
         return new GseMenuItem(RESOURCE_BUNDLE.getString("Copy"), createGraphic('\uf0c5'), new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN));
     }
