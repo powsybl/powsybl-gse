@@ -326,28 +326,37 @@ public class ProjectPane extends Tab {
     }
 
     private boolean isMovable(Object item, TreeItem<Object> targetTreeItem) {
-        return dragAndDropMove != null && item != dragAndDropMove.getSource() && !isSourceAncestorOf(targetTreeItem) && !isChildOf(targetTreeItem) && !areSourceAndTargetProjectFileSiblings(item);
+        return dragAndDropMove != null && item != dragAndDropMove.getSource() && !isSourceAncestorOf(targetTreeItem) && !isChildOf(targetTreeItem) && !areSourceAndTargetProjectFileSiblings(targetTreeItem);
     }
 
-    private boolean areSourceAndTargetProjectFileSiblings(Object targetItem) {
-        Object sourceItem = dragAndDropMove.getSource();
-        Optional<ProjectFolder> sourceParent = ((ProjectNode) sourceItem).getParent();
-        Optional<ProjectFolder> targetParent = ((ProjectNode) targetItem).getParent();
-        if (sourceParent.isPresent() && targetParent.isPresent()) {
-            return sourceItem instanceof ProjectFile && targetItem instanceof ProjectFile && sourceParent.get().getId().equals(targetParent.get().getId());
-        } else {
+    private boolean areSourceAndTargetProjectFileSiblings(TreeItem targetItem) {
+        if (targetItem.getValue() instanceof FolderBase) {
             return false;
         }
+        TreeItem sourceItem = dragAndDropMove.getSourceTreeItem();
+        return sourceItem.getParent() != null && targetItem.getParent() != null && sourceItem.getParent().equals(targetItem.getParent());
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeTableCell treeCell) {
+        LOGGER.info("movable {}", isMovable(item, treeItem));
         if (item instanceof ProjectNode && isMovable(item, treeItem)) {
-            boolean nameExists = item instanceof ProjectFolder ? dragNodeNameAlreadyExists((ProjectFolder) treeItem.getValue()) : dragNodeNameAlreadyExists((ProjectFolder) treeItem.getParent().getValue());
+            boolean nameExists = (item instanceof ProjectFolder) ?
+                    treeItem.getChildren().stream().anyMatch(child -> getName(dragAndDropMove.getSourceTreeItem()).equals(getName(child))) :
+                    treeItem.getParent() != null && treeItem.getParent().getChildren().stream().anyMatch(child -> getName(dragAndDropMove.getSourceTreeItem()).equals(getName(child)));
+            LOGGER.info("name exist {}", nameExists);
             if (!nameExists) {
                 setDragOverStyle(treeCell);
             }
             event.acceptTransferModes(TransferMode.ANY);
             event.consume();
+        }
+    }
+
+    private static String getName(TreeItem treeItem) {
+        if (treeItem.getValue() instanceof com.powsybl.afs.AbstractNodeBase) {
+            return ((com.powsybl.afs.AbstractNodeBase) treeItem.getValue()).getName();
+        } else {
+            throw new IllegalStateException("This method should be used in a project pane using afs nodes");
         }
     }
 
@@ -637,17 +646,23 @@ public class ProjectPane extends Tab {
     }
 
     private boolean ancestorsExistIn(List<? extends TreeItem<Object>> treeItems) {
-        boolean found = false;
         for (TreeItem<Object> treeItem : treeItems) {
-            if (treeItem != treeView.getRoot()) {
-                AbstractNodeBase value = (AbstractNodeBase) treeItem.getValue();
-                found = treeItems.stream().filter(it -> it != treeItem).anyMatch(item -> ((AbstractNodeBase) item.getValue()).isAncestorOf(value));
-                if (found) {
-                    break;
-                }
+            if (treeItem != treeView.getRoot() && hasAncestorsIn(treeItem, treeItems)) {
+                return true;
             }
         }
-        return found;
+        return false;
+    }
+
+    private boolean hasAncestorsIn(TreeItem<Object> item, List<? extends TreeItem<Object>> pool) {
+        TreeItem<Object> parent = item.getParent();
+        while (parent != null && parent != treeView.getRoot()) {
+            if (pool.contains(parent)) {
+                return true;
+            }
+            parent = parent.getParent();
+        }
+        return false;
     }
 
     private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
