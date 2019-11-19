@@ -14,8 +14,8 @@ import com.powsybl.commons.datasource.FileDataSource;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectCreationTask;
 import com.powsybl.gse.spi.ProjectFileCreator;
+import com.powsybl.gse.util.FileImportManager;
 import com.powsybl.gse.util.GseUtil;
-import com.powsybl.iidm.parameters.Parameter;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Insets;
@@ -23,12 +23,10 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import javafx.stage.FileChooser;
 
 import java.io.File;
 import java.util.*;
 import java.util.prefs.Preferences;
-import java.util.stream.Collectors;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -81,18 +79,12 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
         parametersBox.setPadding(new Insets(5, 5, 5, 5));
         add(scrollPane, 0, 2, 3, 1);
         caseFileButton.setOnAction(event -> {
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle(RESOURCE_BUNDLE.getString("SelectXiidmFile"));
-            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("XIIDM", "*.xiidm", "*.xiidm.gz"));
-            String lastPath = preferences.get("caseLastSelectedPath", "");
-            File lastPathFile = new File(lastPath);
-            if (!lastPath.isEmpty() && lastPathFile.exists()) {
-                fileChooser.setInitialDirectory(lastPathFile);
-            }
-            File file = fileChooser.showOpenDialog(scene.getWindow());
-            if (file != null) {
-                caseFileTextField.setText(file.toString());
-                caseFileProperty.setValue(file);
+            FileImportManager xiidmFileImporter = new FileImportManager(RESOURCE_BUNDLE.getString("SelectXiidmFile"), "XIIDM", "*.xiidm", "*.xiidm.gz");
+            xiidmFileImporter.setInitialDirectory(preferences.get("caseLastSelectedPath", ""));
+            Optional<File> file = xiidmFileImporter.showAndWait(scene.getWindow());
+            file.ifPresent(file1 -> {
+                caseFileTextField.setText(file1.toString());
+                caseFileProperty.setValue(file1);
 
                 context.getExecutor().execute(() -> {
                     String name = Files.getNameWithoutExtension(caseFileProperty.getValue().toString());
@@ -101,53 +93,9 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
                         GseUtil.showDialogError(new AfsException(String.format(RESOURCE_BUNDLE.getString("NodeAlreadyExists"), name)));
                     }
                 });
-                preferences.put("caseLastSelectedPath", file.getParent());
-            }
+                preferences.put("caseLastSelectedPath", file1.getParent());
+            });
         });
-        /*caseSelectionPane.nodeProperty().addListener((observable, oldCase, newCase) -> {
-            if (newCase != null) {
-                List<javafx.scene.Node> parameterNodes = new ArrayList<>();
-                for (Parameter parameter : newCase.getImporter().getParameters()) {
-                    switch (parameter.getType()) {
-                        case BOOLEAN:
-                            parameterNodes.add(createBooleanComponent(parameter));
-                            break;
-                        case STRING:
-                            parameterNodes.add(createStringComponent(parameter));
-                            break;
-                        case STRING_LIST:
-                            parameterNodes.add(createListStringComponent(parameter));
-                            break;
-                        default:
-                            throw new AssertionError("TODO");
-                    }
-                }
-                parametersBox.getChildren().setAll(parameterNodes);
-            } else {
-                parametersBox.getChildren().clear();
-            }
-        });*/
-    }
-
-    private javafx.scene.Node createBooleanComponent(Parameter parameter) {
-        CheckBox checkBox = new CheckBox(parameter.getDescription());
-        checkBox.setSelected((Boolean) parameter.getDefaultValue());
-        checkBox.selectedProperty().addListener((observable, oldValue, newValue) -> parametersValue.put(parameter.getName(), newValue.toString()));
-        return checkBox;
-    }
-
-    private javafx.scene.Node createStringComponent(Parameter parameter) {
-        TextField textField = new TextField((String) parameter.getDefaultValue());
-        textField.textProperty().addListener((observable, oldValue, newValue) -> parametersValue.put(parameter.getName(), newValue));
-        return new VBox(5, new Label(parameter.getDescription()), textField);
-    }
-
-    private javafx.scene.Node createListStringComponent(Parameter parameter) {
-        TextArea textArea = new TextArea(((List<String>) parameter.getDefaultValue()).stream().collect(Collectors.joining(System.lineSeparator())));
-        textArea.setPrefColumnCount(20);
-        textArea.setPrefRowCount(5);
-        textArea.textProperty().addListener((observable, oldValue, newValue) -> parametersValue.put(parameter.getName(), newValue.replace(System.lineSeparator(), ",")));
-        return new VBox(5, new Label(parameter.getDescription()), textArea);
     }
 
     @Override
