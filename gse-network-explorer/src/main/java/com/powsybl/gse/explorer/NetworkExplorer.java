@@ -33,7 +33,10 @@ import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.input.*;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.paint.Color;
@@ -124,9 +127,9 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
         setTop(toolBar);
 
         Function<IdAndName, String> listViewToString = idAndName -> showName.isSelected() ? idAndName.getName()
-                                                                                          : idAndName.getId();
+                : idAndName.getId();
         Function<EquipmentInfo, String> treeViewToString = equipmentInfo -> showName.isSelected() ? equipmentInfo.getIdAndName().getName()
-                                                                                                  : equipmentInfo.getIdAndName().getId();
+                : equipmentInfo.getIdAndName().getId();
         GseUtil.setWaitingCellFactory(substationsView, LIST_BUSY, listViewToString);
         GseUtil.setWaitingCellFactory(substationDetailedView, TREEVIEW_BUSY, treeViewToString);
 
@@ -187,7 +190,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private void onDragDetected(MouseEvent event) {
         Dragboard db = substationDetailedView.startDragAndDrop(TransferMode.ANY);
         ClipboardContent content = new ClipboardContent();
-        List<EquipmentInfo> listInfo = substationDetailedView.getSelectionModel().getSelectedItems().stream().map(TreeItem :: getValue).collect(Collectors.toList());
+        List<EquipmentInfo> listInfo = substationDetailedView.getSelectionModel().getSelectedItems().stream().map(TreeItem::getValue).collect(Collectors.toList());
         content.put(EquipmentInfo.DATA_FORMAT, listInfo);
 
         db.setContent(content);
@@ -313,10 +316,8 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private void refreshSubstationDetailView(IdAndName substationIdAndName) {
         if (substationIdAndName != null && substationIdAndName != LIST_BUSY) {
             substationDetailedView.setRoot(new TreeItem<>(TREEVIEW_BUSY));
-            String query = processTemplate(voltageLevelTemplate, ImmutableMap.of("substationId", substationIdAndName.getId().replace("'","\\'")));
-            queryNetwork(query, voltageLevelQueryResultListType,
-                (List<VoltageLevelQueryResult> voltageLevelQueryResults) -> fillSubstationDetailViewWithQueryResults(substationIdAndName, voltageLevelQueryResults),
-                substationDetailsExecutor);
+            String query = processTemplate(voltageLevelTemplate, ImmutableMap.of("substationId", substationIdAndName.getId().replace("'", "\\'")));
+            queryNetwork(query, voltageLevelQueryResultListType, (List<VoltageLevelQueryResult> voltageLevelQueryResults) -> fillSubstationDetailViewWithQueryResults(substationIdAndName, voltageLevelQueryResults), substationDetailsExecutor);
         } else {
             substationDetailedView.setRoot(null);
         }
@@ -325,7 +326,7 @@ class NetworkExplorer extends BorderPane implements ProjectFileViewer, ProjectCa
     private void refreshLineView(EquipmentInfo equipment) {
         equipmentTabs.getTabs().setAll(linePiModelTab);
 
-        String lineQuery = processTemplate(lineTemplate, ImmutableMap.of("lineId", equipment.getIdAndName().getId().replace("'","\\'")));
+        String lineQuery = processTemplate(lineTemplate, ImmutableMap.of("lineId", equipment.getIdAndName().getId().replace("'", "\\'")));
         queryNetwork(lineQuery, lineType, (LineQueryResult result) -> {
             linePiModelDiagram.rProperty().set(result.getR());
             linePiModelDiagram.xProperty().set(result.getX());
