@@ -181,7 +181,7 @@ public class ProjectPane extends Tab {
             public TreeTableCell<Object, Object> call(TreeTableColumn<Object, Object> param) {
                 return new TreeTableCell<Object, Object>() {
 
-                    private Color getProjectFileColor(ProjectFile projectFile){
+                    private Color getProjectFileColor(ProjectFile projectFile) {
                         if (projectFile.mandatoryDependenciesAreMissing()) {
                             return Color.RED;
                         }
@@ -207,7 +207,7 @@ public class ProjectPane extends Tab {
                             } else if (item instanceof ProjectNode) {
                                 ProjectNode node = (ProjectNode) item;
                                 if (node instanceof ProjectFile) {
-                                    setTextFill(getProjectFileColor((ProjectFile)node));
+                                    setTextFill(getProjectFileColor((ProjectFile) node));
                                 }
                                 setText(node.getName());
                                 setGraphic(NodeGraphics.getGraphic(item));
