@@ -343,18 +343,16 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         add(scrollPane, 0, 1, 2, 1);
         context.getExecutor().submit(() -> {
             try {
-                List<TreeItem<N>> nodes = treeModel
-                        .getRootFolders()
-                        .stream()
-                        .map(rootFolder -> {
-                            TreeItem<N> node = createCollapsedFolderItem(rootFolder);
-                            if (writableFsDisplayPriority == null || writableFsDisplayPriority == treeModel.isWritable(rootFolder)) {
-                                node.setExpanded(true);
-                            }
-                            return node;
-                        })
-                        .sorted(Comparator.comparing(item -> !item.isExpanded()))
-                        .collect(Collectors.toList());
+                List<TreeItem<N>> nodes = new ArrayList<>();
+                for (D rootFolder : treeModel.getRootFolders()) {
+                    TreeItem<N> node = createCollapsedFolderItem(rootFolder);
+                    if (writableFsDisplayPriority == null || writableFsDisplayPriority == treeModel.isWritable(rootFolder)) {
+                        node.setExpanded(true);
+                    }
+                    nodes.add(node);
+                }
+                Collections.sort(nodes, Comparator.comparing(item -> !item.isExpanded()));
+
                 Platform.runLater(() -> {
                     rootItem.getChildren().setAll(nodes);
                     // select first root
