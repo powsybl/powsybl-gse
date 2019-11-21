@@ -550,6 +550,9 @@ public class ProjectPane extends Tab {
     private MenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
         MenuItem deleteMenuItem = GseMenuItem.createDeleteMenuItem();
         deleteMenuItem.setOnAction(event -> deleteNodesAlert(selectedTreeItems));
+        deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
+        List<TreeItem<Object>> selectedItems = new ArrayList<>(selectedTreeItems);
+        deleteMenuItem.setDisable(ancestorsExistIn(selectedItems) || selectedItems.contains(treeView.getRoot()));
         return deleteMenuItem;
     }
 
