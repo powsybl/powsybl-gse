@@ -109,7 +109,7 @@ public class GsePane extends StackPane {
         for (Tab tab : tabPane.getTabs()) {
             openedProjects.add(((ProjectPane) tab).getProject().getId());
         }
-        Optional<Project> project = NodeChooser.showAndWaitDialog(getScene().getWindow(), data, context, Project.class, openedProjects);
+        Optional<Project> project = NodeChooser.showAndWaitDialog(getScene().getWindow(), data, context, true, Project.class, openedProjects);
         project.ifPresent(this::openProject);
     }
 
