@@ -7,11 +7,15 @@
 package com.powsybl.gse.util;
 
 import com.powsybl.afs.AbstractNodeBase;
-import com.powsybl.afs.ProjectNode;
 import com.powsybl.afs.Node;
+import com.powsybl.afs.ProjectNode;
 import com.powsybl.gse.spi.Savable;
-import javafx.scene.control.*;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.TreeItem;
 
+import javax.annotation.Nullable;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.Optional;
@@ -33,6 +37,26 @@ public final class GseAlerts {
         alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));
         alert.setHeaderText(GSE_ERROR);
         alert.setContentText(RESOURCE_BUNDLE.getString("FileExists"));
+        alert.showAndWait();
+    }
+
+    public static void showDialogCopyError(@Nullable Throwable e) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(RESOURCE_BUNDLE.getString("CopyErrorTitle"));
+        alert.setResizable(true);
+        if (e != null) {
+            alert.setContentText(e.getLocalizedMessage());
+        } else {
+            alert.setContentText(RESOURCE_BUNDLE.getString("CopyErrorGeneric"));
+        }
+        alert.showAndWait();
+    }
+
+    public static void showPasteCompleteInfo(int itemCount, String folderDestination) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(RESOURCE_BUNDLE.getString("PasteComplete"));
+        alert.setResizable(false);
+        alert.setContentText(String.format(RESOURCE_BUNDLE.getString("PasteCompleteDetails"), itemCount, folderDestination));
         alert.showAndWait();
     }
 

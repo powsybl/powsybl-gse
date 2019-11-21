@@ -7,6 +7,11 @@
 package com.powsybl.gse.util;
 
 import com.powsybl.afs.*;
+import com.powsybl.gse.copy_paste.afs.CopyManager;
+import com.powsybl.gse.copy_paste.afs.CopyService;
+import com.powsybl.gse.copy_paste.afs.CopyServiceConstants;
+import com.powsybl.gse.copy_paste.afs.exceptions.CopyDifferentFileSystemNameException;
+import com.powsybl.gse.copy_paste.afs.exceptions.CopyPasteException;
 import com.powsybl.gse.spi.GseContext;
 import impl.org.controlsfx.skin.BreadCrumbBarSkin;
 import javafx.application.Platform;
@@ -16,14 +21,11 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
-import javafx.scene.layout.ColumnConstraints;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.RowConstraints;
-import javafx.scene.layout.HBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Window;
 import javafx.util.Callback;
+import javafx.util.Pair;
 import org.controlsfx.control.BreadCrumbBar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +50,9 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private boolean success;
     private Set<String> openedProjects = new HashSet<>();
     private SimpleBooleanProperty deleteMenuItemDisableProperty = new SimpleBooleanProperty(false);
+    private Optional<CopyService> copyService;
+
+    private BooleanProperty copied = new SimpleBooleanProperty(false);
 
     public interface TreeModel<N, F, D> {
         Collection<N> getChildren(D folder);
@@ -252,6 +257,17 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         tree.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         tree.setShowRoot(false);
         rootItem.getChildren().add(new TreeItem<>());
+
+        copyService = treeModel
+                .getRootFolders()
+                .stream()
+                .filter(el -> el instanceof Folder)
+                .map(el -> (Folder) el)
+                .filter(el -> el.getFileSystem().isRemotelyAccessible())
+                .map(this::initCopyService)
+                .filter(Objects::nonNull)
+                .findAny();
+
         TreeTableColumn<N, N> fileColumn = new TreeTableColumn<>(RESOURCE_BUNDLE.getString("File"));
         fileColumn.setPrefWidth(415);
         fileColumn.setCellValueFactory((TreeTableColumn.CellDataFeatures<N, N> callback) -> {
@@ -372,6 +388,30 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 LOGGER.error(t.toString(), t);
             }
         });
+
+        final Clipboard systemClipboard = Clipboard.getSystemClipboard();
+        new com.sun.glass.ui.ClipboardAssistance(com.sun.glass.ui.Clipboard.SYSTEM) {
+            @Override
+            public void contentChanged() {
+                copiedChangedListener(systemClipboard);
+            }
+        };
+    }
+
+    private CopyService initCopyService(Folder folder) {
+        try {
+            return folder.findService(CopyService.class);
+        } catch (AfsException e) {
+            LOGGER.warn("Failed to initiate copy service", e);
+        }
+        return null;
+    }
+
+    private void copiedChangedListener(Clipboard systemClipboard) {
+        if (systemClipboard != null && systemClipboard.hasString() && systemClipboard.getString() != null) {
+            String clipBoard = systemClipboard.getString();
+            copied.set(clipBoard.contains(CopyServiceConstants.COPY_SIGNATURE));
+        }
     }
 
     public ReadOnlyObjectProperty<T> selectedNodeProperty() {
@@ -572,15 +612,25 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private ContextMenu createMultipleContextMenu(List<? extends TreeItem<N>> selectedTreeItems) {
         ContextMenu contextMenu = new ContextMenu();
         contextMenu.getItems().add(createDeleteNodeMenuItem(selectedTreeItems));
+        if (copyService.isPresent()) {
+            contextMenu.getItems().add(createCopyProjectNodeItem(selectedTreeItems));
+        }
         return contextMenu;
     }
 
     private ContextMenu createFolderContextMenu(TreeItem<N> selectedTreeItem) {
+        N value = selectedTreeItem.getValue();
         ContextMenu contextMenu = new ContextMenu();
         List<MenuItem> items = new ArrayList<>();
         items.add(createRenameProjectMenuItem());
         items.add(createCreateFolderMenuItem());
-        items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
+        if (value instanceof Folder && ((Folder) value).isWritable()) {
+            if (copyService.isPresent()) {
+                items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+                items.add(createPasteProjectNodeItem(selectedTreeItem));
+            }
+            items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
+        }
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
                 .collect(Collectors.toList()));
@@ -591,6 +641,9 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         ContextMenu contextMenu = new ContextMenu();
         List<MenuItem> items = new ArrayList<>();
         items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
+        if (copyService.isPresent()) {
+            items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+        }
         items.add(createRenameProjectMenuItem());
         contextMenu.getItems().addAll(items.stream()
                 .sorted(Comparator.comparing(MenuItem::getText))
@@ -629,14 +682,95 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         });
     }
 
+    private MenuItem createCopyProjectNodeItem(List<? extends TreeItem<N>> selectedTreeItems) {
+        MenuItem copyMenuItem = GseMenuItem.createCopyMenuItem();
+        copyMenuItem.setOnAction(event -> {
+            try {
+                copy(selectedTreeItems);
+            } catch (CopyPasteException ex) {
+                GseAlerts.showDialogCopyError(ex);
+            }
+        });
+        return copyMenuItem;
+    }
+
+    private MenuItem createPasteProjectNodeItem(TreeItem<N> selectedTreeItem) {
+        MenuItem pasteMenuItem = GseMenuItem.createPasteMenuItem();
+        pasteMenuItem.disableProperty().bind(copied.not());
+        pasteMenuItem.setOnAction(event -> paste(selectedTreeItem));
+        return pasteMenuItem;
+    }
+
+    private void copy(List<? extends TreeItem<N>> selectedTreeItems) throws CopyPasteException {
+        if (copyService.isPresent()) {
+            CopyService cpService = copyService.get();
+
+            List<Node> nodes = selectedTreeItems.stream()
+                    .map(item -> (Node) item.getValue())
+                    .collect(Collectors.toList());
+
+            // check if all selected nodes have the same file system and throw an exception if not
+            long count = nodes.stream().map(node -> node.getFileSystem().getName()).distinct().count();
+            if (count == 1) {
+                cpService.copy(nodes.get(0).getFileSystem().getName(), nodes);
+            } else {
+                throw new CopyDifferentFileSystemNameException();
+            }
+
+            // set copy parameters into the clipboard
+            final Clipboard clipboard = Clipboard.getSystemClipboard();
+            final ClipboardContent content = new ClipboardContent();
+            content.putString(CopyManager.copyParameters(nodes).toString());
+            clipboard.setContent(content);
+        } else {
+            throw new AfsException("copy service not found");
+        }
+    }
+
+    private void paste(TreeItem<N> selectedTreeItem) {
+        if (copyService.isPresent()) {
+            CopyService cpService = copyService.get();
+
+            Optional<Pair<List<String>, String>> copyInfo = getCopyInfo();
+            copyInfo.ifPresent(cpInfo -> {
+                context.getExecutor().execute(() -> {
+                    List<String> nodesIds = cpInfo.getKey();
+                    String fileSystemName = cpInfo.getValue();
+                    try {
+                        cpService.paste(fileSystemName, nodesIds, (Folder) selectedTreeItem.getValue());
+                        Platform.runLater(() -> {
+                            GseAlerts.showPasteCompleteInfo(nodesIds.size(), ((Folder) selectedTreeItem.getValue()).getName());
+                        });
+                    } catch (CopyPasteException ex) {
+                        Platform.runLater(() -> {
+                            GseAlerts.showDialogError(ex.getMessage());
+                        });
+                    } finally {
+                        Platform.runLater(() -> {
+                            refresh(selectedTreeItem);
+                        });
+                    }
+                });
+            });
+        } else {
+            throw new AfsException("copy service not found");
+        }
+    }
+
+    private static Optional<Pair<List<String>, String>> getCopyInfo() {
+        final Clipboard clipboard = Clipboard.getSystemClipboard();
+        String clipboardStringContent = clipboard.getString();
+        return CopyManager.getCopyInfo(clipboard, clipboardStringContent);
+    }
+
     private MenuItem createDeleteNodeMenuItem(List<? extends TreeItem<N>> selectedTreeItems) {
-        MenuItem deleteMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size(ICON_SIZE));
+        MenuItem deleteMenuItem = GseMenuItem.createDeleteMenuItem();
         if (selectedTreeItems.size() == 1) {
             TreeItem<N> selectedTreeItem = selectedTreeItems.get(0);
             N selectedTreeItemValue = selectedTreeItem.getValue();
             if (selectedTreeItemValue instanceof Folder) {
                 Folder folder = (Folder) selectedTreeItemValue;
-                if (!folder.getChildren().isEmpty()) {
+                if (!folder.getChildren().isEmpty() || !folder.isWritable()) {
                     deleteMenuItem.setDisable(true);
                 }
             } else if (selectedTreeItemValue instanceof Project) {
@@ -649,9 +783,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             selectionContainsOpenedProjects(selectedTreeItems, deleteMenuItem);
         }
         deleteMenuItem.setOnAction(event -> createDeleteAlert(selectedTreeItems));
-        deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
         return deleteMenuItem;
-
     }
 
     private void selectionContainsOpenedProjects(List<? extends TreeItem<N>> selectedTreeItems, MenuItem menuItem) {

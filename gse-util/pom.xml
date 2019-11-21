@@ -67,5 +67,11 @@
             <artifactId>powsybl-gse-spi</artifactId>
             <version>${project.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-gse-copy-paste-afs</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>
