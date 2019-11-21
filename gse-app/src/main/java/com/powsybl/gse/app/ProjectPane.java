@@ -180,6 +180,14 @@ public class ProjectPane extends Tab {
             @Override
             public TreeTableCell<Object, Object> call(TreeTableColumn<Object, Object> param) {
                 return new TreeTableCell<Object, Object>() {
+
+                    private Color getProjectFileColor(ProjectFile projectFile){
+                        if (projectFile.mandatoryDependenciesAreMissing()) {
+                            return Color.RED;
+                        }
+                        return Color.BLACK;
+                    }
+
                     @Override
                     protected void updateItem(Object item, boolean empty) {
                         super.updateItem(item, empty);
@@ -198,6 +206,9 @@ public class ProjectPane extends Tab {
                                 setOpacity(1);
                             } else if (item instanceof ProjectNode) {
                                 ProjectNode node = (ProjectNode) item;
+                                if (node instanceof ProjectFile) {
+                                    setTextFill(getProjectFileColor((ProjectFile)node));
+                                }
                                 setText(node.getName());
                                 setGraphic(NodeGraphics.getGraphic(item));
                                 setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
