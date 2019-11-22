@@ -55,7 +55,7 @@ public final class GseAlerts {
     public static void showPasteCompleteInfo(int itemCount, String folderDestination) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(RESOURCE_BUNDLE.getString("PasteComplete"));
-        alert.setResizable(false);
+        alert.setResizable(true);
         alert.setContentText(String.format(RESOURCE_BUNDLE.getString("PasteCompleteDetails"), itemCount, folderDestination));
         alert.showAndWait();
     }
