@@ -684,7 +684,7 @@ public class ProjectPane extends Tab {
                     List<String> nodesIds = cpInfo.getKey();
                     String fileSystemName = cpInfo.getValue();
                     ProjectFolder projectFolder = (ProjectFolder) selectedTreeItem.getValue();
-                    TaskMonitor.Task task = projectFolder.getFileSystem().getTaskMonitor().startTask(RESOURCE_BUNDLE.getString("UnarchiveTask"), projectFolder.getProject());
+                    TaskMonitor.Task task = projectFolder.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("UnarchiveTask"), projectFolder), projectFolder.getProject());
                     try {
                         cpService.paste(fileSystemName, nodesIds, projectFolder);
                         Platform.runLater(() -> {
