@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.ZonedDateTime;
@@ -36,6 +35,7 @@ public final class CopyManager {
     private static final String TEMP_DIR_PREFIX = "powsybl_node_export";
     private static final long CLEANUP_DELAY = 36000;
     private static final long CLEANUP_PERIOD = 180000;
+    private static final String COPY_INFO_SEPARATOR = "/";
 
     private static CopyManager INSTANCE = null;
 
@@ -266,20 +266,19 @@ public final class CopyManager {
     public static StringBuilder copyParameters(List<? extends AbstractNodeBase> nodes) {
         AbstractNodeBase node = nodes.get(0);
         String fileSystemName = (node instanceof Node) ? ((Node) node).getFileSystem().getName() : ((ProjectNode) node).getFileSystem().getName();
-        String pathSeparator = FileSystems.getDefault().getSeparator();
         StringBuilder copyParameters = new StringBuilder();
 
         copyParameters.append(CopyServiceConstants.COPY_SIGNATURE)
-                .append(pathSeparator)
+                .append(COPY_INFO_SEPARATOR)
                 .append(fileSystemName)
-                .append(pathSeparator);
-        nodes.forEach(nod -> copyParameters.append(nod.getId()).append(pathSeparator));
+                .append(COPY_INFO_SEPARATOR);
+        nodes.forEach(nod -> copyParameters.append(nod.getId()).append(COPY_INFO_SEPARATOR));
         return copyParameters;
     }
 
     public static Optional<Pair<List<String>, String>> getCopyInfo(Clipboard clipboard, String copyInfo) {
         if (clipboard.hasString() && copyInfo.contains(CopyServiceConstants.COPY_SIGNATURE)) {
-            String[] copyInfoArray = copyInfo.split(FileSystems.getDefault().getSeparator());
+            String[] copyInfoArray = copyInfo.split(COPY_INFO_SEPARATOR);
             List<String> nodesIds = Arrays.asList(ArrayUtils.removeAll(copyInfoArray, 0, 1));
             String fileSystemName = copyInfoArray[1];
             return Optional.of(new Pair<>(nodesIds, fileSystemName));
