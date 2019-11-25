@@ -140,8 +140,7 @@ public final class CopyManager {
             }
 
             if (children.stream().anyMatch(child -> copyInfo.node.getName().equals(child.getName()))) {
-                // TODO fix name
-                throw new CopyPasteFileAlreadyExistException();
+                renameAndPaste(folder, children, copyInfo);
             } else {
                 LOGGER.info("Pasting node {} with origin id {}", copyInfo.node.getName(), copyInfo.nodeId);
                 folder.unarchive(copyInfo.archivePath.resolve(copyInfo.nodeId));
@@ -201,43 +200,39 @@ public final class CopyManager {
         }
     }
 
-    private void renameSameTypeNode(ProjectFolder projectFolder, AbstractNodeBase child, CopyInfo info) {
-        child.rename(CopyServiceConstants.TEMPORARY_NAME);
-
-        String copyDuplicated = " - " + "Copy";
+    private void renameSameTypeNode(ProjectFolder projectFolder, AbstractNodeBase child, CopyInfo info) throws CopyPasteFileAlreadyExistException {
         String name = info.node.getName();
-        projectFolder.unarchive(info.archivePath.resolve(info.nodeId));
-        projectFolder.getChild(name).ifPresent(pNode -> {
-            if (!name.contains(copyDuplicated) && !projectFolder.getChild(name + copyDuplicated).isPresent()) {
-                pNode.rename(name + copyDuplicated);
-                child.rename(name);
-            } else {
-                if (!name.contains(copyDuplicated)) {
-                    renameCopiedNode(projectFolder, copyDuplicated, child, name, pNode);
-                } else {
-                    renameCopiedNode(projectFolder, "", child, name, pNode);
+        try {
+            info.node.rename(name + UUID.randomUUID().toString());
+            projectFolder.unarchive(info.archivePath.resolve(info.nodeId));
+
+            projectFolder.getChild(name).ifPresent(newNode -> {
+                String copyDuplicated = " - " + "Copy";
+                String copyNameBaseName = name + copyDuplicated;
+                String copyName = copyNameBaseName;
+                AbstractNodeBase childWithSameName = child;
+                int maxLoop = 100;
+                int curLoop = 1;
+                while (childWithSameName != null && curLoop < maxLoop) {
+                    if (curLoop != 1) {
+                        copyName = copyNameBaseName + " (" + curLoop + ")";
+                    }
+                    childWithSameName = projectFolder.getChild(copyName).orElse(null);
+                    curLoop++;
                 }
-            }
-        });
-    }
 
-    private static void renameCopiedNode(ProjectFolder projectFolder, String copy, AbstractNodeBase child, String name, ProjectNode projectNode) {
-        String lastCopiedNode = projectFolder.getChildren().stream()
-                .map(ProjectNode::getName)
-                .filter(n -> n.startsWith(name + copy))
-                .sorted(Comparator.reverseOrder())
-                .collect(Collectors.toList())
-                .get(0);
+                if (childWithSameName != null) {
+                    LOGGER.error("Failed to resolve copy name for node {}", newNode);
+                    copyName = copyNameBaseName + " (" + UUID.randomUUID().toString() + ")";
+                }
 
-        String lastCopiedNodeNumber = lastCopiedNode.substring(lastCopiedNode.indexOf(name + copy) + name.length() + copy.length());
-        if (lastCopiedNodeNumber.isEmpty()) {
-            projectNode.rename(name + copy + 2);
-            child.rename(name);
-        } else {
-            int numberOfCopies = Integer.parseInt(lastCopiedNodeNumber) + 1;
-            projectNode.rename(name + copy + numberOfCopies);
-            child.rename(name);
+                newNode.rename(copyName);
+            });
+
+        } finally {
+            info.node.rename(name);
         }
+
     }
 
     private static void deleteOnExit(File folder) {
