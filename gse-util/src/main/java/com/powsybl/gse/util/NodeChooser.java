@@ -19,10 +19,17 @@ import javafx.beans.property.*;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontPosture;
+import javafx.scene.text.Text;
+import javafx.stage.DirectoryChooser;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 import javafx.stage.Window;
 import javafx.util.Callback;
 import org.controlsfx.control.BreadCrumbBar;
@@ -50,6 +57,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private Set<String> openedProjects = new HashSet<>();
     private SimpleBooleanProperty deleteMenuItemDisableProperty = new SimpleBooleanProperty(false);
     private Optional<CopyService> copyService;
+    private final CopyManager localArchiveManager = CopyManager.getInstance();
 
     private BooleanProperty copied = new SimpleBooleanProperty(false);
 
@@ -621,32 +629,37 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         N value = selectedTreeItem.getValue();
         ContextMenu contextMenu = new ContextMenu();
         List<MenuItem> items = new ArrayList<>();
-        items.add(createRenameProjectMenuItem());
         items.add(createCreateFolderMenuItem());
+        items.add(createRenameProjectMenuItem());
+
         if (value instanceof Folder && ((Folder) value).isWritable()) {
             if (copyService.isPresent()) {
                 items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
                 items.add(createPasteProjectNodeItem(selectedTreeItem));
             }
+            if (((Folder) value).getChildren().isEmpty()) {
+                items.add(new SeparatorMenuItem());
+                items.add(createUnarchiveMenuItem(selectedTreeItem));
+            }
+            items.add(new SeparatorMenuItem());
             items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
         }
-        contextMenu.getItems().addAll(items.stream()
-                .sorted(Comparator.comparing(MenuItem::getText))
-                .collect(Collectors.toList()));
+        contextMenu.getItems().addAll(items);
         return contextMenu;
     }
 
     private ContextMenu createProjectContextMenu(TreeItem<N> selectedTreeItem) {
         ContextMenu contextMenu = new ContextMenu();
         List<MenuItem> items = new ArrayList<>();
-        items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
         if (copyService.isPresent()) {
             items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
         }
         items.add(createRenameProjectMenuItem());
-        contextMenu.getItems().addAll(items.stream()
-                .sorted(Comparator.comparing(MenuItem::getText))
-                .collect(Collectors.toList()));
+        items.add(new SeparatorMenuItem());
+        items.add(createArchiveMenuItem(selectedTreeItem));
+        items.add(new SeparatorMenuItem());
+        items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
+        contextMenu.getItems().addAll(new ArrayList<>(items));
         return contextMenu;
     }
 
@@ -700,6 +713,19 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         return pasteMenuItem;
     }
 
+    private MenuItem createArchiveMenuItem(TreeItem<N> selectedTreeItem) {
+        MenuItem archiveMenuItem = GseMenuItem.createArchiveMenuItem();
+        archiveMenuItem.setDisable(!(selectedTreeItem.getValue() instanceof AbstractNodeBase));
+        archiveMenuItem.setOnAction(event -> archive((AbstractNodeBase) selectedTreeItem.getValue()));
+        return archiveMenuItem;
+    }
+
+    private MenuItem createUnarchiveMenuItem(TreeItem<N> selectedTreeItem) {
+        MenuItem unarchiveMenuItem = GseMenuItem.createUnarchiveMenuItem();
+        unarchiveMenuItem.setOnAction(event -> unarchiveItems(selectedTreeItem));
+        return unarchiveMenuItem;
+    }
+
     private void copy(List<? extends TreeItem<N>> selectedTreeItems) throws CopyPasteException {
         if (copyService.isPresent()) {
             CopyService cpService = copyService.get();
@@ -711,16 +737,29 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             // check if all selected nodes have the same file system and throw an exception if not
             long count = nodes.stream().map(node -> node.getFileSystem().getName()).distinct().count();
             if (count == 1) {
-                cpService.copy(nodes.get(0).getFileSystem().getName(), nodes);
+                context.getExecutor().execute(() -> {
+                    String nodeNames = nodes.stream().map(Node::getName).collect(Collectors.joining(","));
+                    InfoDialog infoDialog = new InfoDialog(String.format(RESOURCE_BUNDLE.getString("CopyTask"), nodeNames), true);
+                    try {
+                        cpService.copy(nodes.get(0).getFileSystem().getName(), nodes);
+                        // set copy parameters into the clipboard
+                        Platform.runLater(() -> {
+                            final Clipboard clipboard = Clipboard.getSystemClipboard();
+                            final ClipboardContent content = new ClipboardContent();
+                            content.putString(CopyManager.copyParameters(nodes).toString());
+                            clipboard.setContent(content);
+                        });
+                        infoDialog.updateStage(RESOURCE_BUNDLE.getString("CompleteTask"));
+                    } catch (CopyPasteException e) {
+                        infoDialog.updateStage(RESOURCE_BUNDLE.getString("ErrorTask"), Color.RED);
+                        LOGGER.error("Failed to copy nodes {}", nodes, e);
+                        Platform.runLater(() -> GseAlerts.showDialogCopyError(e));
+                    }
+                });
             } else {
                 throw new CopyDifferentFileSystemNameException();
             }
 
-            // set copy parameters into the clipboard
-            final Clipboard clipboard = Clipboard.getSystemClipboard();
-            final ClipboardContent content = new ClipboardContent();
-            content.putString(CopyManager.copyParameters(nodes).toString());
-            clipboard.setContent(content);
         } else {
             throw new AfsException("copy service not found");
         }
@@ -735,13 +774,16 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 context.getExecutor().execute(() -> {
                     List<CopyManager.CopyParams.NodeInfo> nodeInfos = cpInfo.getNodeInfos();
                     String fileSystemName = cpInfo.getFileSystem();
+                    String nodeNames = nodeInfos.stream().map(CopyManager.CopyParams.NodeInfo::getName).collect(Collectors.joining(","));
+                    InfoDialog infoDialog = new InfoDialog(String.format(RESOURCE_BUNDLE.getString("PasteTask"), nodeNames), true);
                     try {
                         cpService.paste(fileSystemName, nodeInfos.stream().map(CopyManager.CopyParams.NodeInfo::getId).collect(Collectors.toList()), (Folder) selectedTreeItem.getValue());
                         Platform.runLater(() -> {
-                            GseAlerts.showPasteCompleteInfo(nodeInfos.size(), ((Folder) selectedTreeItem.getValue()).getName());
+                            infoDialog.updateStage(RESOURCE_BUNDLE.getString("CompleteTask"));
                         });
                     } catch (CopyPasteException ex) {
                         Platform.runLater(() -> {
+                            infoDialog.updateStage(RESOURCE_BUNDLE.getString("ErrorTask"), Color.RED);
                             GseAlerts.showDialogError(ex.getMessage());
                         });
                     } finally {
@@ -753,6 +795,46 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             });
         } else {
             throw new AfsException("copy service not found");
+        }
+    }
+
+    private void archive(AbstractNodeBase item) {
+        DirectoryChooser directoryChooser = new DirectoryChooser();
+        java.io.File selectedDirectory = directoryChooser.showDialog(window);
+        if (selectedDirectory != null) {
+            context.getExecutor().execute(() -> {
+                InfoDialog infoDialog = new InfoDialog(String.format(RESOURCE_BUNDLE.getString("ArchiveTask"), item.getName()), true);
+                try {
+                    localArchiveManager.copy(Collections.singletonList(item), selectedDirectory);
+                    infoDialog.updateStage(RESOURCE_BUNDLE.getString("CompleteTask"));
+                } catch (CopyPasteException e) {
+                    GseAlerts.showDialogError(e.getMessage());
+                    infoDialog.updateStage(RESOURCE_BUNDLE.getString("ErrorTask"), Color.RED);
+                }
+            });
+        }
+    }
+
+    private void unarchiveItems(TreeItem<N> folderItem) {
+        Object folder = folderItem.getValue();
+        if (!(folder instanceof Folder)) {
+            throw new IllegalStateException("Can't unarchive item if target is not a folder!");
+        }
+
+        DirectoryChooser directoryChooser = new DirectoryChooser();
+        java.io.File selectedDirectory = directoryChooser.showDialog(window);
+        if (selectedDirectory != null) {
+            context.getExecutor().execute(() -> {
+                InfoDialog infoDialog = new InfoDialog(String.format(RESOURCE_BUNDLE.getString("UnarchiveTask"), selectedDirectory.getName()), true);
+                try {
+                    ((Folder) folder).unarchive(selectedDirectory.toPath());
+                    infoDialog.updateStage(RESOURCE_BUNDLE.getString("CompleteTask"));
+                    Platform.runLater(() -> refresh(folderItem));
+                } catch (Exception e) {
+                    Platform.runLater(() -> GseAlerts.showDialogError(e.getMessage()));
+                    infoDialog.updateStage(RESOURCE_BUNDLE.getString("ErrorTask"), Color.RED);
+                }
+            });
         }
     }
 
@@ -984,6 +1066,56 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             if (dialog != null) {
                 dialog.close();
             }
+        }
+    }
+
+    class InfoDialog {
+        private final VBox content = new VBox(20);
+        private final String initialText;
+
+        InfoDialog(String message, boolean showProgress) {
+            initialText = message;
+            Platform.runLater(() -> {
+                Stage stage = new Stage();
+                stage.setTitle("Information");
+                stage.initModality(Modality.NONE);
+                stage.initOwner(window);
+
+                Pane contentPane = new Pane();
+                contentPane.setPadding(new Insets(5, 5, 5, 5));
+                contentPane.getChildren().add(content);
+
+                AnchorPane pane = new AnchorPane();
+                pane.getChildren().add(content);
+                Text hint = new Text(RESOURCE_BUNDLE.getString("InfoDialogHint"));
+                hint.setFont(Font.font(hint.getFont().getName(), FontPosture.ITALIC, hint.getFont().getSize()));
+                pane.getChildren().add(hint);
+                AnchorPane.setBottomAnchor(hint, 0.0);
+                AnchorPane.setRightAnchor(hint, 0.0);
+                content.getChildren().add(new Text(initialText));
+                if (showProgress) {
+                    ProgressBar progressBar = new ProgressBar();
+                    progressBar.setPrefWidth(350);
+                    content.getChildren().add(progressBar);
+                }
+                Scene dialogScene = new Scene(pane, 400, 100);
+                stage.setScene(dialogScene);
+                stage.show();
+            });
+        }
+
+        void updateStage(String message, Color color) {
+            Platform.runLater(() -> {
+                content.getChildren().clear();
+                content.getChildren().add(new Text(initialText));
+                Text txtMessage = new Text(message);
+                txtMessage.setFill(color);
+                content.getChildren().add(txtMessage);
+            });
+        }
+
+        private void updateStage(String message) {
+            updateStage(message, Color.BLACK);
         }
     }
 }

@@ -629,11 +629,16 @@ public class ProjectPane extends Tab {
         DirectoryChooser directoryChooser = new DirectoryChooser();
         java.io.File selectedDirectory = directoryChooser.showDialog(getContent().getScene().getWindow());
         if (selectedDirectory != null) {
-            try {
-                localArchiveManager.copy(Collections.singletonList(item), selectedDirectory);
-            } catch (CopyPasteException e) {
-                GseAlerts.showDialogError(e.getMessage());
-            }
+            context.getExecutor().execute(() -> {
+                TaskMonitor.Task task = project.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("ArchiveTask"), selectedDirectory.getName()), project);
+                try {
+                    localArchiveManager.copy(Collections.singletonList(item), selectedDirectory);
+                } catch (CopyPasteException e) {
+                    GseAlerts.showDialogError(e.getMessage());
+                } finally {
+                    project.getFileSystem().getTaskMonitor().stopTask(task.getId());
+                }
+            });
         }
     }
 
@@ -648,7 +653,7 @@ public class ProjectPane extends Tab {
         if (selectedDirectory != null) {
             ProjectFolder targetFolder = (ProjectFolder) folder;
             context.getExecutor().execute(() -> {
-                TaskMonitor.Task task = project.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("UnarchiveTask"), targetFolder.getName()), project);
+                TaskMonitor.Task task = project.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("UnarchiveTask"), selectedDirectory.getName()), project);
                 try {
                     ((ProjectFolder) folder).unarchive(selectedDirectory.toPath());
                     Platform.runLater(() -> refresh(folderItem));
@@ -683,17 +688,24 @@ public class ProjectPane extends Tab {
             List<ProjectNode> projectNodes = selectedTreeItems.stream()
                     .map(item -> (ProjectNode) item.getValue())
                     .collect(Collectors.toList());
-            try {
-                cpService.copy(projectNodes.get(0).getFileSystem().getName(), projectNodes);
-                final Clipboard clipboard = Clipboard.getSystemClipboard();
-                final ClipboardContent content = new ClipboardContent();
-                content.putString(CopyManager.copyParameters(projectNodes).toString());
-                clipboard.setContent(content);
-
-            } catch (CopyPasteException e) {
-                LOGGER.error("Failed to copy nodes {}", projectNodes, e);
-                Platform.runLater(() -> GseAlerts.showDialogCopyError(e));
-            }
+            context.getExecutor().execute(() -> {
+                String nodeNames = projectNodes.stream().map(ProjectNode::getName).collect(Collectors.joining(","));
+                TaskMonitor.Task task = project.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("CopyTask"), nodeNames), project);
+                try {
+                    cpService.copy(projectNodes.get(0).getFileSystem().getName(), projectNodes);
+                    Platform.runLater(() -> {
+                        final Clipboard clipboard = Clipboard.getSystemClipboard();
+                        final ClipboardContent content = new ClipboardContent();
+                        content.putString(CopyManager.copyParameters(projectNodes).toString());
+                        clipboard.setContent(content);
+                    });
+                } catch (CopyPasteException e) {
+                    LOGGER.error("Failed to copy nodes {}", projectNodes, e);
+                    Platform.runLater(() -> GseAlerts.showDialogCopyError(e));
+                } finally {
+                    project.getFileSystem().getTaskMonitor().stopTask(task.getId());
+                }
+            });
 
         } else {
             throw new AfsException("copy service not found");
@@ -1056,7 +1068,9 @@ public class ProjectPane extends Tab {
         if (copyService.isPresent()) {
             items.add(createPasteProjectNodeItem(selectedTreeItem));
         }
-        items.add(createUnarchiveMenuItem(selectedTreeItem));
+        if (folder.getChildren().isEmpty()) {
+            items.add(createUnarchiveMenuItem(selectedTreeItem));
+        }
         if (selectedTreeItem != treeView.getRoot()) {
             items.add(createRenameProjectNodeItem(selectedTreeItem));
             if (copyService.isPresent()) {

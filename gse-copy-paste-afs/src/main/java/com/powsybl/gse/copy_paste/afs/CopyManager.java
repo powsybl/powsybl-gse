@@ -23,6 +23,7 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -78,28 +79,18 @@ public final class CopyManager {
                 copyInfo.archivePath = resolveArchiveTargetDirectory(targetDirectory);
                 copyInfo.expirationDate = ZonedDateTime.now().plusHours(CopyServiceConstants.COPY_EXPIRATION_TIME);
 
-                // create task
-                Optional<ProjectNode> projectNode = (node instanceof ProjectNode) ? Optional.of((ProjectNode) node) : Optional.empty();
-                Optional<TaskMonitor.Task> task = projectNode.map(pn -> pn.getFileSystem().getTaskMonitor().startTask("Copy : " + node.getName(), pn.getProject()));
-                task.ifPresent(t -> copyInfo.taskId = t.getId());
-
                 currentCopies.put(copyInfo.nodeId, copyInfo);
 
-                tPool.execute(() -> {
-                    LOGGER.info("Copying (archiving) node {} ({})", node.getName(), node.getId());
+                LOGGER.info("Copying (archiving) node {} ({})", node.getName(), node.getId());
 
-                    try {
-                        node.archive(copyInfo.archivePath);
-                        copyInfo.archiveSuccess = true;
-                        LOGGER.info("Copying (archiving) node {} ({}) is complete", node.getName(), node.getId());
-                    } catch (Exception e) {
-                        copyInfo.archiveSuccess = false;
-                        LOGGER.error("Copy has failed for node {}", node.getId(), e);
-                    }
-
-                    // end task
-                    task.ifPresent(t -> projectNode.ifPresent(pn -> pn.getFileSystem().getTaskMonitor().stopTask(t.getId())));
-                });
+                try {
+                    node.archive(copyInfo.archivePath);
+                    copyInfo.archiveSuccess = true;
+                    LOGGER.info("Copying (archiving) node {} ({}) is complete", node.getName(), node.getId());
+                } catch (Exception e) {
+                    copyInfo.archiveSuccess = false;
+                    LOGGER.error("Copy has failed for node {}", node.getId(), e);
+                }
 
                 deleteOnExit(copyInfo.archivePath.toFile());
             }
@@ -130,8 +121,10 @@ public final class CopyManager {
             throw new CopyNotFinishedException();
         }
 
+        List<String> newNodeNames = new ArrayList<>();
         for (CopyInfo copyInfo : copyInfos.get(true)) {
             List<? extends AbstractNodeBase> children;
+            String nodeNewName = copyInfo.getNode().getName();
 
             if (folder instanceof ProjectFolder) {
                 children = ((ProjectFolder) folder).getChildren();
@@ -140,11 +133,39 @@ public final class CopyManager {
             }
 
             if (children.stream().anyMatch(child -> copyInfo.node.getName().equals(child.getName()))) {
-                renameAndPaste(folder, children, copyInfo);
+                nodeNewName = renameAndPaste(folder, children, copyInfo);
             } else {
                 LOGGER.info("Pasting node {} with origin id {}", copyInfo.node.getName(), copyInfo.nodeId);
                 folder.unarchive(copyInfo.archivePath.resolve(copyInfo.nodeId));
             }
+
+            newNodeNames.add(nodeNewName);
+        }
+
+        newNodeNames.forEach(newNodeName -> {
+            if (folder instanceof ProjectFolder) {
+                ((ProjectFolder) folder).getChild(newNodeName).ifPresent(this::clearOutOfProjectDependencies);
+            }
+        });
+    }
+
+    private void clearOutOfProjectDependencies(ProjectNode copiedNode) {
+        if (copiedNode.isFolder()) {
+            ((ProjectFolder) copiedNode).getChildren().forEach(this::clearOutOfProjectDependencies);
+        } else if (copiedNode instanceof ProjectFile) {
+            ProjectFile projectFile = (ProjectFile) copiedNode;
+            List<ProjectDependency<ProjectNode>> deps = ((ProjectFile) copiedNode).getDependencies();
+            deps.stream()
+                    .filter(dep -> {
+                        if (dep.getProjectNode() instanceof ProjectFile) {
+                            ProjectFile realDep = projectFile.getProject().getFileSystem().findProjectFile(dep.getProjectNode().getId(), ((ProjectFile) dep.getProjectNode()).getClass());
+                            return !Objects.equals(realDep.getProject().getId(), projectFile.getProject().getId());
+                        } else {
+                            LOGGER.warn("Dependency that is not a project file found when clearing out dep after pasting");
+                        }
+                        return false;
+                    })
+                    .forEach(dep -> projectFile.removeDependencies(dep.getName()));
         }
     }
 
@@ -185,54 +206,54 @@ public final class CopyManager {
         }, CLEANUP_DELAY, CLEANUP_PERIOD);
     }
 
-    private void renameAndPaste(AbstractNodeBase folder, List<? extends AbstractNodeBase> children, CopyInfo info) throws CopyPasteException {
+    private String renameAndPaste(AbstractNodeBase folder, List<? extends AbstractNodeBase> children, CopyInfo info) throws CopyPasteException {
 
         for (AbstractNodeBase child : children) {
             String name = child.getName();
             if (info.node.getName().equals(name)) {
-                if (info.node.getClass().equals(child.getClass())) {
-                    renameSameTypeNode((ProjectFolder) folder, child, info);
-                } else {
-                    throw new CopyPasteFileAlreadyExistException();
+                if (info.node.getClass().equals(child.getClass()) && folder instanceof ProjectFolder) {
+                    return renameSameTypeNode((ProjectFolder) folder, child, info);
                 }
-                break;
+                throw new CopyPasteFileAlreadyExistException();
             }
         }
+        throw new CopyPasteException("Failed to rename new node");
     }
 
-    private void renameSameTypeNode(ProjectFolder projectFolder, AbstractNodeBase child, CopyInfo info) throws CopyPasteFileAlreadyExistException {
+    private String renameSameTypeNode(ProjectFolder projectFolder, AbstractNodeBase child, CopyInfo info) throws CopyPasteFileAlreadyExistException {
         String name = info.node.getName();
+        String copyDuplicated = " - " + "Copy";
+        String copyNameBaseName = name + copyDuplicated;
+        AtomicReference<String> copyName = new AtomicReference<>(copyNameBaseName);
         try {
             info.node.rename(name + UUID.randomUUID().toString());
             projectFolder.unarchive(info.archivePath.resolve(info.nodeId));
 
             projectFolder.getChild(name).ifPresent(newNode -> {
-                String copyDuplicated = " - " + "Copy";
-                String copyNameBaseName = name + copyDuplicated;
-                String copyName = copyNameBaseName;
                 AbstractNodeBase childWithSameName = child;
                 int maxLoop = 100;
                 int curLoop = 1;
                 while (childWithSameName != null && curLoop < maxLoop) {
                     if (curLoop != 1) {
-                        copyName = copyNameBaseName + " (" + curLoop + ")";
+                        copyName.set(copyNameBaseName + " (" + curLoop + ")");
                     }
-                    childWithSameName = projectFolder.getChild(copyName).orElse(null);
+                    childWithSameName = projectFolder.getChild(copyName.get()).orElse(null);
                     curLoop++;
                 }
 
                 if (childWithSameName != null) {
                     LOGGER.error("Failed to resolve copy name for node {}", newNode);
-                    copyName = copyNameBaseName + " (" + UUID.randomUUID().toString() + ")";
+                    copyName.set(copyNameBaseName + " (" + UUID.randomUUID().toString() + ")");
                 }
 
-                newNode.rename(copyName);
+                newNode.rename(copyName.get());
             });
 
         } finally {
             info.node.rename(name);
         }
 
+        return copyName.get();
     }
 
     private static void deleteOnExit(File folder) {
