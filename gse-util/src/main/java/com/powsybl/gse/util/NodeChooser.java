@@ -25,7 +25,6 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Window;
 import javafx.util.Callback;
-import javafx.util.Pair;
 import org.controlsfx.control.BreadCrumbBar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -731,15 +730,15 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         if (copyService.isPresent()) {
             CopyService cpService = copyService.get();
 
-            Optional<Pair<List<String>, String>> copyInfo = getCopyInfo();
+            Optional<CopyManager.CopyParams> copyInfo = getCopyInfo();
             copyInfo.ifPresent(cpInfo -> {
                 context.getExecutor().execute(() -> {
-                    List<String> nodesIds = cpInfo.getKey();
-                    String fileSystemName = cpInfo.getValue();
+                    List<CopyManager.CopyParams.NodeInfo> nodeInfos = cpInfo.getNodeInfos();
+                    String fileSystemName = cpInfo.getFileSystem();
                     try {
-                        cpService.paste(fileSystemName, nodesIds, (Folder) selectedTreeItem.getValue());
+                        cpService.paste(fileSystemName, nodeInfos.stream().map(CopyManager.CopyParams.NodeInfo::getId).collect(Collectors.toList()), (Folder) selectedTreeItem.getValue());
                         Platform.runLater(() -> {
-                            GseAlerts.showPasteCompleteInfo(nodesIds.size(), ((Folder) selectedTreeItem.getValue()).getName());
+                            GseAlerts.showPasteCompleteInfo(nodeInfos.size(), ((Folder) selectedTreeItem.getValue()).getName());
                         });
                     } catch (CopyPasteException ex) {
                         Platform.runLater(() -> {
@@ -757,7 +756,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         }
     }
 
-    private static Optional<Pair<List<String>, String>> getCopyInfo() {
+    private static Optional<CopyManager.CopyParams> getCopyInfo() {
         final Clipboard clipboard = Clipboard.getSystemClipboard();
         String clipboardStringContent = clipboard.getString();
         return CopyManager.getCopyInfo(clipboard, clipboardStringContent);

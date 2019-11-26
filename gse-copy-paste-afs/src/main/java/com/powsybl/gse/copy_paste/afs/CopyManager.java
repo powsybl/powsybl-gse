@@ -9,7 +9,6 @@ package com.powsybl.gse.copy_paste.afs;
 import com.powsybl.afs.*;
 import com.powsybl.gse.copy_paste.afs.exceptions.*;
 import javafx.scene.input.Clipboard;
-import javafx.util.Pair;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
@@ -36,6 +35,7 @@ public final class CopyManager {
     private static final long CLEANUP_DELAY = 36000;
     private static final long CLEANUP_PERIOD = 180000;
     private static final String COPY_INFO_SEPARATOR = "/";
+    private static final String COPY_NODE_INFO_SEPARATOR = ";";
 
     private static CopyManager INSTANCE = null;
 
@@ -267,18 +267,75 @@ public final class CopyManager {
                 .append(COPY_INFO_SEPARATOR)
                 .append(fileSystemName)
                 .append(COPY_INFO_SEPARATOR);
-        nodes.forEach(nod -> copyParameters.append(nod.getId()).append(COPY_INFO_SEPARATOR));
+        nodes.forEach(nod -> copyParameters.append(nod.getId()).append(COPY_NODE_INFO_SEPARATOR).append(node.getName().replaceAll(COPY_INFO_SEPARATOR, "").replaceAll(COPY_NODE_INFO_SEPARATOR, "")).append(COPY_INFO_SEPARATOR));
         return copyParameters;
     }
 
-    public static Optional<Pair<List<String>, String>> getCopyInfo(Clipboard clipboard, String copyInfo) {
+    public static Optional<CopyParams> getCopyInfo(Clipboard clipboard, String copyInfo) {
         if (clipboard.hasString() && copyInfo.contains(CopyServiceConstants.COPY_SIGNATURE)) {
             String[] copyInfoArray = copyInfo.split(COPY_INFO_SEPARATOR);
-            List<String> nodesIds = Arrays.asList(ArrayUtils.removeAll(copyInfoArray, 0, 1));
+            List<CopyParams.NodeInfo> nodesInfos = Arrays.stream(ArrayUtils.removeAll(copyInfoArray, 0, 1))
+                    .map(nodeInfo -> {
+                        String[] itemInfo = nodeInfo.split(COPY_NODE_INFO_SEPARATOR);
+                        return new CopyParams.NodeInfo(itemInfo[0], itemInfo.length > 1 ? itemInfo[1] : null);
+                    })
+                    .collect(Collectors.toList());
             String fileSystemName = copyInfoArray[1];
-            return Optional.of(new Pair<>(nodesIds, fileSystemName));
+            return Optional.of(new CopyParams(fileSystemName, nodesInfos));
         }
         return Optional.empty();
+    }
+
+    public static class CopyParams {
+        String fileSystem;
+        List<NodeInfo> nodeInfos;
+
+        public CopyParams(String fileSystem, List<NodeInfo> nodeInfos) {
+            this.fileSystem = fileSystem;
+            this.nodeInfos = nodeInfos;
+        }
+
+        public String getFileSystem() {
+            return fileSystem;
+        }
+
+        public void setFileSystem(String fileSystem) {
+            this.fileSystem = fileSystem;
+        }
+
+        public List<NodeInfo> getNodeInfos() {
+            return nodeInfos;
+        }
+
+        public void setNodeInfos(List<NodeInfo> nodeInfos) {
+            this.nodeInfos = nodeInfos;
+        }
+
+        public static class NodeInfo {
+            String id;
+            String name;
+
+            public NodeInfo(String id, String name) {
+                this.id = id;
+                this.name = name;
+            }
+
+            public String getId() {
+                return id;
+            }
+
+            public void setId(String id) {
+                this.id = id;
+            }
+
+            public String getName() {
+                return name;
+            }
+
+            public void setName(String name) {
+                this.name = name;
+            }
+        }
     }
 
     public static class CopyInfo {
