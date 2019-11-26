@@ -1081,8 +1081,9 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 stage.initModality(Modality.NONE);
                 stage.initOwner(window);
 
-                Pane contentPane = new Pane();
+                BorderPane contentPane = new BorderPane();
                 contentPane.setPadding(new Insets(5, 5, 5, 5));
+                content.setPadding(new Insets(5, 5, 5, 5));
                 contentPane.getChildren().add(content);
 
                 AnchorPane pane = new AnchorPane();

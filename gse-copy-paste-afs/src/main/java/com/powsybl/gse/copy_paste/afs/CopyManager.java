@@ -91,8 +91,6 @@ public final class CopyManager {
                     copyInfo.archiveSuccess = false;
                     LOGGER.error("Copy has failed for node {}", node.getId(), e);
                 }
-
-                deleteOnExit(copyInfo.archivePath.toFile());
             }
         } catch (IOException e) {
             throw new CopyFailedException(e);
