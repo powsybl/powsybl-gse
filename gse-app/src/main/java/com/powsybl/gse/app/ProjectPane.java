@@ -739,7 +739,7 @@ public class ProjectPane extends Tab {
                     List<CopyManager.CopyParams.NodeInfo> nodesInfos = cpInfo.getNodeInfos();
                     String fileSystemName = cpInfo.getFileSystem();
                     ProjectFolder projectFolder = (ProjectFolder) selectedTreeItem.getValue();
-                    String nodeNames = nodesInfos.stream().map(CopyManager.CopyParams.NodeInfo::getName).collect(Collectors.joining(","));
+                    String nodeNames = nodesInfos.stream().map(CopyManager.CopyParams.NodeInfo::getName).collect(Collectors.joining(", "));
                     TaskMonitor.Task task = projectFolder.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("CopyPasteTask"), nodeNames), projectFolder.getProject());
 
                     AtomicReference<CopyPasteException> error = new AtomicReference<>();
