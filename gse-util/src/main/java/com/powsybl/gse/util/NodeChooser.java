@@ -9,7 +9,6 @@ package com.powsybl.gse.util;
 import com.powsybl.afs.*;
 import com.powsybl.gse.copy_paste.afs.CopyManager;
 import com.powsybl.gse.copy_paste.afs.CopyService;
-import com.powsybl.gse.copy_paste.afs.exceptions.CopyDifferentFileSystemNameException;
 import com.powsybl.gse.copy_paste.afs.exceptions.CopyPasteException;
 import com.powsybl.gse.spi.GseContext;
 import impl.org.controlsfx.skin.BreadCrumbBarSkin;
@@ -491,11 +490,11 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private boolean isChildOf(TreeItem<N> targetTreeItem) {
-        return targetTreeItem == dragAndDropMove.getSourceTreeItem().getParent();
+        return dragAndDropMove.getSourceTreeItem().size() == 1 && targetTreeItem == dragAndDropMove.getSourceTreeItem().get(0).getParent();
     }
 
     public boolean isMovable(N item, TreeItem<N> targetTreeItem) {
-        return dragAndDropMove != null && item != dragAndDropMove.getSource() && !isChildOf(targetTreeItem);
+        return dragAndDropMove != null && dragAndDropMove.getSourceTreeItem().size() == 1 && targetTreeItem != dragAndDropMove.getSourceTreeItem().get(0) && !isChildOf(targetTreeItem);
     }
 
     private void dragOverEvent(DragEvent event, N item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treeTableCell) {
@@ -514,8 +513,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private void dragDetectedEvent(N value, TreeItem<N> treeItem, MouseEvent event) {
         dragAndDropMove = new DragAndDropMove();
-        dragAndDropMove.setSource(value);
-        dragAndDropMove.setSourceTreeItem(treeItem);
+        dragAndDropMove.setSourceTreeItem(Collections.singletonList(treeItem));
         if (value instanceof Project && treeItem != tree.getRoot()) {
             Dragboard db = tree.startDragAndDrop(TransferMode.ANY);
             ClipboardContent cb = new ClipboardContent();
@@ -526,14 +524,14 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private void dragDroppedEvent(Object value, TreeItem<N> treeItem, DragEvent event, Node node) {
-        if (value instanceof Folder && value != dragAndDropMove.getSource()) {
+        if (dragAndDropMove.getSourceTreeItem().size() == 1 && value instanceof Folder && treeItem != dragAndDropMove.getSourceTreeItem().get(0)) {
             Folder folder = (Folder) node;
             int count = 0;
             success = false;
             treeItemChildrenSize(treeItem, count);
             accepTransferDrag(folder, success);
             event.setDropCompleted(success);
-            refreshTreeItem(dragAndDropMove.getSourceTreeItem().getParent());
+            refreshTreeItem(dragAndDropMove.getSourceTreeItem().get(0).getParent());
             refreshTreeItem(treeItem);
             tree.getSelectionModel().clearSelection();
             event.consume();
@@ -548,6 +546,9 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private void treeItemChildrenSize(TreeItem<N> treeItem, int compte) {
+        if (dragAndDropMove.getSourceTreeItem().size() != 1) {
+            throw new RuntimeException("Should not happen");
+        }
         counter = compte;
         if (!treeItem.isLeaf()) {
             Folder folder = (Folder) treeItem.getValue();
@@ -555,7 +556,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 for (Node node : folder.getChildren()) {
                     if (node == null) {
                         break;
-                    } else if (node.getName().equals(dragAndDropMove.getSource().toString())) {
+                    } else if (node.getName().equals(dragAndDropMove.getSourceTreeItem().get(0).getValue().toString())) {
                         counter++;
                     }
                 }
@@ -565,10 +566,10 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private void accepTransferDrag(Folder folder, boolean s) {
         success = s;
-        if (getCounter() >= 1) {
+        if (getCounter() >= 1 || dragAndDropMove.getSourceTreeItem().size() != 1) {
             GseAlerts.showDraggingError();
         } else if (getCounter() < 1) {
-            Project monfichier = (Project) dragAndDropMove.getSource();
+            Project monfichier = (Project) dragAndDropMove.getSourceTreeItem().get(0).getValue();
             monfichier.moveTo(folder);
             success = true;
         }

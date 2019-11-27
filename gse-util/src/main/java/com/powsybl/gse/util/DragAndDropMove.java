@@ -8,28 +8,21 @@ package com.powsybl.gse.util;
 
 import javafx.scene.control.TreeItem;
 
+import java.util.Collections;
+import java.util.List;
+
 /**
  * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
  */
 public class DragAndDropMove {
 
-    private Object source;
+    private List<TreeItem> sourceTreeItem = Collections.emptyList();
 
-    private TreeItem sourceTreeItem;
-
-    public Object getSource() {
-        return source;
-    }
-
-    public void setSource(Object source) {
-        this.source = source;
-    }
-
-    public TreeItem getSourceTreeItem() {
+    public List<TreeItem> getSourceTreeItem() {
         return sourceTreeItem;
     }
 
-    public void setSourceTreeItem(TreeItem sourceTreeItem) {
-        this.sourceTreeItem = sourceTreeItem;
+    public void setSourceTreeItem(List<TreeItem> sourceTreeItem) {
+        this.sourceTreeItem = Collections.unmodifiableList(sourceTreeItem);
     }
 }

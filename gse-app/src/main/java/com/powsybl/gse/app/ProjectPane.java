@@ -54,6 +54,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -330,7 +331,7 @@ public class ProjectPane extends Tab {
     private boolean isSourceAncestorOf(TreeItem<Object> targetTreeItem) {
         TreeItem treeItemParent = targetTreeItem.getParent();
         while (treeItemParent != null) {
-            if (dragAndDropMove.getSourceTreeItem() == treeItemParent) {
+            if (dragAndDropMove.getSourceTreeItem().contains(treeItemParent)) {
                 return true;
             } else {
                 treeItemParent = treeItemParent.getParent();
@@ -340,26 +341,24 @@ public class ProjectPane extends Tab {
     }
 
     private boolean isChildOf(TreeItem<Object> targetTreeItem) {
-        return targetTreeItem == dragAndDropMove.getSourceTreeItem().getParent();
+        return dragAndDropMove
+                .getSourceTreeItem()
+                .stream()
+                .map(TreeItem::getParent)
+                .anyMatch(sourceParent -> targetTreeItem.equals(sourceParent) || (!(targetTreeItem.getValue() instanceof FolderBase) && targetTreeItem.getParent() != null && targetTreeItem.getParent().equals(sourceParent)));
     }
 
-    private boolean isMovable(Object item, TreeItem<Object> targetTreeItem) {
-        return dragAndDropMove != null && item != dragAndDropMove.getSource() && !isSourceAncestorOf(targetTreeItem) && !isChildOf(targetTreeItem) && !areSourceAndTargetProjectFileSiblings(targetTreeItem);
-    }
-
-    private boolean areSourceAndTargetProjectFileSiblings(TreeItem targetItem) {
-        if (targetItem.getValue() instanceof FolderBase) {
-            return false;
-        }
-        TreeItem sourceItem = dragAndDropMove.getSourceTreeItem();
-        return sourceItem.getParent() != null && targetItem.getParent() != null && sourceItem.getParent().equals(targetItem.getParent());
+    private boolean isMovable(TreeItem<Object> targetTreeItem) {
+        return dragAndDropMove != null && !dragAndDropMove.getSourceTreeItem().contains(targetTreeItem) && !isSourceAncestorOf(targetTreeItem) && !isChildOf(targetTreeItem);
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeTableCell treeCell) {
-        if (item instanceof ProjectNode && isMovable(item, treeItem)) {
-            boolean nameExists = (item instanceof ProjectFolder) ?
-                    treeItem.getChildren().stream().anyMatch(child -> getName(dragAndDropMove.getSourceTreeItem()).equals(getName(child))) :
-                    treeItem.getParent() != null && treeItem.getParent().getChildren().stream().anyMatch(child -> getName(dragAndDropMove.getSourceTreeItem()).equals(getName(child)));
+        if (item instanceof ProjectNode && isMovable(treeItem)) {
+            List<TreeItem<Object>> children = (item instanceof ProjectFolder) ?
+                    treeItem.getChildren() :
+                    Optional.of(treeItem.getParent()).map(parent -> new ArrayList<>(parent.getChildren())).orElse(new ArrayList<>());
+            List<String> sourceNames = dragAndDropMove.getSourceTreeItem().stream().map(ProjectPane::getName).collect(Collectors.toList());
+            boolean nameExists = children.stream().anyMatch(child -> sourceNames.contains(getName(child)));
             if (!nameExists) {
                 setDragOverStyle(treeCell);
             }
@@ -378,8 +377,7 @@ public class ProjectPane extends Tab {
 
     private void dragDetectedEvent(Object value, TreeItem<Object> treeItem, MouseEvent event) {
         dragAndDropMove = new DragAndDropMove();
-        dragAndDropMove.setSource(value);
-        dragAndDropMove.setSourceTreeItem(treeItem);
+        dragAndDropMove.setSourceTreeItem(new ArrayList<>(treeView.getSelectionModel().getSelectedItems()));
 
         if (value instanceof ProjectNode && treeItem != treeView.getRoot()) {
             Dragboard db = treeView.startDragAndDrop(TransferMode.ANY);
@@ -391,35 +389,55 @@ public class ProjectPane extends Tab {
     }
 
     private void dragDroppedEvent(Object value, TreeItem<Object> treeItem, DragEvent event, ProjectNode projectNode) {
-        if (value != dragAndDropMove.getSource()) {
+        if (dragAndDropMove.getSourceTreeItem() != null && !dragAndDropMove.getSourceTreeItem().contains(treeItem)) {
             success = false;
+            TreeItem<Object> targetDir;
             if (value instanceof ProjectFolder) {
-                ProjectFolder projectFolder = (ProjectFolder) projectNode;
-                acceptTransferDrag(projectFolder, success);
-                refresh(treeItem);
-            } else if (value instanceof ProjectFile) {
-                ProjectFile projectFile = (ProjectFile) projectNode;
-                projectFile.getParent().ifPresent(projectFolder -> acceptTransferDrag(projectFile.getParent().get(), success));
-                refresh(treeItem.getParent());
+                targetDir = treeItem;
+            } else if (value instanceof ProjectFile && treeItem.getParent() != null) {
+                targetDir = treeItem.getParent();
+            } else {
+                GseAlerts.showDraggingError();
+                return;
             }
+
+            acceptTransferDrag(targetDir, success);
+            refresh(targetDir);
+
             event.setDropCompleted(success);
-            refresh(dragAndDropMove.getSourceTreeItem().getParent());
+            Stream
+                    .concat(Stream.of(targetDir), dragAndDropMove
+                            .getSourceTreeItem()
+                            .stream()
+                            .map(TreeItem::getParent)
+                            .filter(Objects::nonNull))
+                    .distinct()
+                    .forEach(this::refresh);
+
             treeView.getSelectionModel().clearSelection();
             event.consume();
         }
     }
 
-    private boolean dragNodeNameAlreadyExists(ProjectFolder projectFolder) {
-        return projectFolder.getChildren().stream().anyMatch(projectNode -> projectNode.getName().equals(((ProjectNode) dragAndDropMove.getSource()).getName()));
+    private boolean dragNodeNameAlreadyExists(TreeItem<Object> projectFolder) {
+        List<String> sourceNames = dragAndDropMove.getSourceTreeItem().stream().map(ProjectPane::getName).collect(Collectors.toList());
+        return projectFolder.getChildren().stream().anyMatch(child -> sourceNames.contains(getName(child)));
     }
 
-    private void acceptTransferDrag(ProjectFolder projectFolder, boolean s) {
+    private void acceptTransferDrag(TreeItem<Object> projectFolder, boolean s) {
         success = s;
-        if (dragNodeNameAlreadyExists(projectFolder)) {
+        if (!(projectFolder.getValue() instanceof ProjectFolder)) {
+            GseAlerts.showDraggingError();
+        } else if (dragNodeNameAlreadyExists(projectFolder)) {
             GseAlerts.showDraggingError();
         } else {
-            ProjectNode projectNode = (ProjectNode) dragAndDropMove.getSource();
-            projectNode.moveTo(projectFolder);
+            dragAndDropMove.getSourceTreeItem().stream().forEach(item -> {
+                if (!(item.getValue() instanceof ProjectNode)) {
+                    LOGGER.warn("Drag'n'droppping an unknown type of node (not a ProjectNode)! Ignoring action.");
+                } else {
+                    ((ProjectNode) item.getValue()).moveTo((ProjectFolder) projectFolder.getValue());
+                }
+            });
             success = true;
         }
     }
@@ -506,7 +524,6 @@ public class ProjectPane extends Tab {
 
         Platform.runLater(() -> {
             List<ProjectNode> childNodes = folder.getChildren();
-
             List<TreeItem<Object>> childItems = childNodes.stream()
                     .map(child -> new Pair<>(child, findTreeItemFromValue(child, folderItem)))
                     .map(childAndTreeItem -> createNodeTreeItem(childAndTreeItem.getKey(), childAndTreeItem.getValue().orElse(null)))
@@ -539,6 +556,14 @@ public class ProjectPane extends Tab {
     }
 
     private Optional<TreeItem<Object>> findTreeItemFromValue(Object value, TreeItem<Object> root) {
+        return findTreeItemFromValue(value, root, 1);
+    }
+
+    private Optional<TreeItem<Object>> findTreeItemFromValue(Object value, TreeItem<Object> root, int depth) {
+        if (depth < 0) {
+            return Optional.empty();
+        }
+
         if (root.getValue() != null &&
                 root.getValue() instanceof AbstractNodeBase &&
                 value instanceof AbstractNodeBase &&
@@ -549,7 +574,7 @@ public class ProjectPane extends Tab {
         if (root.getChildren() != null && root.getChildren().size() > 0) {
             return root.getChildren()
                     .stream()
-                    .map(item -> findTreeItemFromValue(value, item))
+                    .map(item -> findTreeItemFromValue(value, item, depth - 1))
                     .filter(Optional::isPresent)
                     .findFirst()
                     .orElse(Optional.empty());
@@ -776,7 +801,7 @@ public class ProjectPane extends Tab {
 
     private boolean hasAncestorsIn(TreeItem<Object> item, List<? extends TreeItem<Object>> pool) {
         TreeItem<Object> parent = item.getParent();
-        while (parent != null && parent != treeView.getRoot()) {
+        while (parent != null) {
             if (pool.contains(parent)) {
                 return true;
             }
