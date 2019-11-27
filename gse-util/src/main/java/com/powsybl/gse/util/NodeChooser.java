@@ -9,8 +9,6 @@ package com.powsybl.gse.util;
 import com.powsybl.afs.*;
 import com.powsybl.gse.copy_paste.afs.CopyManager;
 import com.powsybl.gse.copy_paste.afs.CopyService;
-import com.powsybl.gse.copy_paste.afs.CopyServiceConstants;
-import com.powsybl.gse.copy_paste.afs.exceptions.CopyDifferentFileSystemNameException;
 import com.powsybl.gse.copy_paste.afs.exceptions.CopyPasteException;
 import com.powsybl.gse.spi.GseContext;
 import impl.org.controlsfx.skin.BreadCrumbBarSkin;
@@ -56,7 +54,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private boolean success;
     private Set<String> openedProjects = new HashSet<>();
     private SimpleBooleanProperty deleteMenuItemDisableProperty = new SimpleBooleanProperty(false);
-    private Optional<CopyService> copyService;
     private final CopyManager localArchiveManager = CopyManager.getInstance();
 
     private BooleanProperty copied = new SimpleBooleanProperty(false);
@@ -265,16 +262,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         tree.setShowRoot(false);
         rootItem.getChildren().add(new TreeItem<>());
 
-        copyService = treeModel
-                .getRootFolders()
-                .stream()
-                .filter(el -> el instanceof Folder)
-                .map(el -> (Folder) el)
-                .filter(el -> el.getFileSystem().isRemotelyAccessible())
-                .map(this::initCopyService)
-                .filter(Objects::nonNull)
-                .findAny();
-
         TreeTableColumn<N, N> fileColumn = new TreeTableColumn<>(RESOURCE_BUNDLE.getString("File"));
         fileColumn.setPrefWidth(415);
         fileColumn.setCellValueFactory((TreeTableColumn.CellDataFeatures<N, N> callback) -> {
@@ -415,10 +402,8 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private void copiedChangedListener(Clipboard systemClipboard) {
-        if (systemClipboard != null && systemClipboard.hasString() && systemClipboard.getString() != null) {
-            String clipBoard = systemClipboard.getString();
-            copied.set(clipBoard.contains(CopyServiceConstants.COPY_SIGNATURE));
-        }
+        boolean canPaste = CopyManager.getCopyInfo(systemClipboard).map(copyParams -> !copyParams.getProjectNodeType()).orElse(false);
+        copied.set(canPaste);
     }
 
     public ReadOnlyObjectProperty<T> selectedNodeProperty() {
@@ -505,11 +490,11 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private boolean isChildOf(TreeItem<N> targetTreeItem) {
-        return targetTreeItem == dragAndDropMove.getSourceTreeItem().getParent();
+        return dragAndDropMove.getSourceTreeItem().size() == 1 && targetTreeItem == dragAndDropMove.getSourceTreeItem().get(0).getParent();
     }
 
     public boolean isMovable(N item, TreeItem<N> targetTreeItem) {
-        return dragAndDropMove != null && item != dragAndDropMove.getSource() && !isChildOf(targetTreeItem);
+        return dragAndDropMove != null && dragAndDropMove.getSourceTreeItem().size() == 1 && targetTreeItem != dragAndDropMove.getSourceTreeItem().get(0) && !isChildOf(targetTreeItem);
     }
 
     private void dragOverEvent(DragEvent event, N item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treeTableCell) {
@@ -528,8 +513,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private void dragDetectedEvent(N value, TreeItem<N> treeItem, MouseEvent event) {
         dragAndDropMove = new DragAndDropMove();
-        dragAndDropMove.setSource(value);
-        dragAndDropMove.setSourceTreeItem(treeItem);
+        dragAndDropMove.setSourceTreeItem(Collections.singletonList(treeItem));
         if (value instanceof Project && treeItem != tree.getRoot()) {
             Dragboard db = tree.startDragAndDrop(TransferMode.ANY);
             ClipboardContent cb = new ClipboardContent();
@@ -540,14 +524,14 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private void dragDroppedEvent(Object value, TreeItem<N> treeItem, DragEvent event, Node node) {
-        if (value instanceof Folder && value != dragAndDropMove.getSource()) {
+        if (dragAndDropMove.getSourceTreeItem().size() == 1 && value instanceof Folder && treeItem != dragAndDropMove.getSourceTreeItem().get(0)) {
             Folder folder = (Folder) node;
             int count = 0;
             success = false;
             treeItemChildrenSize(treeItem, count);
             accepTransferDrag(folder, success);
             event.setDropCompleted(success);
-            refreshTreeItem(dragAndDropMove.getSourceTreeItem().getParent());
+            refreshTreeItem(dragAndDropMove.getSourceTreeItem().get(0).getParent());
             refreshTreeItem(treeItem);
             tree.getSelectionModel().clearSelection();
             event.consume();
@@ -562,6 +546,9 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private void treeItemChildrenSize(TreeItem<N> treeItem, int compte) {
+        if (dragAndDropMove.getSourceTreeItem().size() != 1) {
+            throw new RuntimeException("Should not happen");
+        }
         counter = compte;
         if (!treeItem.isLeaf()) {
             Folder folder = (Folder) treeItem.getValue();
@@ -569,7 +556,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 for (Node node : folder.getChildren()) {
                     if (node == null) {
                         break;
-                    } else if (node.getName().equals(dragAndDropMove.getSource().toString())) {
+                    } else if (node.getName().equals(dragAndDropMove.getSourceTreeItem().get(0).getValue().toString())) {
                         counter++;
                     }
                 }
@@ -579,10 +566,10 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private void accepTransferDrag(Folder folder, boolean s) {
         success = s;
-        if (getCounter() >= 1) {
+        if (getCounter() >= 1 || dragAndDropMove.getSourceTreeItem().size() != 1) {
             GseAlerts.showDraggingError();
         } else if (getCounter() < 1) {
-            Project monfichier = (Project) dragAndDropMove.getSource();
+            Project monfichier = (Project) dragAndDropMove.getSourceTreeItem().get(0).getValue();
             monfichier.moveTo(folder);
             success = true;
         }
@@ -619,9 +606,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private ContextMenu createMultipleContextMenu(List<? extends TreeItem<N>> selectedTreeItems) {
         ContextMenu contextMenu = new ContextMenu();
         contextMenu.getItems().add(createDeleteNodeMenuItem(selectedTreeItems));
-        if (copyService.isPresent()) {
-            contextMenu.getItems().add(createCopyProjectNodeItem(selectedTreeItems));
-        }
         return contextMenu;
     }
 
@@ -633,10 +617,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         items.add(createRenameProjectMenuItem());
 
         if (value instanceof Folder && ((Folder) value).isWritable()) {
-            if (copyService.isPresent()) {
-                items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
-                items.add(createPasteProjectNodeItem(selectedTreeItem));
-            }
             if (((Folder) value).getChildren().isEmpty()) {
                 items.add(new SeparatorMenuItem());
                 items.add(createUnarchiveMenuItem(selectedTreeItem));
@@ -651,9 +631,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private ContextMenu createProjectContextMenu(TreeItem<N> selectedTreeItem) {
         ContextMenu contextMenu = new ContextMenu();
         List<MenuItem> items = new ArrayList<>();
-        if (copyService.isPresent()) {
-            items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
-        }
         items.add(createRenameProjectMenuItem());
         items.add(new SeparatorMenuItem());
         items.add(createArchiveMenuItem(selectedTreeItem));
@@ -694,25 +671,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         });
     }
 
-    private MenuItem createCopyProjectNodeItem(List<? extends TreeItem<N>> selectedTreeItems) {
-        MenuItem copyMenuItem = GseMenuItem.createCopyMenuItem();
-        copyMenuItem.setOnAction(event -> {
-            try {
-                copy(selectedTreeItems);
-            } catch (CopyPasteException ex) {
-                GseAlerts.showDialogCopyError(ex);
-            }
-        });
-        return copyMenuItem;
-    }
-
-    private MenuItem createPasteProjectNodeItem(TreeItem<N> selectedTreeItem) {
-        MenuItem pasteMenuItem = GseMenuItem.createPasteMenuItem();
-        pasteMenuItem.disableProperty().bind(copied.not());
-        pasteMenuItem.setOnAction(event -> paste(selectedTreeItem));
-        return pasteMenuItem;
-    }
-
     private MenuItem createArchiveMenuItem(TreeItem<N> selectedTreeItem) {
         MenuItem archiveMenuItem = GseMenuItem.createArchiveMenuItem();
         archiveMenuItem.setDisable(!(selectedTreeItem.getValue() instanceof AbstractNodeBase));
@@ -724,78 +682,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         MenuItem unarchiveMenuItem = GseMenuItem.createUnarchiveMenuItem();
         unarchiveMenuItem.setOnAction(event -> unarchiveItems(selectedTreeItem));
         return unarchiveMenuItem;
-    }
-
-    private void copy(List<? extends TreeItem<N>> selectedTreeItems) throws CopyPasteException {
-        if (copyService.isPresent()) {
-            CopyService cpService = copyService.get();
-
-            List<Node> nodes = selectedTreeItems.stream()
-                    .map(item -> (Node) item.getValue())
-                    .collect(Collectors.toList());
-
-            // check if all selected nodes have the same file system and throw an exception if not
-            long count = nodes.stream().map(node -> node.getFileSystem().getName()).distinct().count();
-            if (count == 1) {
-                context.getExecutor().execute(() -> {
-                    String nodeNames = nodes.stream().map(Node::getName).collect(Collectors.joining(","));
-                    InfoDialog infoDialog = new InfoDialog(String.format(RESOURCE_BUNDLE.getString("CopyTask"), nodeNames), true);
-                    try {
-                        cpService.copy(nodes.get(0).getFileSystem().getName(), nodes);
-                        // set copy parameters into the clipboard
-                        Platform.runLater(() -> {
-                            final Clipboard clipboard = Clipboard.getSystemClipboard();
-                            final ClipboardContent content = new ClipboardContent();
-                            content.putString(CopyManager.copyParameters(nodes).toString());
-                            clipboard.setContent(content);
-                        });
-                        infoDialog.updateStage(RESOURCE_BUNDLE.getString("CompleteTask"));
-                    } catch (CopyPasteException e) {
-                        infoDialog.updateStage(RESOURCE_BUNDLE.getString("ErrorTask"), Color.RED);
-                        LOGGER.error("Failed to copy nodes {}", nodes, e);
-                        Platform.runLater(() -> GseAlerts.showDialogCopyError(e));
-                    }
-                });
-            } else {
-                throw new CopyDifferentFileSystemNameException();
-            }
-
-        } else {
-            throw new AfsException("copy service not found");
-        }
-    }
-
-    private void paste(TreeItem<N> selectedTreeItem) {
-        if (copyService.isPresent()) {
-            CopyService cpService = copyService.get();
-
-            Optional<CopyManager.CopyParams> copyInfo = getCopyInfo();
-            copyInfo.ifPresent(cpInfo -> {
-                context.getExecutor().execute(() -> {
-                    List<CopyManager.CopyParams.NodeInfo> nodeInfos = cpInfo.getNodeInfos();
-                    String fileSystemName = cpInfo.getFileSystem();
-                    String nodeNames = nodeInfos.stream().map(CopyManager.CopyParams.NodeInfo::getName).collect(Collectors.joining(","));
-                    InfoDialog infoDialog = new InfoDialog(String.format(RESOURCE_BUNDLE.getString("PasteTask"), nodeNames), true);
-                    try {
-                        cpService.paste(fileSystemName, nodeInfos.stream().map(CopyManager.CopyParams.NodeInfo::getId).collect(Collectors.toList()), (Folder) selectedTreeItem.getValue());
-                        Platform.runLater(() -> {
-                            infoDialog.updateStage(RESOURCE_BUNDLE.getString("CompleteTask"));
-                        });
-                    } catch (CopyPasteException ex) {
-                        Platform.runLater(() -> {
-                            infoDialog.updateStage(RESOURCE_BUNDLE.getString("ErrorTask"), Color.RED);
-                            GseAlerts.showDialogError(ex.getMessage());
-                        });
-                    } finally {
-                        Platform.runLater(() -> {
-                            refresh(selectedTreeItem);
-                        });
-                    }
-                });
-            });
-        } else {
-            throw new AfsException("copy service not found");
-        }
     }
 
     private void archive(AbstractNodeBase item) {
@@ -840,8 +726,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private static Optional<CopyManager.CopyParams> getCopyInfo() {
         final Clipboard clipboard = Clipboard.getSystemClipboard();
-        String clipboardStringContent = clipboard.getString();
-        return CopyManager.getCopyInfo(clipboard, clipboardStringContent);
+        return CopyManager.getCopyInfo(clipboard);
     }
 
     private MenuItem createDeleteNodeMenuItem(List<? extends TreeItem<N>> selectedTreeItems) {

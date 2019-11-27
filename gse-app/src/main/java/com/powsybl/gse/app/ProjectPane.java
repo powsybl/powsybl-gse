@@ -10,10 +10,12 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.panemu.tiwulfx.control.DetachableTabPane;
 import com.powsybl.afs.*;
+import com.powsybl.afs.storage.ListenableAppStorage;
+import com.powsybl.afs.storage.NodeInfo;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.copy_paste.afs.CopyManager;
 import com.powsybl.gse.copy_paste.afs.CopyService;
-import com.powsybl.gse.copy_paste.afs.CopyServiceConstants;
+import com.powsybl.gse.copy_paste.afs.exceptions.CopyDifferentFileSystemNameException;
 import com.powsybl.gse.copy_paste.afs.exceptions.CopyPasteException;
 import com.powsybl.gse.spi.*;
 import com.powsybl.gse.util.*;
@@ -44,12 +46,15 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Field;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -62,6 +67,8 @@ public class ProjectPane extends Tab {
     private static final ServiceLoaderCache<ProjectFileEditorExtension> EDITOR_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileEditorExtension.class);
     private static final ServiceLoaderCache<ProjectFileViewerExtension> VIEWER_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileViewerExtension.class);
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
+    private static final List<ProjectFileExtension> PROJECT_FILE_EXTENSIONS = new ServiceLoaderCache<>(ProjectFileExtension.class).getServices();
+
     private static final String STAR_NOTIFICATION = " *";
     private final KeyCombination saveKeyCombination = new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
     private boolean success;
@@ -145,10 +152,9 @@ public class ProjectPane extends Tab {
         new com.sun.glass.ui.ClipboardAssistance(com.sun.glass.ui.Clipboard.SYSTEM) {
             @Override
             public void contentChanged() {
-                if (systemClipboard != null && systemClipboard.hasString() && systemClipboard.getString() != null) {
-                    String clipBoard = systemClipboard.getString();
-                    copied.set(clipBoard.contains(CopyServiceConstants.COPY_SIGNATURE) && !clipBoard.contains(CopyServiceConstants.PROJECT_TYPE)
-                            && !clipBoard.contains(CopyServiceConstants.FOLDER_TYPE));
+                if (systemClipboard != null) {
+                    boolean canPaste = CopyManager.getCopyInfo(systemClipboard).map(CopyManager.CopyParams::getProjectNodeType).orElse(false);
+                    copied.set(canPaste);
                 }
             }
         };
@@ -325,7 +331,7 @@ public class ProjectPane extends Tab {
     private boolean isSourceAncestorOf(TreeItem<Object> targetTreeItem) {
         TreeItem treeItemParent = targetTreeItem.getParent();
         while (treeItemParent != null) {
-            if (dragAndDropMove.getSourceTreeItem() == treeItemParent) {
+            if (dragAndDropMove.getSourceTreeItem().contains(treeItemParent)) {
                 return true;
             } else {
                 treeItemParent = treeItemParent.getParent();
@@ -335,26 +341,24 @@ public class ProjectPane extends Tab {
     }
 
     private boolean isChildOf(TreeItem<Object> targetTreeItem) {
-        return targetTreeItem == dragAndDropMove.getSourceTreeItem().getParent();
+        return dragAndDropMove
+                .getSourceTreeItem()
+                .stream()
+                .map(TreeItem::getParent)
+                .anyMatch(sourceParent -> targetTreeItem.equals(sourceParent) || (!(targetTreeItem.getValue() instanceof FolderBase) && targetTreeItem.getParent() != null && targetTreeItem.getParent().equals(sourceParent)));
     }
 
-    private boolean isMovable(Object item, TreeItem<Object> targetTreeItem) {
-        return dragAndDropMove != null && item != dragAndDropMove.getSource() && !isSourceAncestorOf(targetTreeItem) && !isChildOf(targetTreeItem) && !areSourceAndTargetProjectFileSiblings(targetTreeItem);
-    }
-
-    private boolean areSourceAndTargetProjectFileSiblings(TreeItem targetItem) {
-        if (targetItem.getValue() instanceof FolderBase) {
-            return false;
-        }
-        TreeItem sourceItem = dragAndDropMove.getSourceTreeItem();
-        return sourceItem.getParent() != null && targetItem.getParent() != null && sourceItem.getParent().equals(targetItem.getParent());
+    private boolean isMovable(TreeItem<Object> targetTreeItem) {
+        return dragAndDropMove != null && !dragAndDropMove.getSourceTreeItem().contains(targetTreeItem) && !isSourceAncestorOf(targetTreeItem) && !isChildOf(targetTreeItem);
     }
 
     private void dragOverEvent(DragEvent event, Object item, TreeItem<Object> treeItem, TreeTableCell treeCell) {
-        if (item instanceof ProjectNode && isMovable(item, treeItem)) {
-            boolean nameExists = (item instanceof ProjectFolder) ?
-                    treeItem.getChildren().stream().anyMatch(child -> getName(dragAndDropMove.getSourceTreeItem()).equals(getName(child))) :
-                    treeItem.getParent() != null && treeItem.getParent().getChildren().stream().anyMatch(child -> getName(dragAndDropMove.getSourceTreeItem()).equals(getName(child)));
+        if (item instanceof ProjectNode && isMovable(treeItem)) {
+            List<TreeItem<Object>> children = (item instanceof ProjectFolder) ?
+                    treeItem.getChildren() :
+                    Optional.of(treeItem.getParent()).map(parent -> new ArrayList<>(parent.getChildren())).orElse(new ArrayList<>());
+            List<String> sourceNames = dragAndDropMove.getSourceTreeItem().stream().map(ProjectPane::getName).collect(Collectors.toList());
+            boolean nameExists = children.stream().anyMatch(child -> sourceNames.contains(getName(child)));
             if (!nameExists) {
                 setDragOverStyle(treeCell);
             }
@@ -373,8 +377,7 @@ public class ProjectPane extends Tab {
 
     private void dragDetectedEvent(Object value, TreeItem<Object> treeItem, MouseEvent event) {
         dragAndDropMove = new DragAndDropMove();
-        dragAndDropMove.setSource(value);
-        dragAndDropMove.setSourceTreeItem(treeItem);
+        dragAndDropMove.setSourceTreeItem(new ArrayList<>(treeView.getSelectionModel().getSelectedItems()));
 
         if (value instanceof ProjectNode && treeItem != treeView.getRoot()) {
             Dragboard db = treeView.startDragAndDrop(TransferMode.ANY);
@@ -386,35 +389,55 @@ public class ProjectPane extends Tab {
     }
 
     private void dragDroppedEvent(Object value, TreeItem<Object> treeItem, DragEvent event, ProjectNode projectNode) {
-        if (value != dragAndDropMove.getSource()) {
+        if (dragAndDropMove.getSourceTreeItem() != null && !dragAndDropMove.getSourceTreeItem().contains(treeItem)) {
             success = false;
+            TreeItem<Object> targetDir;
             if (value instanceof ProjectFolder) {
-                ProjectFolder projectFolder = (ProjectFolder) projectNode;
-                acceptTransferDrag(projectFolder, success);
-                refresh(treeItem);
-            } else if (value instanceof ProjectFile) {
-                ProjectFile projectFile = (ProjectFile) projectNode;
-                projectFile.getParent().ifPresent(projectFolder -> acceptTransferDrag(projectFile.getParent().get(), success));
-                refresh(treeItem.getParent());
+                targetDir = treeItem;
+            } else if (value instanceof ProjectFile && treeItem.getParent() != null) {
+                targetDir = treeItem.getParent();
+            } else {
+                GseAlerts.showDraggingError();
+                return;
             }
+
+            acceptTransferDrag(targetDir, success);
+            refresh(targetDir);
+
             event.setDropCompleted(success);
-            refresh(dragAndDropMove.getSourceTreeItem().getParent());
+            Stream
+                    .concat(Stream.of(targetDir), dragAndDropMove
+                            .getSourceTreeItem()
+                            .stream()
+                            .map(TreeItem::getParent)
+                            .filter(Objects::nonNull))
+                    .distinct()
+                    .forEach(this::refresh);
+
             treeView.getSelectionModel().clearSelection();
             event.consume();
         }
     }
 
-    private boolean dragNodeNameAlreadyExists(ProjectFolder projectFolder) {
-        return projectFolder.getChildren().stream().anyMatch(projectNode -> projectNode.getName().equals(((ProjectNode) dragAndDropMove.getSource()).getName()));
+    private boolean dragNodeNameAlreadyExists(TreeItem<Object> projectFolder) {
+        List<String> sourceNames = dragAndDropMove.getSourceTreeItem().stream().map(ProjectPane::getName).collect(Collectors.toList());
+        return projectFolder.getChildren().stream().anyMatch(child -> sourceNames.contains(getName(child)));
     }
 
-    private void acceptTransferDrag(ProjectFolder projectFolder, boolean s) {
+    private void acceptTransferDrag(TreeItem<Object> projectFolder, boolean s) {
         success = s;
-        if (dragNodeNameAlreadyExists(projectFolder)) {
+        if (!(projectFolder.getValue() instanceof ProjectFolder)) {
+            GseAlerts.showDraggingError();
+        } else if (dragNodeNameAlreadyExists(projectFolder)) {
             GseAlerts.showDraggingError();
         } else {
-            ProjectNode projectNode = (ProjectNode) dragAndDropMove.getSource();
-            projectNode.moveTo(projectFolder);
+            dragAndDropMove.getSourceTreeItem().stream().forEach(item -> {
+                if (!(item.getValue() instanceof ProjectNode)) {
+                    LOGGER.warn("Drag'n'droppping an unknown type of node (not a ProjectNode)! Ignoring action.");
+                } else {
+                    ((ProjectNode) item.getValue()).moveTo((ProjectFolder) projectFolder.getValue());
+                }
+            });
             success = true;
         }
     }
@@ -501,7 +524,6 @@ public class ProjectPane extends Tab {
 
         Platform.runLater(() -> {
             List<ProjectNode> childNodes = folder.getChildren();
-
             List<TreeItem<Object>> childItems = childNodes.stream()
                     .map(child -> new Pair<>(child, findTreeItemFromValue(child, folderItem)))
                     .map(childAndTreeItem -> createNodeTreeItem(childAndTreeItem.getKey(), childAndTreeItem.getValue().orElse(null)))
@@ -534,6 +556,14 @@ public class ProjectPane extends Tab {
     }
 
     private Optional<TreeItem<Object>> findTreeItemFromValue(Object value, TreeItem<Object> root) {
+        return findTreeItemFromValue(value, root, 1);
+    }
+
+    private Optional<TreeItem<Object>> findTreeItemFromValue(Object value, TreeItem<Object> root, int depth) {
+        if (depth < 0) {
+            return Optional.empty();
+        }
+
         if (root.getValue() != null &&
                 root.getValue() instanceof AbstractNodeBase &&
                 value instanceof AbstractNodeBase &&
@@ -544,7 +574,7 @@ public class ProjectPane extends Tab {
         if (root.getChildren() != null && root.getChildren().size() > 0) {
             return root.getChildren()
                     .stream()
-                    .map(item -> findTreeItemFromValue(value, item))
+                    .map(item -> findTreeItemFromValue(value, item, depth - 1))
                     .filter(Optional::isPresent)
                     .findFirst()
                     .orElse(Optional.empty());
@@ -683,30 +713,13 @@ public class ProjectPane extends Tab {
 
     private void copy(List<? extends TreeItem<Object>> selectedTreeItems) {
         if (copyService.isPresent()) {
-            CopyService cpService = copyService.get();
-
             List<ProjectNode> projectNodes = selectedTreeItems.stream()
                     .map(item -> (ProjectNode) item.getValue())
                     .collect(Collectors.toList());
-            context.getExecutor().execute(() -> {
-                String nodeNames = projectNodes.stream().map(ProjectNode::getName).collect(Collectors.joining(","));
-                TaskMonitor.Task task = project.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("CopyTask"), nodeNames), project);
-                try {
-                    cpService.copy(projectNodes.get(0).getFileSystem().getName(), projectNodes);
-                    Platform.runLater(() -> {
-                        final Clipboard clipboard = Clipboard.getSystemClipboard();
-                        final ClipboardContent content = new ClipboardContent();
-                        content.putString(CopyManager.copyParameters(projectNodes).toString());
-                        clipboard.setContent(content);
-                    });
-                } catch (CopyPasteException e) {
-                    LOGGER.error("Failed to copy nodes {}", projectNodes, e);
-                    Platform.runLater(() -> GseAlerts.showDialogCopyError(e));
-                } finally {
-                    project.getFileSystem().getTaskMonitor().stopTask(task.getId());
-                }
-            });
-
+            final Clipboard clipboard = Clipboard.getSystemClipboard();
+            final ClipboardContent content = new ClipboardContent();
+            content.putString(CopyManager.copyParameters(projectNodes).toString());
+            clipboard.setContent(content);
         } else {
             throw new AfsException("copy service not found");
         }
@@ -717,21 +730,53 @@ public class ProjectPane extends Tab {
         context.getExecutor().execute(() -> {
             if (copyService.isPresent()) {
                 CopyService cpService = copyService.get();
-
                 copyInfo.ifPresent(cpInfo -> {
+                    if (!cpInfo.getFileSystem().equals(project.getFileSystem().getName())) {
+                        Platform.runLater(() -> GseAlerts.showDialogError(CopyDifferentFileSystemNameException.MESSAGE));
+                        return;
+                    }
+
                     List<CopyManager.CopyParams.NodeInfo> nodesInfos = cpInfo.getNodeInfos();
                     String fileSystemName = cpInfo.getFileSystem();
                     ProjectFolder projectFolder = (ProjectFolder) selectedTreeItem.getValue();
-                    TaskMonitor.Task task = projectFolder.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("PasteTask"), nodesInfos.stream().map(CopyManager.CopyParams.NodeInfo::getName).collect(Collectors.joining(","))), projectFolder.getProject());
+                    String nodeNames = nodesInfos.stream().map(CopyManager.CopyParams.NodeInfo::getName).collect(Collectors.joining(", "));
+                    TaskMonitor.Task task = projectFolder.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("CopyPasteTask"), nodeNames), projectFolder.getProject());
+
+                    AtomicReference<CopyPasteException> error = new AtomicReference<>();
+                    List<AbstractNodeBase> projectNodes = nodesInfos
+                            .stream()
+                            .map(CopyManager.CopyParams.NodeInfo::getId)
+                            .map(nodeId -> {
+                                try {
+                                    return fetchProjectNodeWithId(nodeId);
+                                } catch (CopyPasteException e) {
+                                    LOGGER.error("Failed to fetch project node for node id {}", nodeId);
+                                    error.set(e);
+                                    return null;
+                                }
+                            })
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toList());
+
+                    if (projectNodes.size() != nodesInfos.size()) {
+                        project.getFileSystem().getTaskMonitor().stopTask(task.getId());
+                        Platform.runLater(() -> GseAlerts.showDialogCopyError(error.get()));
+                        return;
+                    }
+
                     try {
+                        project.getFileSystem().getTaskMonitor().updateTaskMessage(task.getId(), String.format(RESOURCE_BUNDLE.getString("CopyTask"), nodeNames));
+                        cpService.copy(project.getFileSystem().getName(), projectNodes);
+                        project.getFileSystem().getTaskMonitor().updateTaskMessage(task.getId(), String.format(RESOURCE_BUNDLE.getString("PasteTask"), nodeNames));
                         cpService.paste(fileSystemName, nodesInfos.stream().map(CopyManager.CopyParams.NodeInfo::getId).collect(Collectors.toList()), projectFolder);
                         Platform.runLater(() -> {
-                            GseAlerts.showPasteCompleteInfo(nodesInfos.size(), projectFolder.getName());
+                            GseAlerts.showPasteCompleteInfo(nodeNames, projectFolder.getName());
                         });
-                    } catch (CopyPasteException ex) {
-                        Platform.runLater(() -> GseAlerts.showDialogError(ex.getMessage()));
+                    } catch (CopyPasteException e) {
+                        LOGGER.error("Failed to copy nodes {}", projectNodes, e);
+                        Platform.runLater(() -> GseAlerts.showDialogCopyError(e));
                     } finally {
-                        projectFolder.getFileSystem().getTaskMonitor().stopTask(task.getId());
+                        project.getFileSystem().getTaskMonitor().stopTask(task.getId());
                         Platform.runLater(() -> refresh(selectedTreeItem));
                     }
 
@@ -742,8 +787,7 @@ public class ProjectPane extends Tab {
 
     private static Optional<CopyManager.CopyParams> getCopyInfo() {
         final Clipboard clipboard = Clipboard.getSystemClipboard();
-        String clipboardStringContent = clipboard.getString();
-        return CopyManager.getCopyInfo(clipboard, clipboardStringContent);
+        return CopyManager.getCopyInfo(clipboard);
     }
 
     private boolean ancestorsExistIn(List<? extends TreeItem<Object>> treeItems) {
@@ -757,7 +801,7 @@ public class ProjectPane extends Tab {
 
     private boolean hasAncestorsIn(TreeItem<Object> item, List<? extends TreeItem<Object>> pool) {
         TreeItem<Object> parent = item.getParent();
-        while (parent != null && parent != treeView.getRoot()) {
+        while (parent != null) {
             if (pool.contains(parent)) {
                 return true;
             }
@@ -1097,6 +1141,34 @@ public class ProjectPane extends Tab {
             }
         }
         return true;
+    }
+
+    private AbstractNodeBase fetchProjectNodeWithId(String nodeId) throws CopyPasteException {
+        try {
+            Field storageField = AppFileSystem.class.getDeclaredField("storage");
+            storageField.setAccessible(true);
+            ListenableAppStorage storage = (ListenableAppStorage) storageField.get(project.getFileSystem());
+
+            NodeInfo projectFileInfo = storage.getNodeInfo(nodeId);
+            NodeInfo parentInfo = storage.getParentNode(projectFileInfo.getId()).orElse(null);
+            while (parentInfo != null && !Project.PSEUDO_CLASS.equals(parentInfo.getPseudoClass())) {
+                parentInfo = storage.getParentNode(parentInfo.getId()).orElse(null);
+            }
+            if (parentInfo == null) {
+                return project.getFileSystem().createNode(projectFileInfo);
+            }
+
+            ProjectFileCreationContext context = new ProjectFileCreationContext(projectFileInfo, storage, project);
+
+            if (ProjectFolder.PSEUDO_CLASS.equals(projectFileInfo.getPseudoClass())) {
+                return new ProjectFolder(context);
+            }
+
+            Optional<ProjectFileExtension> extension = PROJECT_FILE_EXTENSIONS.stream().filter(pfe -> pfe.getProjectFilePseudoClass().equals(projectFileInfo.getPseudoClass())).findFirst();
+            return extension.map(ext -> (AbstractNodeBase) ext.createProjectFile(context)).orElseGet(() -> project.getFileSystem().createNode(projectFileInfo));
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new CopyPasteException("Unhandled exception while trying to retrieve node storage", e);
+        }
     }
 
     private class ProjectPaneProjectFolderListener implements ProjectFolderListener {
