@@ -770,7 +770,7 @@ public class ProjectPane extends Tab {
                         project.getFileSystem().getTaskMonitor().updateTaskMessage(task.getId(), String.format(RESOURCE_BUNDLE.getString("PasteTask"), nodeNames));
                         cpService.paste(fileSystemName, nodesInfos.stream().map(CopyManager.CopyParams.NodeInfo::getId).collect(Collectors.toList()), projectFolder);
                         Platform.runLater(() -> {
-                            GseAlerts.showPasteCompleteInfo(nodesInfos.size(), projectFolder.getName());
+                            GseAlerts.showPasteCompleteInfo(nodeNames, projectFolder.getName());
                         });
                     } catch (CopyPasteException e) {
                         LOGGER.error("Failed to copy nodes {}", projectNodes, e);
@@ -1145,7 +1145,7 @@ public class ProjectPane extends Tab {
 
     private AbstractNodeBase fetchProjectNodeWithId(String nodeId) throws CopyPasteException {
         try {
-            Field storageField = project.getFileSystem().getClass().getDeclaredField("storage");
+            Field storageField = AppFileSystem.class.getDeclaredField("storage");
             storageField.setAccessible(true);
             ListenableAppStorage storage = (ListenableAppStorage) storageField.get(project.getFileSystem());
 

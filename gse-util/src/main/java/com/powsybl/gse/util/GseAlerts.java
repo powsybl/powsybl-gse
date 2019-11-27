@@ -52,11 +52,11 @@ public final class GseAlerts {
         alert.showAndWait();
     }
 
-    public static void showPasteCompleteInfo(int itemCount, String folderDestination) {
+    public static void showPasteCompleteInfo(String nodeNames, String folderDestination) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(RESOURCE_BUNDLE.getString("PasteComplete"));
         alert.setResizable(true);
-        alert.setContentText(String.format(RESOURCE_BUNDLE.getString("PasteCompleteDetails"), itemCount, folderDestination));
+        alert.setContentText(String.format(RESOURCE_BUNDLE.getString("PasteCompleteDetails"), nodeNames, folderDestination));
         alert.showAndWait();
     }
 
