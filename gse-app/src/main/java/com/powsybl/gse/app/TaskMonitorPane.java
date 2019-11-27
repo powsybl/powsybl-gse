@@ -31,7 +31,7 @@ public class TaskMonitorPane extends BorderPane {
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.TaskMonitorPane");
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskMonitorPane.class);
 
-    private static class TaskListCell extends ListCell<TaskItem> {
+    private class TaskListCell extends ListCell<TaskItem> {
 
         private final Label label = new Label("");
         private final Pane content;
@@ -50,6 +50,8 @@ public class TaskMonitorPane extends BorderPane {
                 setGraphic(null);
             } else {
                 label.setText(item.getName() + System.lineSeparator() + item.getMessage().getValue());
+                label.setTextOverrun(OverrunStyle.ELLIPSIS);
+                label.maxWidthProperty().bind(taskList.widthProperty().subtract(50.0));
                 closeButton.setOnAction(event -> onCloseAction.accept(item));
                 setGraphic(content);
             }
@@ -76,6 +78,7 @@ public class TaskMonitorPane extends BorderPane {
             AnchorPane.setTopAnchor(box, 0.0);
             AnchorPane.setRightAnchor(box, 0.0);
 
+            root.setMaxWidth(Control.USE_PREF_SIZE);
             return root;
         }
     }
