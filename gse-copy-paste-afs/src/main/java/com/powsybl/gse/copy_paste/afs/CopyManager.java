@@ -258,17 +258,6 @@ public final class CopyManager {
         return copyName.get();
     }
 
-    private static void deleteOnExit(File folder) {
-        folder.deleteOnExit();
-        for (File file : folder.listFiles()) {
-            if (file.isDirectory()) {
-                deleteOnExit(file);
-            } else {
-                file.deleteOnExit();
-            }
-        }
-    }
-
     private static void throwBadArgumentException(String fileSystemName, AbstractNodeBase folder) throws CopyDifferentFileSystemNameException {
         if (!(folder instanceof ProjectFolder || folder instanceof Folder)) {
             throw new IllegalArgumentException("the parameter must be a folder");
