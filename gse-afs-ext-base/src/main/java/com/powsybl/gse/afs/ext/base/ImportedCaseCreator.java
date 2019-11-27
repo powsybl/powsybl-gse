@@ -182,22 +182,26 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
         Optional<ButtonType> result = GseAlerts.showReplaceAndQuitDialog(folder.getName(), name);
         result.ifPresent(buttonType -> {
             if (buttonType.getButtonData() == ButtonBar.ButtonData.YES) {
-                folder.getChild(name).ifPresent(projectNode -> backwardDependencies = projectNode.getBackwardDependencies());
-                folder.getChild(name).ifPresent(projectNode -> projectNode.rename(TEMPORARY_NAME));
-                buildFile(aCase, folder, null);
-                backwardDependencies.forEach(projectFile -> projectFile.replaceDependencies(folder.getChild(TEMPORARY_NAME).get().getId(), folder.getChild(name).get()));
-                folder.getChild(TEMPORARY_NAME).ifPresent(ProjectNode::delete);
-                backwardDependencies.clear();
-            } else if (buttonType.getButtonData() == ButtonBar.ButtonData.OTHER) {
-                Optional<String> newName = RenamePane.showAndWaitDialog(scene.getWindow(), folder.getChild(name).get());
-                newName.ifPresent(newname -> {
-                    if (folder.getChild(newname).isPresent()) {
-                        replaceNode(folder, aCase, scene);
-                    } else {
-                        buildFile(aCase, folder, newname);
-                    }
+                folder.getChild(name).ifPresent(projectNode -> {
+                    backwardDependencies = projectNode.getBackwardDependencies();
+                    projectNode.rename(TEMPORARY_NAME);
+                    buildFile(aCase, folder, null);
+                    folder.getChild(name).ifPresent(importedNode ->
+                            backwardDependencies.forEach(projectFile -> projectFile.replaceDependencies(projectNode.getId(), importedNode)));
+                    projectNode.delete();
+                    backwardDependencies.clear();
                 });
-
+            } else if (buttonType.getButtonData() == ButtonBar.ButtonData.OTHER) {
+                folder.getChild(name).ifPresent(projectNode -> {
+                    Optional<String> text = RenamePane.showAndWaitDialog(scene.getWindow(), projectNode);
+                    text.ifPresent(newName -> {
+                        if (!folder.getChild(newName).isPresent()) {
+                            buildFile(aCase, folder, newName);
+                        } else {
+                            replaceNode(folder, aCase, scene);
+                        }
+                    });
+                });
             }
         });
     }
