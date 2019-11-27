@@ -9,7 +9,6 @@ package com.powsybl.gse.util;
 import com.powsybl.afs.*;
 import com.powsybl.gse.copy_paste.afs.CopyManager;
 import com.powsybl.gse.copy_paste.afs.CopyService;
-import com.powsybl.gse.copy_paste.afs.CopyServiceConstants;
 import com.powsybl.gse.copy_paste.afs.exceptions.CopyDifferentFileSystemNameException;
 import com.powsybl.gse.copy_paste.afs.exceptions.CopyPasteException;
 import com.powsybl.gse.spi.GseContext;
@@ -415,10 +414,8 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private void copiedChangedListener(Clipboard systemClipboard) {
-        if (systemClipboard != null && systemClipboard.hasString() && systemClipboard.getString() != null) {
-            String clipBoard = systemClipboard.getString();
-            copied.set(clipBoard.contains(CopyServiceConstants.COPY_SIGNATURE));
-        }
+        boolean canPaste = CopyManager.getCopyInfo(systemClipboard).map(copyParams -> !copyParams.getProjectNodeType()).orElse(false);
+        copied.set(canPaste);
     }
 
     public ReadOnlyObjectProperty<T> selectedNodeProperty() {
@@ -840,8 +837,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private static Optional<CopyManager.CopyParams> getCopyInfo() {
         final Clipboard clipboard = Clipboard.getSystemClipboard();
-        String clipboardStringContent = clipboard.getString();
-        return CopyManager.getCopyInfo(clipboard, clipboardStringContent);
+        return CopyManager.getCopyInfo(clipboard);
     }
 
     private MenuItem createDeleteNodeMenuItem(List<? extends TreeItem<N>> selectedTreeItems) {

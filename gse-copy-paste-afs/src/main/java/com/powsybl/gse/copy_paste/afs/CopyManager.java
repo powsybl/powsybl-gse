@@ -31,6 +31,10 @@ import java.util.stream.Collectors;
  */
 public final class CopyManager {
 
+    private static final String PROJECT_NODE_COPY_TYPE = "@PROJECT_NODE@";
+    private static final String NODE_COPY_TYPE = "@NODE@";
+    private static final String COPY_SIGNATURE = "@COPY_SIGNATURE@";
+    private static final long COPY_EXPIRATION_TIME = 12;
     private static final Logger LOGGER = LoggerFactory.getLogger(CopyManager.class);
     private static final String TEMP_DIR_PREFIX = "powsybl_node_export";
     private static final long CLEANUP_DELAY = 36000;
@@ -68,7 +72,7 @@ public final class CopyManager {
             for (AbstractNodeBase node : nodes) {
                 if (currentCopies.containsKey(node.getId()) && (currentCopies.get(node.getId()).archiveSuccess == null || currentCopies.get(node.getId()).archiveSuccess)) {
                     LOGGER.info("Skipping archiving of already ongoing copy {}", currentCopies.get(node.getId()));
-                    currentCopies.get(node.getId()).expirationDate = ZonedDateTime.now().plusHours(CopyServiceConstants.COPY_EXPIRATION_TIME);
+                    currentCopies.get(node.getId()).expirationDate = ZonedDateTime.now().plusHours(COPY_EXPIRATION_TIME);
                     continue;
                 }
 
@@ -77,7 +81,7 @@ public final class CopyManager {
                 copyInfo.nodeId = node.getId();
                 copyInfo.node = node;
                 copyInfo.archivePath = resolveArchiveTargetDirectory(targetDirectory);
-                copyInfo.expirationDate = ZonedDateTime.now().plusHours(CopyServiceConstants.COPY_EXPIRATION_TIME);
+                copyInfo.expirationDate = ZonedDateTime.now().plusHours(COPY_EXPIRATION_TIME);
 
                 currentCopies.put(copyInfo.nodeId, copyInfo);
 
@@ -279,10 +283,12 @@ public final class CopyManager {
 
     public static StringBuilder copyParameters(List<? extends AbstractNodeBase> nodes) {
         AbstractNodeBase node = nodes.get(0);
-        String fileSystemName = (node instanceof Node) ? ((Node) node).getFileSystem().getName() : ((ProjectNode) node).getFileSystem().getName();
+        boolean isProjectNode = node instanceof ProjectNode;
+        String fileSystemName = isProjectNode ? ((ProjectNode) node).getFileSystem().getName() : ((Node) node).getFileSystem().getName();
         StringBuilder copyParameters = new StringBuilder();
 
-        copyParameters.append(CopyServiceConstants.COPY_SIGNATURE)
+        copyParameters.append(COPY_SIGNATURE)
+                .append(isProjectNode ? PROJECT_NODE_COPY_TYPE : NODE_COPY_TYPE)
                 .append(COPY_INFO_SEPARATOR)
                 .append(fileSystemName)
                 .append(COPY_INFO_SEPARATOR);
@@ -290,9 +296,9 @@ public final class CopyManager {
         return copyParameters;
     }
 
-    public static Optional<CopyParams> getCopyInfo(Clipboard clipboard, String copyInfo) {
-        if (clipboard.hasString() && copyInfo.contains(CopyServiceConstants.COPY_SIGNATURE)) {
-            String[] copyInfoArray = copyInfo.split(COPY_INFO_SEPARATOR);
+    public static Optional<CopyParams> getCopyInfo(Clipboard clipboard) {
+        if (clipboard.hasString() && clipboard.getString() != null && clipboard.getString().contains(COPY_SIGNATURE)) {
+            String[] copyInfoArray = clipboard.getString().split(COPY_INFO_SEPARATOR);
             List<CopyParams.NodeInfo> nodesInfos = Arrays.stream(ArrayUtils.removeAll(copyInfoArray, 0, 1))
                     .map(nodeInfo -> {
                         String[] itemInfo = nodeInfo.split(COPY_NODE_INFO_SEPARATOR);
@@ -300,7 +306,7 @@ public final class CopyManager {
                     })
                     .collect(Collectors.toList());
             String fileSystemName = copyInfoArray[1];
-            return Optional.of(new CopyParams(fileSystemName, nodesInfos));
+            return Optional.of(new CopyParams(fileSystemName, nodesInfos, clipboard.getString().contains(PROJECT_NODE_COPY_TYPE)));
         }
         return Optional.empty();
     }
@@ -308,10 +314,20 @@ public final class CopyManager {
     public static class CopyParams {
         String fileSystem;
         List<NodeInfo> nodeInfos;
+        boolean isProjectNodeType;
 
-        public CopyParams(String fileSystem, List<NodeInfo> nodeInfos) {
+        public CopyParams(String fileSystem, List<NodeInfo> nodeInfos, boolean isProjectNodeType) {
             this.fileSystem = fileSystem;
             this.nodeInfos = nodeInfos;
+            this.isProjectNodeType = isProjectNodeType;
+        }
+
+        public boolean getProjectNodeType() {
+            return isProjectNodeType;
+        }
+
+        public void setProjectNodeType(boolean projectNodeType) {
+            this.isProjectNodeType = projectNodeType;
         }
 
         public String getFileSystem() {

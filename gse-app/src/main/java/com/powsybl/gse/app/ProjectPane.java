@@ -10,10 +10,12 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.panemu.tiwulfx.control.DetachableTabPane;
 import com.powsybl.afs.*;
+import com.powsybl.afs.storage.ListenableAppStorage;
+import com.powsybl.afs.storage.NodeInfo;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.copy_paste.afs.CopyManager;
 import com.powsybl.gse.copy_paste.afs.CopyService;
-import com.powsybl.gse.copy_paste.afs.CopyServiceConstants;
+import com.powsybl.gse.copy_paste.afs.exceptions.CopyDifferentFileSystemNameException;
 import com.powsybl.gse.copy_paste.afs.exceptions.CopyPasteException;
 import com.powsybl.gse.spi.*;
 import com.powsybl.gse.util.*;
@@ -44,9 +46,11 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Field;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -62,6 +66,8 @@ public class ProjectPane extends Tab {
     private static final ServiceLoaderCache<ProjectFileEditorExtension> EDITOR_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileEditorExtension.class);
     private static final ServiceLoaderCache<ProjectFileViewerExtension> VIEWER_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileViewerExtension.class);
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
+    private static final List<ProjectFileExtension> PROJECT_FILE_EXTENSIONS = new ServiceLoaderCache<>(ProjectFileExtension.class).getServices();
+
     private static final String STAR_NOTIFICATION = " *";
     private final KeyCombination saveKeyCombination = new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
     private boolean success;
@@ -145,10 +151,9 @@ public class ProjectPane extends Tab {
         new com.sun.glass.ui.ClipboardAssistance(com.sun.glass.ui.Clipboard.SYSTEM) {
             @Override
             public void contentChanged() {
-                if (systemClipboard != null && systemClipboard.hasString() && systemClipboard.getString() != null) {
-                    String clipBoard = systemClipboard.getString();
-                    copied.set(clipBoard.contains(CopyServiceConstants.COPY_SIGNATURE) && !clipBoard.contains(CopyServiceConstants.PROJECT_TYPE)
-                            && !clipBoard.contains(CopyServiceConstants.FOLDER_TYPE));
+                if (systemClipboard != null) {
+                    boolean canPaste = CopyManager.getCopyInfo(systemClipboard).map(CopyManager.CopyParams::getProjectNodeType).orElse(false);
+                    copied.set(canPaste);
                 }
             }
         };
@@ -683,30 +688,13 @@ public class ProjectPane extends Tab {
 
     private void copy(List<? extends TreeItem<Object>> selectedTreeItems) {
         if (copyService.isPresent()) {
-            CopyService cpService = copyService.get();
-
             List<ProjectNode> projectNodes = selectedTreeItems.stream()
                     .map(item -> (ProjectNode) item.getValue())
                     .collect(Collectors.toList());
-            context.getExecutor().execute(() -> {
-                String nodeNames = projectNodes.stream().map(ProjectNode::getName).collect(Collectors.joining(","));
-                TaskMonitor.Task task = project.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("CopyTask"), nodeNames), project);
-                try {
-                    cpService.copy(projectNodes.get(0).getFileSystem().getName(), projectNodes);
-                    Platform.runLater(() -> {
-                        final Clipboard clipboard = Clipboard.getSystemClipboard();
-                        final ClipboardContent content = new ClipboardContent();
-                        content.putString(CopyManager.copyParameters(projectNodes).toString());
-                        clipboard.setContent(content);
-                    });
-                } catch (CopyPasteException e) {
-                    LOGGER.error("Failed to copy nodes {}", projectNodes, e);
-                    Platform.runLater(() -> GseAlerts.showDialogCopyError(e));
-                } finally {
-                    project.getFileSystem().getTaskMonitor().stopTask(task.getId());
-                }
-            });
-
+            final Clipboard clipboard = Clipboard.getSystemClipboard();
+            final ClipboardContent content = new ClipboardContent();
+            content.putString(CopyManager.copyParameters(projectNodes).toString());
+            clipboard.setContent(content);
         } else {
             throw new AfsException("copy service not found");
         }
@@ -717,21 +705,53 @@ public class ProjectPane extends Tab {
         context.getExecutor().execute(() -> {
             if (copyService.isPresent()) {
                 CopyService cpService = copyService.get();
-
                 copyInfo.ifPresent(cpInfo -> {
+                    if (!cpInfo.getFileSystem().equals(project.getFileSystem().getName())) {
+                        Platform.runLater(() -> GseAlerts.showDialogError(CopyDifferentFileSystemNameException.MESSAGE));
+                        return;
+                    }
+
                     List<CopyManager.CopyParams.NodeInfo> nodesInfos = cpInfo.getNodeInfos();
                     String fileSystemName = cpInfo.getFileSystem();
                     ProjectFolder projectFolder = (ProjectFolder) selectedTreeItem.getValue();
-                    TaskMonitor.Task task = projectFolder.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("PasteTask"), nodesInfos.stream().map(CopyManager.CopyParams.NodeInfo::getName).collect(Collectors.joining(","))), projectFolder.getProject());
+                    String nodeNames = nodesInfos.stream().map(CopyManager.CopyParams.NodeInfo::getName).collect(Collectors.joining(","));
+                    TaskMonitor.Task task = projectFolder.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("CopyPasteTask"), nodeNames), projectFolder.getProject());
+
+                    AtomicReference<CopyPasteException> error = new AtomicReference<>();
+                    List<AbstractNodeBase> projectNodes = nodesInfos
+                            .stream()
+                            .map(CopyManager.CopyParams.NodeInfo::getId)
+                            .map(nodeId -> {
+                                try {
+                                    return fetchProjectNodeWithId(nodeId);
+                                } catch (CopyPasteException e) {
+                                    LOGGER.error("Failed to fetch project node for node id {}", nodeId);
+                                    error.set(e);
+                                    return null;
+                                }
+                            })
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toList());
+
+                    if (projectNodes.size() != nodesInfos.size()) {
+                        project.getFileSystem().getTaskMonitor().stopTask(task.getId());
+                        Platform.runLater(() -> GseAlerts.showDialogCopyError(error.get()));
+                        return;
+                    }
+
                     try {
+                        project.getFileSystem().getTaskMonitor().updateTaskMessage(task.getId(), String.format(RESOURCE_BUNDLE.getString("CopyTask"), nodeNames));
+                        cpService.copy(project.getFileSystem().getName(), projectNodes);
+                        project.getFileSystem().getTaskMonitor().updateTaskMessage(task.getId(), String.format(RESOURCE_BUNDLE.getString("PasteTask"), nodeNames));
                         cpService.paste(fileSystemName, nodesInfos.stream().map(CopyManager.CopyParams.NodeInfo::getId).collect(Collectors.toList()), projectFolder);
                         Platform.runLater(() -> {
                             GseAlerts.showPasteCompleteInfo(nodesInfos.size(), projectFolder.getName());
                         });
-                    } catch (CopyPasteException ex) {
-                        Platform.runLater(() -> GseAlerts.showDialogError(ex.getMessage()));
+                    } catch (CopyPasteException e) {
+                        LOGGER.error("Failed to copy nodes {}", projectNodes, e);
+                        Platform.runLater(() -> GseAlerts.showDialogCopyError(e));
                     } finally {
-                        projectFolder.getFileSystem().getTaskMonitor().stopTask(task.getId());
+                        project.getFileSystem().getTaskMonitor().stopTask(task.getId());
                         Platform.runLater(() -> refresh(selectedTreeItem));
                     }
 
@@ -742,8 +762,7 @@ public class ProjectPane extends Tab {
 
     private static Optional<CopyManager.CopyParams> getCopyInfo() {
         final Clipboard clipboard = Clipboard.getSystemClipboard();
-        String clipboardStringContent = clipboard.getString();
-        return CopyManager.getCopyInfo(clipboard, clipboardStringContent);
+        return CopyManager.getCopyInfo(clipboard);
     }
 
     private boolean ancestorsExistIn(List<? extends TreeItem<Object>> treeItems) {
@@ -1097,6 +1116,34 @@ public class ProjectPane extends Tab {
             }
         }
         return true;
+    }
+
+    private AbstractNodeBase fetchProjectNodeWithId(String nodeId) throws CopyPasteException {
+        try {
+            Field storageField = project.getFileSystem().getClass().getDeclaredField("storage");
+            storageField.setAccessible(true);
+            ListenableAppStorage storage = (ListenableAppStorage) storageField.get(project.getFileSystem());
+
+            NodeInfo projectFileInfo = storage.getNodeInfo(nodeId);
+            NodeInfo parentInfo = storage.getParentNode(projectFileInfo.getId()).orElse(null);
+            while (parentInfo != null && !Project.PSEUDO_CLASS.equals(parentInfo.getPseudoClass())) {
+                parentInfo = storage.getParentNode(parentInfo.getId()).orElse(null);
+            }
+            if (parentInfo == null) {
+                return project.getFileSystem().createNode(projectFileInfo);
+            }
+
+            ProjectFileCreationContext context = new ProjectFileCreationContext(projectFileInfo, storage, project);
+
+            if (ProjectFolder.PSEUDO_CLASS.equals(projectFileInfo.getPseudoClass())) {
+                return new ProjectFolder(context);
+            }
+
+            Optional<ProjectFileExtension> extension = PROJECT_FILE_EXTENSIONS.stream().filter(pfe -> pfe.getProjectFilePseudoClass().equals(projectFileInfo.getPseudoClass())).findFirst();
+            return extension.map(ext -> (AbstractNodeBase) ext.createProjectFile(context)).orElseGet(() -> project.getFileSystem().createNode(projectFileInfo));
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new CopyPasteException("Unhandled exception while trying to retrieve node storage", e);
+        }
     }
 
     private class ProjectPaneProjectFolderListener implements ProjectFolderListener {
