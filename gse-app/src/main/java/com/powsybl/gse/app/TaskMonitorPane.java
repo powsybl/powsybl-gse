@@ -6,9 +6,11 @@
  */
 package com.powsybl.gse.app;
 
+import com.powsybl.gse.util.Glyph;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.control.*;
@@ -70,9 +72,16 @@ public class TaskMonitorPane extends BorderPane {
             AnchorPane.setBottomAnchor(vBox, 0.0);
 
             VBox box = new VBox();
-            box.setPrefWidth(30.0);
+            box.setPrefWidth(15.0);
             box.setAlignment(Pos.TOP_CENTER);
-            closeButton.getStyleClass().add("close-button");
+            Glyph graphic = Glyph.createAwesomeFont('\uf068');
+            graphic.color("-fx-mark-color");
+            closeButton.setGraphic(graphic);
+            closeButton.setPadding(new Insets(2, 5, 2, 5));
+            closeButton.setOnMouseEntered(event -> graphic.color("#eee"));
+            closeButton.setOnMouseExited(event -> graphic.color("-fx-mark-color"));
+            closeButton.getStyleClass().add("transparent-button");
+            closeButton.getStyleClass().add("hide-button");
             box.getChildren().add(closeButton);
             root.getChildren().add(box);
             AnchorPane.setTopAnchor(box, 0.0);
