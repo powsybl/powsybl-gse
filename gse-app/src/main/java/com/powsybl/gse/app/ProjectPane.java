@@ -740,7 +740,6 @@ public class ProjectPane extends Tab {
                     String fileSystemName = cpInfo.getFileSystem();
                     ProjectFolder projectFolder = (ProjectFolder) selectedTreeItem.getValue();
                     String nodeNames = nodesInfos.stream().map(CopyManager.CopyParams.NodeInfo::getName).collect(Collectors.joining(", "));
-                    TaskMonitor.Task task = projectFolder.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("CopyPasteTask"), nodeNames), projectFolder.getProject());
 
                     AtomicReference<CopyPasteException> error = new AtomicReference<>();
                     List<AbstractNodeBase> projectNodes = nodesInfos
@@ -759,16 +758,12 @@ public class ProjectPane extends Tab {
                             .collect(Collectors.toList());
 
                     if (projectNodes.size() != nodesInfos.size()) {
-                        project.getFileSystem().getTaskMonitor().stopTask(task.getId());
                         Platform.runLater(() -> GseAlerts.showDialogCopyError(error.get()));
                         return;
                     }
 
                     try {
-                        project.getFileSystem().getTaskMonitor().updateTaskMessage(task.getId(), String.format(RESOURCE_BUNDLE.getString("CopyTask"), nodeNames));
-                        cpService.copy(project.getFileSystem().getName(), projectNodes);
-                        project.getFileSystem().getTaskMonitor().updateTaskMessage(task.getId(), String.format(RESOURCE_BUNDLE.getString("PasteTask"), nodeNames));
-                        cpService.paste(fileSystemName, nodesInfos.stream().map(CopyManager.CopyParams.NodeInfo::getId).collect(Collectors.toList()), projectFolder);
+                        cpService.copyPaste(project.getFileSystem().getName(), projectNodes, projectFolder);
                         Platform.runLater(() -> {
                             GseAlerts.showPasteCompleteInfo(nodeNames, projectFolder.getName());
                         });
@@ -776,7 +771,6 @@ public class ProjectPane extends Tab {
                         LOGGER.error("Failed to copy nodes {}", projectNodes, e);
                         Platform.runLater(() -> GseAlerts.showDialogCopyError(e));
                     } finally {
-                        project.getFileSystem().getTaskMonitor().stopTask(task.getId());
                         Platform.runLater(() -> refresh(selectedTreeItem));
                     }
 
