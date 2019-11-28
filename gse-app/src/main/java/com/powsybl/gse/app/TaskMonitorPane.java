@@ -78,7 +78,6 @@ public class TaskMonitorPane extends BorderPane {
             AnchorPane.setTopAnchor(box, 0.0);
             AnchorPane.setRightAnchor(box, 0.0);
 
-            root.setMaxWidth(Control.USE_PREF_SIZE);
             return root;
         }
     }
