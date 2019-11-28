@@ -1112,7 +1112,7 @@ public class ProjectPane extends Tab {
         if (copyService.isPresent()) {
             items.add(createPasteProjectNodeItem(selectedTreeItem));
         }
-        if (folder.getChildren().isEmpty()) {
+        if (folder != null && (folder.getChildren() == null || folder.getChildren().isEmpty())) {
             items.add(createUnarchiveMenuItem(selectedTreeItem));
         }
         if (selectedTreeItem != treeView.getRoot()) {
