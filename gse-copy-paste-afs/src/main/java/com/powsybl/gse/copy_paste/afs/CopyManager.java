@@ -24,6 +24,7 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -58,14 +59,35 @@ public final class CopyManager {
         init();
     }
 
+    public void copyPaste(List<? extends AbstractNodeBase> nodes, AbstractNodeBase targetFolder) throws CopyPasteException {
+        String fileSystem = getCommonFileSystem(nodes);
+        Optional<Project> targetProjectOpt = (targetFolder instanceof ProjectNode) ? Optional.of(((ProjectNode) targetFolder).getProject()) : Optional.empty();
+        Optional<TaskMonitor.Task> task = targetProjectOpt.map(targetProject -> targetProject.getFileSystem().getTaskMonitor().startTask("Copying", targetProject));
+
+        Consumer<String> logger = task
+                .map(tsk -> (Consumer<String>) msg -> targetProjectOpt.get().getFileSystem().getTaskMonitor().updateTaskMessage(tsk.getId(), msg))
+                .orElse(LOGGER::debug);
+        try {
+            copy(nodes, null, logger);
+            paste(fileSystem, nodes.stream().map(AbstractNodeBase::getId).collect(Collectors.toList()), targetFolder, logger);
+        } finally {
+            task.ifPresent(taskEl -> targetProjectOpt.get().getFileSystem().getTaskMonitor().stopTask(taskEl.getId()));
+        }
+
+    }
+
     public Map<String, CopyInfo> copy(List<? extends AbstractNodeBase> nodes) throws CopyPasteException {
         return copy(nodes, null);
+    }
+
+    public Map<String, CopyInfo> copy(List<? extends AbstractNodeBase> nodes, @Nullable File targetDirectory) throws CopyPasteException {
+        return copy(nodes, targetDirectory, LOGGER::debug);
     }
 
     /**
      * @param nodes the nodes to copy
      */
-    public Map<String, CopyInfo> copy(List<? extends AbstractNodeBase> nodes, @Nullable File targetDirectory) throws CopyPasteException {
+    public Map<String, CopyInfo> copy(List<? extends AbstractNodeBase> nodes, @Nullable File targetDirectory, Consumer<String> logger) throws CopyPasteException {
         Objects.requireNonNull(nodes);
 
         try {
@@ -86,7 +108,7 @@ public final class CopyManager {
                 currentCopies.put(copyInfo.nodeId, copyInfo);
 
                 LOGGER.info("Copying (archiving) node {} ({})", node.getName(), node.getId());
-
+                logger.accept(String.format("Copying node %s", copyInfo.getNode().getName()));
                 try {
                     node.archive(copyInfo.archivePath);
                     copyInfo.archiveSuccess = true;
@@ -102,11 +124,15 @@ public final class CopyManager {
         return currentCopies;
     }
 
+    public void paste(String fileSystemName, List<String> nodesIds, AbstractNodeBase folder) throws CopyPasteException {
+        paste(fileSystemName, nodesIds, folder, LOGGER::debug);
+    }
+
     /**
      * @param nodesIds the copied node's id
      * @param folder   the archive destination's folder
      */
-    public void paste(String fileSystemName, List<String> nodesIds, AbstractNodeBase folder) throws CopyPasteException {
+    public void paste(String fileSystemName, List<String> nodesIds, AbstractNodeBase folder, Consumer<String> logger) throws CopyPasteException {
         Objects.requireNonNull(nodesIds);
         throwBadArgumentException(fileSystemName, folder);
 
@@ -134,6 +160,7 @@ public final class CopyManager {
                 children = ((Folder) folder).getChildren();
             }
 
+            logger.accept(String.format("Pasting node %s", copyInfo.getNode().getName()));
             if (children.stream().anyMatch(child -> copyInfo.node.getName().equals(child.getName()))) {
                 nodeNewName = renameAndPaste(folder, children, copyInfo);
             } else {
@@ -298,6 +325,26 @@ public final class CopyManager {
             return Optional.of(new CopyParams(fileSystemName, nodesInfos, clipboard.getString().contains(PROJECT_NODE_COPY_TYPE)));
         }
         return Optional.empty();
+    }
+
+    private static String getCommonFileSystem(List<? extends AbstractNodeBase> nodes) throws CopyPasteException {
+        try {
+            return nodes.stream().map(node -> {
+                if (node instanceof ProjectNode) {
+                    return ((ProjectNode) node).getFileSystem().getName();
+                } else if (node instanceof Node) {
+                    return ((Node) node).getFileSystem().getName();
+                }
+                return null;
+            }).reduce((fs1, fs2) -> {
+                if (Objects.equals(fs1, fs2)) {
+                    return fs1;
+                }
+                throw new RuntimeException("Can't copy nodes from multiple filesystem");
+            }).orElseThrow(() -> new CopyPasteException("Fail to retrieve copied node filesystem name"));
+        } catch (Exception e) {
+            throw new CopyPasteException("Fail to retrieve copied node filesystem name", e);
+        }
     }
 
     public static class CopyParams {
