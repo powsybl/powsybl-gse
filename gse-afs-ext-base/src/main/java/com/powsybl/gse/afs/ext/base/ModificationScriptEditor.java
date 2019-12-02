@@ -7,6 +7,7 @@
 package com.powsybl.gse.afs.ext.base;
 
 import com.powsybl.afs.ProjectFile;
+import com.powsybl.afs.ext.base.AbstractScript;
 import com.powsybl.afs.ext.base.ScriptListener;
 import com.powsybl.afs.ext.base.ScriptType;
 import com.powsybl.afs.ext.base.StorableScript;
@@ -17,6 +18,7 @@ import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.spi.Savable;
 import com.powsybl.gse.util.Glyph;
 import com.powsybl.gse.util.GseAlerts;
+import com.powsybl.gse.util.GseDialog;
 import com.powsybl.gse.util.GseUtil;
 import com.powsybl.gse.util.editor.AbstractCodeEditor;
 import com.powsybl.gse.util.editor.AbstractCodeEditorFactoryService;
@@ -42,6 +44,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.scene.text.TextFlow;
+import javafx.util.Callback;
 import org.controlsfx.control.MasterDetailPane;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +65,8 @@ public class ModificationScriptEditor extends BorderPane
 
     private static final ServiceLoaderCache<AbstractCodeEditorFactoryService> CODE_EDITOR_FACTORIES = new ServiceLoaderCache<>(AbstractCodeEditorFactoryService.class);
 
+    private static final String GSE_TOOLBAR_BUTTON_STYLE = "gse-toolbar-button";
+
     private final GseContext context;
 
     private final ToolBar toolBar;
@@ -77,6 +82,8 @@ public class ModificationScriptEditor extends BorderPane
     private final Button saveButton;
 
     private final Button validateButton;
+
+    private final Button addVirtualScriptButton;
 
     private final ProgressIndicator progressIndicator = new ProgressIndicator();
 
@@ -130,14 +137,25 @@ public class ModificationScriptEditor extends BorderPane
 
         Text saveGlyph = Glyph.createAwesomeFont('\uf0c7').size("1.3em");
         saveButton = new Button("", saveGlyph);
-        saveButton.getStyleClass().add("gse-toolbar-button");
+        saveButton.getStyleClass().add(GSE_TOOLBAR_BUTTON_STYLE);
         saveButton.disableProperty().bind(saved);
         saveButton.setOnAction(event -> save());
 
         Image validateImage = new Image(ModificationScriptEditor.class.getResourceAsStream("/icons/spell-check-solid.png"));
         validateButton = new Button("", new ImageView(validateImage));
-        validateButton.getStyleClass().add("gse-toolbar-button");
+        validateButton.getStyleClass().add(GSE_TOOLBAR_BUTTON_STYLE);
         validateButton.setOnAction(event -> validateScript(codeWithSyntaxCheckPane));
+
+        Text plusGlyph = Glyph.createAwesomeFont('\uf055').size("1.3em");
+        addVirtualScriptButton = new Button("", plusGlyph);
+        addVirtualScriptButton.getStyleClass().add(GSE_TOOLBAR_BUTTON_STYLE);
+        addVirtualScriptButton.setOnAction(event -> {
+            VirtualScriptCreator virtualScriptCreator = new VirtualScriptCreator((AbstractScript) storableScript, scene, context);
+            Callback<ButtonType, Boolean> resultConverter = buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE;
+            Dialog<Boolean> dialog = new GseDialog<>(virtualScriptCreator.getTitle(), virtualScriptCreator, scene.getWindow(), virtualScriptCreator.okProperty().not(), resultConverter);
+            dialog.showAndWait().filter(result -> result).ifPresent(result -> {
+            });
+        });
 
         comboBox = new ComboBox(FXCollections.observableArrayList(2, 4, 8));
         comboBox.getSelectionModel().select(1);
@@ -145,7 +163,7 @@ public class ModificationScriptEditor extends BorderPane
         tabSizeLabel = new Label(RESOURCE_BUNDLE.getString("TabSize") + ": ");
         caretPositionDisplay = new Label(codeEditor.currentPosition());
 
-        toolBar = new ToolBar(saveButton, validateButton);
+        toolBar = new ToolBar(saveButton, validateButton, addVirtualScriptButton);
 
         Pane spacer = new Pane();
         bottomToolBar = new ToolBar(tabSizeLabel, comboBox, spacer, caretPositionDisplay);
