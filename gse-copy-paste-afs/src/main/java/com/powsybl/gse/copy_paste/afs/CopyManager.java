@@ -255,7 +255,7 @@ public final class CopyManager {
         String copyNameBaseName = name + copyDuplicated;
         AtomicReference<String> copyName = new AtomicReference<>(copyNameBaseName);
         try {
-            info.node.rename(name + UUID.randomUUID().toString());
+            child.rename(name + UUID.randomUUID().toString());
             projectFolder.unarchive(info.archivePath.resolve(info.nodeId));
 
             projectFolder.getChild(name).ifPresent(newNode -> {
@@ -279,7 +279,7 @@ public final class CopyManager {
             });
 
         } finally {
-            info.node.rename(name);
+            child.rename(name);
         }
 
         return copyName.get();
