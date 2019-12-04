@@ -74,6 +74,11 @@ public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExten
     }
 
     @Override
+    public String getMenuGroup() {
+        return "Case";
+    }
+
+    @Override
     public Node getMenuGraphic(ProjectFile file) {
         return Glyph.createAwesomeFont('\uf093').size("1em");
     }

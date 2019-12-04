@@ -12,13 +12,18 @@ package com.powsybl.gse.util;
  */
 public class Shortcut {
 
+    private String group;
     private String action;
-
     private String keycode;
 
     public Shortcut(String action, String keycode) {
+        this(action, keycode, null);
+    }
+
+    public Shortcut(String action, String keycode, String group) {
         this.action = action;
         this.keycode = keycode;
+        this.group = group;
     }
 
     public String getAction() {
@@ -27,6 +32,14 @@ public class Shortcut {
 
     public void setAction(String action) {
         this.action = action;
+    }
+
+    public String getGroup() {
+        return group;
+    }
+
+    public void setGroup(String group) {
+        this.group = group;
     }
 
     public String getKeycode() {

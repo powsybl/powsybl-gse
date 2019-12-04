@@ -34,6 +34,11 @@ public class VirtualCaseEditorExtension implements ProjectFileEditorExtension<Vi
     }
 
     @Override
+    public String getMenuGroup() {
+        return RESOURCE_BUNDLE.getString("VirtualCaseName");
+    }
+
+    @Override
     public String getMenuText(VirtualCase virtualCase) {
         return RESOURCE_BUNDLE.getString("EditCalculatedCase") + "...";
     }
