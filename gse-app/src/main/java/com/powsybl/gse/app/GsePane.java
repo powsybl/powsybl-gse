@@ -189,10 +189,8 @@ public class GsePane extends StackPane {
     private void showShortcuts() {
         Color fillColor = Color.valueOf("#eaeaea");
         FlowPane flowPane = new FlowPane();
-        flowPane.setPrefWidth(928);
-        flowPane.setPrefHeight(697);
-        flowPane.setMaxHeight(flowPane.getPrefHeight());
-        flowPane.setMaxWidth(flowPane.getPrefWidth());
+        flowPane.setPrefWidth(300);
+        flowPane.setPrefHeight(600);
         flowPane.setVgap(20);
         flowPane.setHgap(10);
         flowPane.setOrientation(Orientation.VERTICAL);
