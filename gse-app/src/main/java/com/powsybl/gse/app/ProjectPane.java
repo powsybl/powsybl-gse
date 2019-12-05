@@ -1004,6 +1004,7 @@ public class ProjectPane extends Tab {
             items.add(menuItem);
         }
 
+        items.sort(Comparator.comparing(GseMenuItem::getOrder));
         menu.getItems().addAll(items);
         menu.setDisable(editorExtensions.isEmpty() && viewerExtensions.isEmpty() && executionTaskExtensions.isEmpty());
 
