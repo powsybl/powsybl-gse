@@ -44,6 +44,11 @@ public class ModificationScriptCreatorExtension implements ProjectFileCreatorExt
     }
 
     @Override
+    public int getMenuOrder() {
+        return 19;
+    }
+
+    @Override
     public KeyCodeCombination getMenuKeycode() {
         return new KeyCodeCombination(KeyCode.X, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
     }

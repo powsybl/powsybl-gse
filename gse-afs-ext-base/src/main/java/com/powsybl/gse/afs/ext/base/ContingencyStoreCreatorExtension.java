@@ -45,6 +45,11 @@ public class ContingencyStoreCreatorExtension implements ProjectFileCreatorExten
     }
 
     @Override
+    public int getMenuOrder() {
+        return 20;
+    }
+
+    @Override
     public KeyCodeCombination getMenuKeycode() {
         return new KeyCodeCombination(KeyCode.Z, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
     }

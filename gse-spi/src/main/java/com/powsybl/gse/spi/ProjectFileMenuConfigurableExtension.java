@@ -25,6 +25,10 @@ public interface ProjectFileMenuConfigurableExtension<T extends ProjectFile> {
         return null;
     }
 
+    default int getMenuOrder() {
+        return 0;
+    }
+
     default KeyCombination getMenuKeyCode() {
         return null;
     }
