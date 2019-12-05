@@ -21,6 +21,10 @@ public interface ProjectFileMenuConfigurableExtension<T extends ProjectFile> {
 
     String getMenuText(T file);
 
+    default String getMenuGroup() {
+        return null;
+    }
+
     default KeyCombination getMenuKeyCode() {
         return null;
     }

@@ -23,6 +23,10 @@ public interface ProjectFileCreatorExtension {
         return null;
     }
 
+    default String getMenuGroup() {
+        return null;
+    }
+
     String getMenuText();
 
     KeyCodeCombination getMenuKeycode();

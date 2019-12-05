@@ -18,23 +18,26 @@ import com.powsybl.gse.util.Shortcut;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
+import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Side;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.stage.Popup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
 
@@ -184,22 +187,69 @@ public class GsePane extends StackPane {
     }
 
     private void showShortcuts() {
-        TableView<Shortcut> tableView = new TableView<>();
-        TableColumn<Shortcut, String> column1 = new TableColumn<>(RESOURCE_BUNDLE.getString("Action"));
-        column1.setCellValueFactory(new PropertyValueFactory<>("action"));
-        TableColumn<Shortcut, String> column2 = new TableColumn<>(RESOURCE_BUNDLE.getString("Shortcut"));
-        column2.setCellValueFactory(new PropertyValueFactory<>("keycode"));
+        Color fillColor = Color.valueOf("#eaeaea");
+        FlowPane flowPane = new FlowPane();
+        flowPane.setPrefWidth(300);
+        flowPane.setPrefHeight(600);
+        flowPane.setVgap(20);
+        flowPane.setHgap(10);
+        flowPane.setOrientation(Orientation.VERTICAL);
+        flowPane.setPadding(new Insets(10, 10, 10, 10));
+        flowPane.setBackground(new Background(new BackgroundFill(
+                Paint.valueOf("#404040e0"),
+                new CornerRadii(5),
+                new Insets(0, 0, 0, 0))));
 
-        tableView.setPrefSize(430, 445);
-        tableView.getColumns().add(column1);
-        tableView.getColumns().add(column2);
+        Map<String, List<Shortcut>> shortcuts = createShortcuts().stream().peek(el -> {
+            if (el.getGroup() == null) {
+                el.setGroup(RESOURCE_BUNDLE.getString("GlobalShortcutSection"));
+            }
+        }).collect(Collectors.groupingBy(Shortcut::getGroup));
 
-        createShortcuts().forEach(shortcut -> tableView.getItems().add(shortcut));
+        shortcuts.keySet().stream().sorted(Comparator.comparing(Function.identity(), (o1, o2) -> {
+            if (o1.equals(o2)) {
+                return 0;
+            }
+            if (o1.equals(RESOURCE_BUNDLE.getString("GlobalShortcutSection"))) {
+                return -1;
+            }
+            if (o2.equals(RESOURCE_BUNDLE.getString("GlobalShortcutSection"))) {
+                return 1;
+            }
+            if (o1.equals(RESOURCE_BUNDLE.getString("NewItemShortcutSection"))) {
+                return -1;
+            }
+            if (o2.equals(RESOURCE_BUNDLE.getString("NewItemShortcutSection"))) {
+                return 1;
+            }
+            return o1.compareTo(o2);
+        })).forEach((shortcutGroup) -> {
+            VBox vbox = new VBox();
+            vbox.setPrefHeight(20);
+            if (shortcutGroup != null) {
+                Label groupTitle = new Label(shortcutGroup);
+                groupTitle.setTextFill(fillColor);
+                groupTitle.setFont(Font.font(Font.getDefault().getFamily(), FontWeight.BOLD, Font.getDefault().getSize()));
+                vbox.getChildren().add(groupTitle);
+            }
+            vbox.getChildren().addAll(shortcuts.get(shortcutGroup).stream().map(shortcut -> {
+                HBox hBox = new HBox();
+                Label shortCutKey = new Label(shortcut.getKeycode());
+                shortCutKey.setTextFill(fillColor);
+                shortCutKey.setPrefWidth(120);
+                shortCutKey.setMaxHeight(120);
+                shortCutKey.setMinWidth(120);
+                Label shortCutDesc = new Label(shortcut.getAction());
+                shortCutDesc.setTextFill(fillColor);
+                hBox.getChildren().addAll(shortCutKey, shortCutDesc);
+                return hBox;
+            }).collect(Collectors.toList()));
+            flowPane.getChildren().add(vbox);
+        });
 
-        VBox vbox = new VBox(tableView);
         Popup popup = new Popup();
         popup.setAutoHide(true);
-        popup.getContent().addAll(vbox);
+        popup.getContent().addAll(flowPane);
         popup.show(getScene().getWindow());
     }
 
@@ -213,36 +263,44 @@ public class GsePane extends StackPane {
                 new Shortcut(RESOURCE_BUNDLE.getString("Export"), "CTRL + S"),
                 new Shortcut(RESOURCE_BUNDLE.getString("Rename"), "F2"),
                 new Shortcut(RESOURCE_BUNDLE.getString("Delete"), RESOURCE_BUNDLE.getString("Delete")),
-                new Shortcut(RESOURCE_BUNDLE.getString("Edit"), RESOURCE_BUNDLE.getString("Enter")));
+                new Shortcut(RESOURCE_BUNDLE.getString("Edit"), RESOURCE_BUNDLE.getString("Enter")),
+                new Shortcut(RESOURCE_BUNDLE.getString("EditorSelectAll"), "CTRL + A", RESOURCE_BUNDLE.getString("EditorShortcutSection")),
+                new Shortcut(RESOURCE_BUNDLE.getString("EditorCopyPaste"), "CTRL + C/V", RESOURCE_BUNDLE.getString("EditorShortcutSection")),
+                new Shortcut(RESOURCE_BUNDLE.getString("EditorSave"), "CTRL + S", RESOURCE_BUNDLE.getString("EditorShortcutSection")),
+                new Shortcut(RESOURCE_BUNDLE.getString("EditorDuplicate"), "ALT + MAJ + ↑/↓", RESOURCE_BUNDLE.getString("EditorShortcutSection")),
+                new Shortcut(RESOURCE_BUNDLE.getString("EditorDelete"), "CTRL + D", RESOURCE_BUNDLE.getString("EditorShortcutSection")),
+                new Shortcut(RESOURCE_BUNDLE.getString("EditorGoto"), "CTRL + L", RESOURCE_BUNDLE.getString("EditorShortcutSection")),
+                new Shortcut(RESOURCE_BUNDLE.getString("EditorSearch"), "CTRL + F", RESOURCE_BUNDLE.getString("EditorShortcutSection")),
+                new Shortcut(RESOURCE_BUNDLE.getString("EditorReplace"), "CTRL + H", RESOURCE_BUNDLE.getString("EditorShortcutSection"))
+        );
         shortcuts.addAll(standardShortcuts);
 
         //projectfile creation shortcuts
         for (ProjectFileCreatorExtension creatorExtension : CREATOR_EXTENSION.getServices()) {
-            shortcuts.add(new Shortcut(creatorExtension.getMenuText(), creatorExtension.getMenuKeycode().getName()));
+            shortcuts.add(new Shortcut(creatorExtension.getMenuText(), creatorExtension.getMenuKeycode().getName(), RESOURCE_BUNDLE.getString("NewItemShortcutSection")));
         }
 
         // projectfile edition shortcuts
         for (ProjectFileEditorExtension editorExtension : EDITOR_EXTENSION.getServices()) {
             if (editorExtension.getMenuKeyCode() != null) {
-                shortcuts.add(new Shortcut(editorExtension.getMenuText(null), editorExtension.getMenuKeyCode().getName()));
+                shortcuts.add(new Shortcut(editorExtension.getMenuText(null), editorExtension.getMenuKeyCode().getName(), editorExtension.getMenuGroup()));
             }
         }
 
         // projectfile execution shortcuts
         for (ProjectFileExecutionTaskExtension taskExtension : EXECUTION_TASK_EXTENSION.getServices()) {
             if (taskExtension.getMenuKeyCode() != null) {
-                shortcuts.add(new Shortcut(taskExtension.getMenuText(null), taskExtension.getMenuKeyCode().getName()));
+                shortcuts.add(new Shortcut(taskExtension.getMenuText(null), taskExtension.getMenuKeyCode().getName(), taskExtension.getMenuGroup()));
             }
         }
 
         // projectfile viewer shortcuts
         for (ProjectFileViewerExtension viewerExtension : VIEWER_EXTENSION.getServices()) {
             if (viewerExtension.getMenuKeyCode() != null) {
-                shortcuts.add(new Shortcut(viewerExtension.getMenuText(null), viewerExtension.getMenuKeyCode().getName()));
+                shortcuts.add(new Shortcut(viewerExtension.getMenuText(null), viewerExtension.getMenuKeyCode().getName(), viewerExtension.getMenuGroup()));
             }
         }
 
-        shortcuts.sort(Comparator.comparing(Shortcut::getAction));
         return shortcuts;
     }
 
