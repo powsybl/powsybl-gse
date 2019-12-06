@@ -250,13 +250,13 @@ public class ProjectPane extends Tab {
                         setText(null);
                         setGraphic(null);
                     } else {
-                        setText(item.format(DateTimeFormatter.ofPattern("d MMM yy, HH:mm")));
+                        setText(item.format(DateTimeFormatter.ofPattern("dd/MM/yy, HH:mm")));
                     }
                 }
             };
         });
         treeTableView.getColumns().add(nameColumn);
-//        treeTableView.getColumns().add(dateColumn);
+        treeTableView.getColumns().add(dateColumn);
         treeTableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         treeTableView.getSelectionModel().getSelectedItems().addListener(this::treeViewSelectionChangeListener);
         treeTableView.setOnMouseClicked(this::treeViewMouseClickHandler);
