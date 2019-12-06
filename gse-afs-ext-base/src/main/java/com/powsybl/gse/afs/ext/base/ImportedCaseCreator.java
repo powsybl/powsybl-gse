@@ -188,7 +188,7 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
                     buildFile(aCase, folder, null);
                     Optional<ProjectNode> importedNode = folder.getChild(name);
                     if (importedNode.isPresent()) {
-                        backwardDependencies.forEach(projectFile -> projectFile.replaceDependencies(projectNode.getId(), importedNode.get()));
+                        backwardDependencies.forEach(projectFile -> projectFile.replaceDependency(projectNode.getId(), importedNode.get()));
                         projectNode.delete();
                     } else {
                         projectNode.rename(name);
