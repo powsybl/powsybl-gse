@@ -49,7 +49,7 @@ public class TaskItemList {
 
     private final Lock initLock = new ReentrantLock();
 
-    private final ObservableList<TaskItem> items = FXCollections.observableArrayList(task -> new Observable[]{task.getMessage()});
+    private final ObservableList<TaskItem> items = FXCollections.observableArrayList(task -> new Observable[]{task.getMessage(), task.cancelableProperty()});
 
     private final ObjectProperty<FilteredList<TaskItem>> displayItems = new SimpleObjectProperty<>();
 
@@ -91,7 +91,9 @@ public class TaskItemList {
         try {
             items.clear();
             for (TaskMonitor.Task task : snapshot.getTasks()) {
-                items.add(new TaskItem(task.getId(), task.getName(), task.getMessage()));
+                TaskItem taskItem = new TaskItem(task.getId(), task.getName(), task.getMessage());
+                taskItem.cancelableProperty().setValue(task.isCancelable());
+                items.add(taskItem);
             }
         } finally {
             initLock.unlock();
@@ -130,7 +132,17 @@ public class TaskItemList {
                     Platform.runLater(() -> items.stream()
                             .filter(task -> task.getId().equals(event.getTaskId()))
                             .findFirst()
-                            .ifPresent(task -> task.getMessage().set(((UpdateTaskMessageEvent) event).getMessage())));
+                            .ifPresent(task -> {
+                                task.getMessage().set(((UpdateTaskMessageEvent) event).getMessage());
+                            }));
+                }  else if (event instanceof TaskCancelableStatusChangeEvent) {
+                    Platform.runLater(() -> items.stream()
+                            .filter(task -> task.getId().equals(event.getTaskId()))
+                            .findFirst()
+                            .ifPresent(task -> {
+                                LOGGER.info("Task cancelable status has been update to {} for task {}", ((TaskCancelableStatusChangeEvent) event).isCancelable(), event.getTaskId());
+                                task.cancelableProperty().set(((TaskCancelableStatusChangeEvent) event).isCancelable());
+                            }));
                 } else {
                     throw new AssertionError();
                 }
@@ -164,6 +176,14 @@ public class TaskItemList {
             hiddenTaskCount.set(config.getHiddenTasks().size());
         }
         displayItems.get().setPredicate(el -> !config.getHiddenTasks().contains(el.getId().toString()));
+    }
+
+    public void cancelTask(TaskItem taskItem) {
+        try {
+            taskMonitor.cancelTaskComputation(taskItem.getId());
+        } catch (TaskMonitor.NotCancelableException e) {
+            e.printStackTrace();
+        }
     }
 
     private Config retrieveConfig() {

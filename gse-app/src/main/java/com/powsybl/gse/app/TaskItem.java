@@ -6,6 +6,8 @@
  */
 package com.powsybl.gse.app;
 
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
@@ -23,6 +25,8 @@ public class TaskItem {
 
     private final StringProperty message = new SimpleStringProperty("");
 
+    private final BooleanProperty cancelable = new SimpleBooleanProperty(false);
+
     public TaskItem(UUID id, String name, String message) {
         this.id = Objects.requireNonNull(id);
         this.name = Objects.requireNonNull(name);
@@ -39,6 +43,14 @@ public class TaskItem {
 
     public StringProperty getMessage() {
         return message;
+    }
+
+    public boolean isCancelable() {
+        return cancelable.get();
+    }
+
+    public BooleanProperty cancelableProperty() {
+        return cancelable;
     }
 
     @Override

@@ -14,10 +14,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.control.*;
-import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,12 +34,16 @@ public class TaskMonitorPane extends BorderPane {
 
         private final Label label = new Label("");
         private final Pane content;
+        private final Button hideButton = new Button();
         private final Button closeButton = new Button();
+        private final HBox actionBox = new HBox();
         private final Consumer<TaskItem> onCloseAction;
+        private final Consumer<TaskItem> onHideAction;
 
-        public TaskListCell(Consumer<TaskItem> onClose) {
+        public TaskListCell(Consumer<TaskItem> onHide, Consumer<TaskItem> onClose) {
             content = createLayout();
             onCloseAction = onClose;
+            onHideAction = onHide;
         }
 
         @Override
@@ -51,10 +52,17 @@ public class TaskMonitorPane extends BorderPane {
             if (empty) {
                 setGraphic(null);
             } else {
+                LOGGER.info("Updating task item display for {}", item);
                 label.setText(item.getName() + System.lineSeparator() + item.getMessage().getValue());
                 label.setTextOverrun(OverrunStyle.ELLIPSIS);
                 label.maxWidthProperty().bind(taskList.widthProperty().subtract(50.0));
+                hideButton.setOnAction(event -> onHideAction.accept(item));
                 closeButton.setOnAction(event -> onCloseAction.accept(item));
+                if (item.isCancelable() && !actionBox.getChildren().contains(closeButton)) {
+                    actionBox.getChildren().add(closeButton);
+                } else if (!item.isCancelable()) {
+                    actionBox.getChildren().remove(closeButton);
+                }
                 setGraphic(content);
             }
         }
@@ -68,24 +76,35 @@ public class TaskMonitorPane extends BorderPane {
             root.getChildren().add(vBox);
             AnchorPane.setLeftAnchor(vBox, 0.0);
             AnchorPane.setTopAnchor(vBox, 0.0);
-            AnchorPane.setRightAnchor(vBox, 30.0);
+            AnchorPane.setRightAnchor(vBox, 45.0);
             AnchorPane.setBottomAnchor(vBox, 0.0);
 
-            VBox box = new VBox();
-            box.setPrefWidth(15.0);
-            box.setAlignment(Pos.TOP_CENTER);
+            actionBox.setPrefWidth(30.0);
+            actionBox.setAlignment(Pos.TOP_CENTER);
+
             Glyph graphic = Glyph.createAwesomeFont('\uf068');
             graphic.color("-fx-mark-color");
-            closeButton.setGraphic(graphic);
+            hideButton.setGraphic(graphic);
+            hideButton.setPadding(new Insets(2, 5, 2, 5));
+            hideButton.setOnMouseEntered(event -> graphic.color("#eee"));
+            hideButton.setOnMouseExited(event -> graphic.color("-fx-mark-color"));
+            hideButton.getStyleClass().add("transparent-button");
+            hideButton.getStyleClass().add("hide-button");
+            actionBox.getChildren().add(hideButton);
+
+            Glyph closeGraphic = Glyph.createAwesomeFont('\uf00d');
+            closeGraphic.color("-fx-mark-color");
+            closeButton.setGraphic(closeGraphic);
             closeButton.setPadding(new Insets(2, 5, 2, 5));
-            closeButton.setOnMouseEntered(event -> graphic.color("#eee"));
-            closeButton.setOnMouseExited(event -> graphic.color("-fx-mark-color"));
+            closeButton.setOnMouseEntered(event -> closeGraphic.color("#eee"));
+            closeButton.setOnMouseExited(event -> closeGraphic.color("-fx-mark-color"));
             closeButton.getStyleClass().add("transparent-button");
             closeButton.getStyleClass().add("hide-button");
-            box.getChildren().add(closeButton);
-            root.getChildren().add(box);
-            AnchorPane.setTopAnchor(box, 0.0);
-            AnchorPane.setRightAnchor(box, 0.0);
+            actionBox.getChildren().add(closeButton);
+
+            root.getChildren().add(actionBox);
+            AnchorPane.setTopAnchor(actionBox, 0.0);
+            AnchorPane.setRightAnchor(actionBox, 0.0);
 
             return root;
         }
@@ -97,7 +116,7 @@ public class TaskMonitorPane extends BorderPane {
         taskList.itemsProperty().bind(items.getDisplayItems());
         taskList.setPlaceholder(new Label(RESOURCE_BUNDLE.getString("NoTaskRunning")));
         setCenter(taskList);
-        taskList.setCellFactory(param -> new TaskListCell(items::hideTask));
+        taskList.setCellFactory(param -> new TaskListCell(items::hideTask, items::cancelTask));
         renderHiddenItemsHint(items);
         items.hiddenTaskCountProperty().addListener(new InvalidationListener() {
             @Override
