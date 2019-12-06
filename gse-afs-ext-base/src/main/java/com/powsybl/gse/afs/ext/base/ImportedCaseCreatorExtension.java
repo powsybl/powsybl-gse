@@ -45,6 +45,11 @@ public class ImportedCaseCreatorExtension implements ProjectFileCreatorExtension
     }
 
     @Override
+    public int getMenuOrder() {
+        return 10;
+    }
+
+    @Override
     public KeyCodeCombination getMenuKeycode() {
         return new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
     }
