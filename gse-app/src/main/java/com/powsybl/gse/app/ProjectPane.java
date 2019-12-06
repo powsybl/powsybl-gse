@@ -614,8 +614,8 @@ public class ProjectPane extends Tab {
 
     // contextual menu
 
-    private MenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
-        MenuItem deleteMenuItem = GseMenuItem.createDeleteMenuItem();
+    private GseMenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
+        GseMenuItem deleteMenuItem = GseMenuItem.createDeleteMenuItem();
         deleteMenuItem.setOnAction(event -> deleteNodesAlert(selectedTreeItems));
         deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
         List<TreeItem<Object>> selectedItems = new ArrayList<>(selectedTreeItems);
@@ -642,15 +642,15 @@ public class ProjectPane extends Tab {
         });
     }
 
-    private MenuItem createArchiveMenuItem(TreeItem<Object> selectedTreeItem) {
-        MenuItem archiveMenuItem = GseMenuItem.createArchiveMenuItem();
+    private GseMenuItem createArchiveMenuItem(TreeItem<Object> selectedTreeItem) {
+        GseMenuItem archiveMenuItem = GseMenuItem.createArchiveMenuItem();
         archiveMenuItem.setDisable(!(selectedTreeItem.getValue() instanceof AbstractNodeBase));
         archiveMenuItem.setOnAction(event -> archive((AbstractNodeBase) selectedTreeItem.getValue()));
         return archiveMenuItem;
     }
 
-    private MenuItem createUnarchiveMenuItem(TreeItem<Object> selectedTreeItem) {
-        MenuItem unarchiveMenuItem = GseMenuItem.createUnarchiveMenuItem();
+    private GseMenuItem createUnarchiveMenuItem(TreeItem<Object> selectedTreeItem) {
+        GseMenuItem unarchiveMenuItem = GseMenuItem.createUnarchiveMenuItem();
         unarchiveMenuItem.setOnAction(event -> unarchiveItems(selectedTreeItem));
         return unarchiveMenuItem;
     }
@@ -696,16 +696,16 @@ public class ProjectPane extends Tab {
         }
     }
 
-    private MenuItem createCopyProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
-        MenuItem copyMenuItem = GseMenuItem.createCopyMenuItem();
+    private GseMenuItem createCopyProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
+        GseMenuItem copyMenuItem = GseMenuItem.createCopyMenuItem();
         List<TreeItem<Object>> selectedItems = new ArrayList<>(selectedTreeItems);
         copyMenuItem.setDisable(ancestorsExistIn(selectedItems) || selectedItems.contains(treeView.getRoot()));
         copyMenuItem.setOnAction(event -> copy(selectedTreeItems));
         return copyMenuItem;
     }
 
-    private MenuItem createPasteProjectNodeItem(TreeItem<Object> selectedTreeItem) {
-        MenuItem pasteMenuItem = GseMenuItem.createPasteMenuItem();
+    private GseMenuItem createPasteProjectNodeItem(TreeItem<Object> selectedTreeItem) {
+        GseMenuItem pasteMenuItem = GseMenuItem.createPasteMenuItem();
         pasteMenuItem.disableProperty().bind(copied.not());
         pasteMenuItem.setOnAction(event -> paste(selectedTreeItem));
         return pasteMenuItem;
@@ -804,8 +804,8 @@ public class ProjectPane extends Tab {
         return false;
     }
 
-    private MenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
-        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
+    private GseMenuItem createRenameProjectNodeItem(TreeItem selectedTreeItem) {
+        GseMenuItem menuItem = new GseMenuItem(RESOURCE_BUNDLE.getString("Rename"), Glyph.createAwesomeFont('\uf120').size("1.1em"));
         menuItem.setAccelerator(new KeyCodeCombination(KeyCode.F2));
         menuItem.setOnAction(event -> renameProjectNode(selectedTreeItem));
         return menuItem;
@@ -937,9 +937,9 @@ public class ProjectPane extends Tab {
         viewer.view();
     }
 
-    private static MenuItem initMenuItem(ProjectFileMenuConfigurableExtension menuConfigurable, ProjectFile file) {
+    private static GseMenuItem initMenuItem(ProjectFileMenuConfigurableExtension menuConfigurable, ProjectFile file) {
         Node graphic = menuConfigurable.getMenuGraphic(file);
-        MenuItem menuItem = new MenuItem(menuConfigurable.getMenuText(file), graphic);
+        GseMenuItem menuItem = new GseMenuItem(menuConfigurable.getMenuText(file), graphic);
         if (menuConfigurable.getMenuKeyCode() != null) {
             menuItem.setAccelerator(menuConfigurable.getMenuKeyCode());
         }
@@ -975,34 +975,37 @@ public class ProjectPane extends Tab {
 
         // create menu
         Menu menu = new Menu(RESOURCE_BUNDLE.getString("Open"));
+        List<GseMenuItem> items = new ArrayList<>();
 
         // add viewer extensions
         List<ProjectFileViewerExtension> viewerExtensions = findViewerExtensions(file);
         for (ProjectFileViewerExtension viewerExtension : viewerExtensions) {
-            MenuItem menuItem = initMenuItem(viewerExtension, file);
+            GseMenuItem menuItem = initMenuItem(viewerExtension, file);
             String tabName = getTabName(selectedTreeItem);
             menuItem.setOnAction(event -> viewFile(file, viewerExtension, tabName));
-            menu.getItems().add(menuItem);
+            items.add(menuItem);
         }
 
         // add editor extensions
         List<ProjectFileEditorExtension> editorExtensions = findEditorExtensions(file);
         for (ProjectFileEditorExtension editorExtension : editorExtensions) {
-            MenuItem menuItem = initMenuItem(editorExtension, file);
+            GseMenuItem menuItem = initMenuItem(editorExtension, file);
             String tabName = getTabName(selectedTreeItem);
             menuItem.setOnAction(event -> showProjectItemEditorDialog(file, editorExtension, tabName));
             menuItem.setDisable(!editorExtension.isMenuEnabled(file));
-            menu.getItems().add(menuItem);
+            items.add(menuItem);
         }
 
         // add task extensions
         List<ProjectFileExecutionTaskExtension> executionTaskExtensions = findExecutionTaskExtensions(file);
         for (ProjectFileExecutionTaskExtension executionTaskExtension : executionTaskExtensions) {
-            MenuItem menuItem = initMenuItem(executionTaskExtension, file);
+            GseMenuItem menuItem = initMenuItem(executionTaskExtension, file);
             menuItem.setOnAction(event -> executionTaskLaunch(executionTaskExtension, file));
-            menu.getItems().add(menuItem);
+            items.add(menuItem);
         }
 
+        items.sort(Comparator.comparing(GseMenuItem::getOrder));
+        menu.getItems().addAll(items);
         menu.setDisable(editorExtensions.isEmpty() && viewerExtensions.isEmpty() && executionTaskExtensions.isEmpty());
 
         ContextMenu contextMenu = new ContextMenu();
@@ -1016,8 +1019,8 @@ public class ProjectPane extends Tab {
         return contextMenu;
     }
 
-    private MenuItem createCreateFolderItem(TreeItem<Object> selectedTreeItem, ProjectFolder folder) {
-        MenuItem menuItem = new MenuItem(RESOURCE_BUNDLE.getString("CreateFolder") + "...");
+    private GseMenuItem createCreateFolderItem(TreeItem<Object> selectedTreeItem, ProjectFolder folder) {
+        GseMenuItem menuItem = new GseMenuItem(RESOURCE_BUNDLE.getString("CreateFolder") + "...");
         Glyph createFolderGlyph = Glyph.createAwesomeFont('\uf07b').size("1.3em").color("#FFDB69");
         menuItem.setGraphic(createFolderGlyph);
         menuItem.setOnAction((ActionEvent event) ->
@@ -1089,13 +1092,14 @@ public class ProjectPane extends Tab {
 
     private ContextMenu createFolderContextMenu(TreeItem<Object> selectedTreeItem) {
         ContextMenu contextMenu = new ContextMenu();
-        List<MenuItem> items = new ArrayList<>();
+        List<GseMenuItem> items = new ArrayList<>();
         ProjectFolder folder = (ProjectFolder) selectedTreeItem.getValue();
-        items.add(createCreateFolderItem(selectedTreeItem, folder));
+        items.add(createCreateFolderItem(selectedTreeItem, folder).order(99));
         for (Class<? extends ProjectFile> type : project.getFileSystem().getData().getProjectFileClasses()) {
             for (ProjectFileCreatorExtension creatorExtension : findCreatorExtension(type)) {
                 if (creatorExtension != null) {
-                    MenuItem menuItem = new MenuItem(creatorExtension.getMenuText());
+                    GseMenuItem menuItem = new GseMenuItem(creatorExtension.getMenuText());
+                    menuItem.setOrder(creatorExtension.getMenuOrder());
                     menuItem.setGraphic(creatorExtension.getMenuGraphic());
                     menuItem.setAccelerator(creatorExtension.getMenuKeycode());
                     menuItem.setOnAction(event -> showProjectItemCreatorDialog(selectedTreeItem, creatorExtension));
@@ -1104,19 +1108,21 @@ public class ProjectPane extends Tab {
             }
         }
         if (copyService.isPresent()) {
-            items.add(createPasteProjectNodeItem(selectedTreeItem));
+            items.add(createPasteProjectNodeItem(selectedTreeItem).order(102));
         }
         if (folder != null && (folder.getChildren() == null || folder.getChildren().isEmpty())) {
-            items.add(createUnarchiveMenuItem(selectedTreeItem));
+            items.add(createUnarchiveMenuItem(selectedTreeItem).order(110));
         }
         if (selectedTreeItem != treeView.getRoot()) {
-            items.add(createRenameProjectNodeItem(selectedTreeItem));
+            items.add(createRenameProjectNodeItem(selectedTreeItem).order(100));
             if (copyService.isPresent()) {
-                items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+                items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)).order(101));
             }
-            items.add(createArchiveMenuItem(selectedTreeItem));
-            items.add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)));
+            items.add(createArchiveMenuItem(selectedTreeItem).order(109));
+            items.add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)).order(108));
         }
+
+        items.sort(Comparator.comparing(GseMenuItem::getOrder));
         contextMenu.getItems().addAll(items);
         return contextMenu;
     }
@@ -1242,8 +1248,8 @@ public class ProjectPane extends Tab {
         }
 
         private ContextMenu contextMenu() {
-            MenuItem closeMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Close"));
-            MenuItem closeAllMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("CloseAll"));
+            GseMenuItem closeMenuItem = new GseMenuItem(RESOURCE_BUNDLE.getString("Close"));
+            GseMenuItem closeAllMenuItem = new GseMenuItem(RESOURCE_BUNDLE.getString("CloseAll"));
             closeMenuItem.setOnAction(event -> closeTab(event, this));
             closeAllMenuItem.setOnAction(event -> {
                 List<MyTab> mytabs = new ArrayList<>(getTabPane().getTabs().stream()

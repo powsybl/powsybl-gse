@@ -48,6 +48,11 @@ public class ActionScriptCreatorExtension implements ProjectFileCreatorExtension
     }
 
     @Override
+    public int getMenuOrder() {
+        return 18;
+    }
+
+    @Override
     public KeyCodeCombination getMenuKeycode() {
         return new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
     }

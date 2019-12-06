@@ -23,28 +23,51 @@ public class GseMenuItem extends MenuItem {
 
     private static final String ICON_SIZE = "1.1em";
 
+    private int order = 9999;
+
     public GseMenuItem(String title, Node graphic, KeyCodeCombination shortcut) {
         super(title, graphic);
         setAccelerator(shortcut);
     }
 
-    public static MenuItem createArchiveMenuItem() {
+    public GseMenuItem(String text) {
+        super(text);
+    }
+
+    public GseMenuItem(String text, Node graphic) {
+        super(text, graphic);
+    }
+
+    public int getOrder() {
+        return order;
+    }
+
+    public void setOrder(int order) {
+        this.order = order;
+    }
+
+    public GseMenuItem order(int order) {
+        this.order = order;
+        return this;
+    }
+
+    public static GseMenuItem createArchiveMenuItem() {
         return new GseMenuItem(RESOURCE_BUNDLE.getString("Archive"), createGraphic('\uf0ed'), null);
     }
 
-    public static MenuItem createUnarchiveMenuItem() {
+    public static GseMenuItem createUnarchiveMenuItem() {
         return new GseMenuItem(RESOURCE_BUNDLE.getString("Unarchive"), createGraphic('\uf0ee'), null);
     }
 
-    public static MenuItem createCopyMenuItem() {
+    public static GseMenuItem createCopyMenuItem() {
         return new GseMenuItem(RESOURCE_BUNDLE.getString("Copy"), createGraphic('\uf0c5'), new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN));
     }
 
-    public static MenuItem createPasteMenuItem() {
+    public static GseMenuItem createPasteMenuItem() {
         return new GseMenuItem(RESOURCE_BUNDLE.getString("Paste"), createGraphic('\uf0ea'), new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN));
     }
 
-    public static MenuItem createDeleteMenuItem() {
+    public static GseMenuItem createDeleteMenuItem() {
         return new GseMenuItem(RESOURCE_BUNDLE.getString("Delete"), createGraphic('\uf1f8'), new KeyCodeCombination(KeyCode.DELETE));
 
     }
