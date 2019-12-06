@@ -184,12 +184,15 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
             if (buttonType.getButtonData() == ButtonBar.ButtonData.YES) {
                 folder.getChild(name).ifPresent(projectNode -> {
                     backwardDependencies = projectNode.getBackwardDependencies();
-                    projectNode.rename(TEMPORARY_NAME);
+                    projectNode.rename(TEMPORARY_NAME + UUID.randomUUID());
                     buildFile(aCase, folder, null);
-                    folder.getChild(name).ifPresent(importedNode ->
-                            backwardDependencies.forEach(projectFile -> projectFile.replaceDependencies(projectNode.getId(), importedNode)));
-                    projectNode.delete();
-                    backwardDependencies.clear();
+                    Optional<ProjectNode> importedNode = folder.getChild(name);
+                    if (importedNode.isPresent()) {
+                        backwardDependencies.forEach(projectFile -> projectFile.replaceDependencies(projectNode.getId(), importedNode.get()));
+                        projectNode.delete();
+                    } else {
+                        projectNode.rename(name);
+                    }
                 });
             } else if (buttonType.getButtonData() == ButtonBar.ButtonData.OTHER) {
                 folder.getChild(name).ifPresent(projectNode -> {
