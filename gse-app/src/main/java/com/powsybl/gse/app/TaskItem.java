@@ -25,7 +25,7 @@ public class TaskItem {
 
     private final StringProperty message = new SimpleStringProperty("");
 
-    private final BooleanProperty cancelable = new SimpleBooleanProperty(false);
+    private final BooleanProperty cancellable = new SimpleBooleanProperty(false);
 
     public TaskItem(UUID id, String name, String message) {
         this.id = Objects.requireNonNull(id);
@@ -45,12 +45,12 @@ public class TaskItem {
         return message;
     }
 
-    public boolean isCancelable() {
-        return cancelable.get();
+    public boolean getCancellable() {
+        return cancellable.get();
     }
 
-    public BooleanProperty cancelableProperty() {
-        return cancelable;
+    public BooleanProperty cancellableProperty() {
+        return cancellable;
     }
 
     @Override

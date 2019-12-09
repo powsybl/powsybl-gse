@@ -58,9 +58,9 @@ public class TaskMonitorPane extends BorderPane {
                 label.maxWidthProperty().bind(taskList.widthProperty().subtract(50.0));
                 hideButton.setOnAction(event -> onHideAction.accept(item));
                 closeButton.setOnAction(event -> onCloseAction.accept(item));
-                if (item.isCancelable() && !actionBox.getChildren().contains(closeButton)) {
+                if (item.getCancellable() && !actionBox.getChildren().contains(closeButton)) {
                     actionBox.getChildren().add(closeButton);
-                } else if (!item.isCancelable()) {
+                } else if (!item.getCancellable()) {
                     actionBox.getChildren().remove(closeButton);
                 }
                 setGraphic(content);
