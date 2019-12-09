@@ -25,6 +25,8 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -35,6 +37,8 @@ import java.util.stream.Collectors;
 public class ImportedCaseCreator extends GridPane implements ProjectFileCreator {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ImportedCaseCreator");
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ImportedCaseCreator.class);
 
     private static final String TEMPORARY_NAME = "temporaryName";
 
@@ -201,7 +205,7 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
                         if (!folder.getChild(newName).isPresent()) {
                             buildFile(aCase, folder, newName);
                         } else {
-                            replaceNode(folder, aCase, scene);
+                            LOGGER.warn("The renaming was not completed");
                         }
                     });
                 });
