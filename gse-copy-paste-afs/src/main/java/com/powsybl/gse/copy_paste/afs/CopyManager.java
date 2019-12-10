@@ -7,7 +7,9 @@
 package com.powsybl.gse.copy_paste.afs;
 
 import com.powsybl.afs.*;
+import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.copy_paste.afs.exceptions.*;
+import com.powsybl.gse.spi.ProjectFileExecutionTaskExtension;
 import javafx.scene.input.Clipboard;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ArrayUtils;
@@ -42,6 +44,7 @@ public final class CopyManager {
     private static final long CLEANUP_PERIOD = 180000;
     private static final String COPY_INFO_SEPARATOR = "/";
     private static final String COPY_NODE_INFO_SEPARATOR = ";";
+    private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> PROJECT_FILE_EXECUTION_TASK_EXTENSIONS = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
 
     private static CopyManager INSTANCE = null;
 
@@ -171,15 +174,33 @@ public final class CopyManager {
             newNodeNames.add(nodeNewName);
         }
 
+        // cleaning unwanted data paste (out of project links, previous execution results)
         newNodeNames.forEach(newNodeName -> {
             if (folder instanceof ProjectFolder) {
-                ((ProjectFolder) folder).getChild(newNodeName).ifPresent(this::clearOutOfProjectDependencies);
+                ((ProjectFolder) folder).getChild(newNodeName).ifPresent(projectNode -> {
+                    clearOutOfProjectDependencies(projectNode);
+                    cleanPastedObject(projectNode);
+                });
             }
         });
     }
 
+    private void cleanPastedObject(ProjectNode copiedNode) {
+        if (copiedNode instanceof ProjectFolder) {
+            ((ProjectFolder) copiedNode).getChildren().forEach(this::cleanPastedObject);
+        } else if (copiedNode instanceof ProjectFile) {
+            List<ProjectFileExecutionTaskExtension> services = PROJECT_FILE_EXECUTION_TASK_EXTENSIONS.getServices();
+            services
+                    .stream()
+                    .filter(service -> service.getProjectFileType().isAssignableFrom(copiedNode.getClass()) && (service.getAdditionalType() == null || service.getAdditionalType().isAssignableFrom(copiedNode.getClass())))
+                    .forEach(service -> service.clearResults((ProjectFile) copiedNode));
+        } else {
+            throw new AssertionError();
+        }
+    }
+
     private void clearOutOfProjectDependencies(ProjectNode copiedNode) {
-        if (copiedNode.isFolder()) {
+        if (copiedNode instanceof ProjectFolder) {
             ((ProjectFolder) copiedNode).getChildren().forEach(this::clearOutOfProjectDependencies);
         } else if (copiedNode instanceof ProjectFile) {
             ProjectFile projectFile = (ProjectFile) copiedNode;

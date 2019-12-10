@@ -44,6 +44,12 @@ public class SecurityAnalysisExecutionTaskExtension implements ProjectFileExecut
     }
 
     @Override
+    public void clearResults(SecurityAnalysisRunner projectFile) {
+        // TODO(pbuiquang)
+        //projectFile.clearResults();
+    }
+
+    @Override
     public ExecutionTaskConfigurator<Void> createConfigurator(SecurityAnalysisRunner runner, Scene scene, GseContext context) {
         return null;
     }
