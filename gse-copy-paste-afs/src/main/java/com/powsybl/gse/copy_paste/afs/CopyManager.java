@@ -216,7 +216,7 @@ public final class CopyManager {
     }
 
     private void init() {
-        Timer timer = new Timer();
+        Timer timer = new Timer(true);
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
