@@ -52,8 +52,6 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
 
     private final Scene scene;
 
-    private List<ProjectFile> backwardDependencies = new ArrayList<>();
-
     ImportedCaseCreator(ProjectFolder folder, Scene scene, GseContext context) {
         this.folder = Objects.requireNonNull(folder);
         this.scene = Objects.requireNonNull(scene);
@@ -187,7 +185,7 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
         result.ifPresent(buttonType -> {
             if (buttonType.getButtonData() == ButtonBar.ButtonData.YES) {
                 folder.getChild(name).ifPresent(projectNode -> {
-                    backwardDependencies = projectNode.getBackwardDependencies();
+                    List<ProjectFile> backwardDependencies = projectNode.getBackwardDependencies();
                     projectNode.rename(TEMPORARY_NAME + UUID.randomUUID());
                     buildFile(aCase, folder, null);
                     Optional<ProjectNode> importedNode = folder.getChild(name);
