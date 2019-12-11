@@ -27,7 +27,7 @@ jobs:
 
       - name: Build powsybl-core with Maven
         run: mvn --batch-mode -DskipTests install
-        working-directory: powsybl-core
+        working-directory: ./powsybl-core
 
       - name: Build with Maven
         run: mvn --batch-mode package
