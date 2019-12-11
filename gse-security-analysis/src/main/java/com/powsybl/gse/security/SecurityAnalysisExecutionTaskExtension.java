@@ -45,8 +45,7 @@ public class SecurityAnalysisExecutionTaskExtension implements ProjectFileExecut
 
     @Override
     public void clearResults(SecurityAnalysisRunner projectFile) {
-        // TODO(pbuiquang)
-        //projectFile.clearResults();
+        projectFile.clearResult();
     }
 
     @Override
