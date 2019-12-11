@@ -26,7 +26,7 @@ jobs:
           java-version: 1.8
 
       - name: Build powsybl-core with Maven
-        run: ls -l
+        run: ls -l ..
 
       - name: Build with Maven
         run: mvn --batch-mode package
