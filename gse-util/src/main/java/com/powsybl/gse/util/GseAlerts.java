@@ -10,10 +10,7 @@ import com.powsybl.afs.AbstractNodeBase;
 import com.powsybl.afs.Node;
 import com.powsybl.afs.ProjectNode;
 import com.powsybl.gse.spi.Savable;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.TreeItem;
+import javafx.scene.control.*;
 
 import javax.annotation.Nullable;
 import java.text.MessageFormat;
@@ -75,6 +72,20 @@ public final class GseAlerts {
         ButtonType save = new ButtonType(RESOURCE_BUNDLE.getString("Save"), ButtonBar.ButtonData.YES);
         ButtonType dontSave = new ButtonType(RESOURCE_BUNDLE.getString("DontSave"), ButtonBar.ButtonData.NO);
         alert.getButtonTypes().setAll(save, dontSave, ButtonType.CANCEL);
+
+        return alert.showAndWait();
+    }
+
+    public static Optional<ButtonType> showReplaceAndQuitDialog(String folderName, String documentName) {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle(RESOURCE_BUNDLE.getString("FileConflict"));
+        alert.setHeaderText(MessageFormat.format(RESOURCE_BUNDLE.getString("ReplaceFile"), documentName));
+        alert.setContentText(MessageFormat.format(RESOURCE_BUNDLE.getString("FileWithTheSameNameExists"), folderName));
+        ButtonType replace = new ButtonType(RESOURCE_BUNDLE.getString("Replace"), ButtonBar.ButtonData.YES);
+        ButtonType rename = new ButtonType(RESOURCE_BUNDLE.getString("Rename"), ButtonBar.ButtonData.OTHER);
+        alert.getButtonTypes().setAll(replace, rename, ButtonType.CANCEL);
+        alert.getDialogPane().setPrefWidth(600);
+        alert.getDialogPane().setPrefHeight(170);
 
         return alert.showAndWait();
     }
