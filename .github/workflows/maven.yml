@@ -26,8 +26,7 @@ jobs:
           java-version: 1.8
 
       - name: Build powsybl-core with Maven
-        run: echo toto
-        working-directory: ./powsybl-core
+        run: (cd powsybl-core && mvn --batch-mode --skipTests install)
 
       - name: Build with Maven
         run: mvn --batch-mode package
