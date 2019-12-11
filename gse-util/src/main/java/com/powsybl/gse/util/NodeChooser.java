@@ -694,7 +694,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                     localArchiveManager.copy(Collections.singletonList(item), selectedDirectory);
                     infoDialog.updateStage(RESOURCE_BUNDLE.getString("CompleteTask"));
                 } catch (CopyPasteException e) {
-                    GseAlerts.showDialogError(e.getMessage());
+                    Platform.runLater(() -> GseAlerts.showDialogError(e.getMessage()));
                     infoDialog.updateStage(RESOURCE_BUNDLE.getString("ErrorTask"), Color.RED);
                 }
             });
