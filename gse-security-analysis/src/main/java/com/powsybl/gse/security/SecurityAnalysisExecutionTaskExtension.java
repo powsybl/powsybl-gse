@@ -44,6 +44,11 @@ public class SecurityAnalysisExecutionTaskExtension implements ProjectFileExecut
     }
 
     @Override
+    public void clearResults(SecurityAnalysisRunner projectFile) {
+        projectFile.clearResult();
+    }
+
+    @Override
     public ExecutionTaskConfigurator<Void> createConfigurator(SecurityAnalysisRunner runner, Scene scene, GseContext context) {
         return null;
     }

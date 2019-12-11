@@ -209,4 +209,9 @@ public class ProjectCaseExportExtension implements ProjectFileExecutionTaskExten
             monitor.stopTask(taskId);
         }
     }
+
+    @Override
+    public void clearResults(ProjectFile projectFile) {
+        // Noop
+    }
 }

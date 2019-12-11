@@ -21,4 +21,6 @@ public interface ProjectFileExecutionTaskExtension<T extends ProjectFile, C> ext
     ExecutionTaskConfigurator<C> createConfigurator(T projectFile, Scene scene, GseContext context);
 
     void execute(T projectFile, C config);
+
+    void clearResults(T projectFile);
 }
