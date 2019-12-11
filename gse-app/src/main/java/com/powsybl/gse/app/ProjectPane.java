@@ -10,7 +10,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.panemu.tiwulfx.control.DetachableTabPane;
 import com.powsybl.afs.*;
-import com.powsybl.afs.storage.ListenableAppStorage;
+import com.powsybl.afs.storage.AppStorage;
 import com.powsybl.afs.storage.NodeInfo;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.copy_paste.afs.CopyManager;
@@ -1147,7 +1147,7 @@ public class ProjectPane extends Tab {
         try {
             Field storageField = AppFileSystem.class.getDeclaredField("storage");
             storageField.setAccessible(true);
-            ListenableAppStorage storage = (ListenableAppStorage) storageField.get(project.getFileSystem());
+            AppStorage storage = (AppStorage) storageField.get(project.getFileSystem());
 
             NodeInfo projectFileInfo = storage.getNodeInfo(nodeId);
             NodeInfo parentInfo = storage.getParentNode(projectFileInfo.getId()).orElse(null);
