@@ -26,7 +26,7 @@ jobs:
           java-version: 1.8
 
       - name: Build powsybl-core with Maven
-        run: (cd powsybl-core && mvn --batch-mode --skipTests install)
+        run: echo $PWD
 
       - name: Build with Maven
         run: mvn --batch-mode package
