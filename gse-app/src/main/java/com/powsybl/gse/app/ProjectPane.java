@@ -66,6 +66,7 @@ public class ProjectPane extends Tab {
     private static final ServiceLoaderCache<ProjectFileCreatorExtension> CREATOR_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileCreatorExtension.class);
     private static final ServiceLoaderCache<ProjectFileEditorExtension> EDITOR_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileEditorExtension.class);
     private static final ServiceLoaderCache<ProjectFileViewerExtension> VIEWER_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileViewerExtension.class);
+    private static final ServiceLoaderCache<ProjectFileMetadataViewerExtension> METADATA_VIEWER_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileMetadataViewerExtension.class);
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
     private static final List<ProjectFileExtension> PROJECT_FILE_EXTENSIONS = new ServiceLoaderCache<>(ProjectFileExtension.class).getServices();
 
@@ -214,6 +215,14 @@ public class ProjectPane extends Tab {
                                 ProjectNode node = (ProjectNode) item;
                                 if (node instanceof ProjectFile) {
                                     setTextFill(getProjectFileColor((ProjectFile) node));
+                                }
+                                if (item instanceof ProjectFile) {
+                                    ProjectFile projectFile = (ProjectFile) item;
+                                    List<ProjectFileMetadataViewerExtension> metadataViewerExtensions = findMetadataViewerExtensions(projectFile);
+                                    metadataViewerExtensions.stream().findFirst().ifPresent(extension -> {
+                                        Tooltip tooltip = new Tooltip(extension.display(projectFile));
+                                        setTooltip(tooltip);
+                                    });
                                 }
                                 setText(node.getName());
                                 setGraphic(NodeGraphics.getGraphic(item));
@@ -595,6 +604,12 @@ public class ProjectPane extends Tab {
         return EDITOR_EXTENSION_LOADER.getServices().stream()
                 .filter(extension -> extension.getProjectFileType().isAssignableFrom(file.getClass())
                         && (extension.getAdditionalType() == null || extension.getAdditionalType().isAssignableFrom(file.getClass())))
+                .collect(Collectors.toList());
+    }
+
+    public static List<ProjectFileMetadataViewerExtension> findMetadataViewerExtensions(ProjectFile file) {
+        return METADATA_VIEWER_EXTENSION_LOADER.getServices().stream()
+                .filter(extension -> extension.getProjectFileType().isAssignableFrom(file.getClass()))
                 .collect(Collectors.toList());
     }
 
