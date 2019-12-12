@@ -246,7 +246,16 @@ public class ProjectPane extends Tab {
         dateColumn.setCellValueFactory(param -> {
             ZonedDateTime objectModificationDate = null;
             if (param != null && param.getValue() != null && param.getValue().getValue() instanceof ProjectNode) {
-                objectModificationDate = ((ProjectNode) param.getValue().getValue()).getModificationDate();
+                if (param.getValue().getValue() instanceof ProjectFolder) {
+                    objectModificationDate = param.getValue().getChildren().stream().map(child -> {
+                        if (child.getValue() instanceof ProjectNode) {
+                            return ((ProjectNode) child.getValue()).getModificationDate();
+                        }
+                        return null;
+                    }).filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(((ProjectFolder) param.getValue().getValue()).getModificationDate());
+                } else {
+                    objectModificationDate = ((ProjectNode) param.getValue().getValue()).getModificationDate();
+                }
             }
             return new ReadOnlyObjectWrapper<>(objectModificationDate);
         });
