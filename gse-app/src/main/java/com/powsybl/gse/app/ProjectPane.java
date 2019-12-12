@@ -66,6 +66,7 @@ public class ProjectPane extends Tab {
     private static final ServiceLoaderCache<ProjectFileCreatorExtension> CREATOR_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileCreatorExtension.class);
     private static final ServiceLoaderCache<ProjectFileEditorExtension> EDITOR_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileEditorExtension.class);
     private static final ServiceLoaderCache<ProjectFileViewerExtension> VIEWER_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileViewerExtension.class);
+    private static final ServiceLoaderCache<ProjectFileMetadataViewerExtension> METADATA_VIEWER_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileMetadataViewerExtension.class);
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
     private static final List<ProjectFileExtension> PROJECT_FILE_EXTENSIONS = new ServiceLoaderCache<>(ProjectFileExtension.class).getServices();
 
@@ -215,6 +216,14 @@ public class ProjectPane extends Tab {
                                 if (node instanceof ProjectFile) {
                                     setTextFill(getProjectFileColor((ProjectFile) node));
                                 }
+                                if (item instanceof ProjectFile) {
+                                    ProjectFile projectFile = (ProjectFile) item;
+                                    List<ProjectFileMetadataViewerExtension> metadataViewerExtensions = findMetadataViewerExtensions(projectFile);
+                                    metadataViewerExtensions.stream().findFirst().ifPresent(extension -> {
+                                        Tooltip tooltip = new Tooltip(extension.display(projectFile));
+                                        setTooltip(tooltip);
+                                    });
+                                }
                                 setText(node.getName());
                                 setGraphic(NodeGraphics.getGraphic(item));
                                 setOpacity(node instanceof UnknownProjectFile ? 0.5 : 1);
@@ -237,7 +246,16 @@ public class ProjectPane extends Tab {
         dateColumn.setCellValueFactory(param -> {
             ZonedDateTime objectModificationDate = null;
             if (param != null && param.getValue() != null && param.getValue().getValue() instanceof ProjectNode) {
-                objectModificationDate = ((ProjectNode) param.getValue().getValue()).getModificationDate();
+                if (param.getValue().getValue() instanceof ProjectFolder) {
+                    objectModificationDate = param.getValue().getChildren().stream().map(child -> {
+                        if (child.getValue() instanceof ProjectNode) {
+                            return ((ProjectNode) child.getValue()).getModificationDate();
+                        }
+                        return null;
+                    }).filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(((ProjectFolder) param.getValue().getValue()).getModificationDate());
+                } else {
+                    objectModificationDate = ((ProjectNode) param.getValue().getValue()).getModificationDate();
+                }
             }
             return new ReadOnlyObjectWrapper<>(objectModificationDate);
         });
@@ -250,13 +268,13 @@ public class ProjectPane extends Tab {
                         setText(null);
                         setGraphic(null);
                     } else {
-                        setText(item.format(DateTimeFormatter.ofPattern("d MMM yy, HH:mm")));
+                        setText(item.format(DateTimeFormatter.ofPattern("dd/MM/yy, HH:mm")));
                     }
                 }
             };
         });
         treeTableView.getColumns().add(nameColumn);
-//        treeTableView.getColumns().add(dateColumn);
+        treeTableView.getColumns().add(dateColumn);
         treeTableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         treeTableView.getSelectionModel().getSelectedItems().addListener(this::treeViewSelectionChangeListener);
         treeTableView.setOnMouseClicked(this::treeViewMouseClickHandler);
@@ -595,6 +613,12 @@ public class ProjectPane extends Tab {
         return EDITOR_EXTENSION_LOADER.getServices().stream()
                 .filter(extension -> extension.getProjectFileType().isAssignableFrom(file.getClass())
                         && (extension.getAdditionalType() == null || extension.getAdditionalType().isAssignableFrom(file.getClass())))
+                .collect(Collectors.toList());
+    }
+
+    public static List<ProjectFileMetadataViewerExtension> findMetadataViewerExtensions(ProjectFile file) {
+        return METADATA_VIEWER_EXTENSION_LOADER.getServices().stream()
+                .filter(extension -> extension.getProjectFileType().isAssignableFrom(file.getClass()))
                 .collect(Collectors.toList());
     }
 
