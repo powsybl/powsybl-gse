@@ -10,7 +10,7 @@ import com.google.auto.service.AutoService;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileViewerExtension;
 import com.powsybl.gse.util.Glyph;
-import com.powsybl.security.afs.SecurityAnalysisRunner;
+import com.powsybl.afs.security.SecurityAnalysisRunner;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 

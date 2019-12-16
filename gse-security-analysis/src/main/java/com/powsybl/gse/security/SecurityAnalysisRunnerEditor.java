@@ -8,7 +8,7 @@ package com.powsybl.gse.security;
 
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileEditor;
-import com.powsybl.security.afs.SecurityAnalysisRunner;
+import com.powsybl.afs.security.SecurityAnalysisRunner;
 import javafx.scene.Scene;
 
 /**

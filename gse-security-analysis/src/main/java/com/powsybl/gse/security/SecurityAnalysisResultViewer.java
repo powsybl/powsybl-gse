@@ -12,7 +12,7 @@ import com.powsybl.gse.util.BadgeCount;
 import com.powsybl.gse.util.GseUtil;
 import com.powsybl.security.LimitViolation;
 import com.powsybl.security.SecurityAnalysisResult;
-import com.powsybl.security.afs.SecurityAnalysisRunner;
+import com.powsybl.afs.security.SecurityAnalysisRunner;
 import javafx.collections.ListChangeListener;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;

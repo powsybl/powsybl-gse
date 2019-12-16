@@ -11,7 +11,7 @@ import com.powsybl.afs.ProjectFile;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileEditor;
 import com.powsybl.gse.spi.ProjectFileEditorExtension;
-import com.powsybl.security.afs.SecurityAnalysisRunner;
+import com.powsybl.afs.security.SecurityAnalysisRunner;
 import javafx.scene.Scene;
 
 import java.util.ResourceBundle;

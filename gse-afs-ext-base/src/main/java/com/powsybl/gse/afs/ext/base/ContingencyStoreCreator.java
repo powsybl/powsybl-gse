@@ -7,7 +7,7 @@
 package com.powsybl.gse.afs.ext.base;
 
 import com.powsybl.afs.ProjectFolder;
-import com.powsybl.contingency.afs.ContingencyStoreBuilder;
+import com.powsybl.afs.contingency.ContingencyStoreBuilder;
 
 import java.util.ResourceBundle;
 

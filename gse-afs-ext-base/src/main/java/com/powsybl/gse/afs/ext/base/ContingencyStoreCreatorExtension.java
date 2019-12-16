@@ -8,7 +8,7 @@ package com.powsybl.gse.afs.ext.base;
 
 import com.google.auto.service.AutoService;
 import com.powsybl.afs.ProjectFolder;
-import com.powsybl.contingency.afs.ContingencyStore;
+import com.powsybl.afs.contingency.ContingencyStore;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileCreator;
 import com.powsybl.gse.spi.ProjectFileCreatorExtension;

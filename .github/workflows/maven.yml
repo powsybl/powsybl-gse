@@ -27,6 +27,16 @@ jobs:
         run: mvn --batch-mode -DskipTests install
         working-directory: ../powsybl-core
 
+      - name: Checkout powsybl-afs
+        uses: actions/checkout@v1
+        with:
+          repository: powsybl/powsybl-afs
+          ref: refs/heads/master
+
+      - name: Build powsybl-afs with Maven
+        run: mvn --batch-mode -DskipTests install
+        working-directory: ../powsybl-afs
+
       - name: Checkout sources
         uses: actions/checkout@v1
 
