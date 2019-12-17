@@ -229,13 +229,13 @@
         <!-- Security analysis -->
         <dependency>
             <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-gse-security-analysis</artifactId>
-            <version>${project.version}</version>
+            <artifactId>powsybl-afs-security-analysis-local</artifactId>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-security-analysis-afs-local</artifactId>
+            <artifactId>powsybl-gse-security-analysis</artifactId>
+            <version>${project.version}</version>
             <scope>runtime</scope>
         </dependency>
     </dependencies>

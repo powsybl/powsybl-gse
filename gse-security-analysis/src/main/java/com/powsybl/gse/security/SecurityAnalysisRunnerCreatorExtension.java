@@ -10,7 +10,7 @@ import com.google.auto.service.AutoService;
 import com.powsybl.afs.ProjectFolder;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileCreatorExtension;
-import com.powsybl.security.afs.SecurityAnalysisRunner;
+import com.powsybl.afs.security.SecurityAnalysisRunner;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;

@@ -46,19 +46,19 @@
         </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-afs-action-dsl</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-afs-contingency</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
             <artifactId>powsybl-afs-ext-base</artifactId>
         </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-iidm-xml-converter</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-action-dsl-afs</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-contingency-afs</artifactId>
         </dependency>
 
         <dependency>

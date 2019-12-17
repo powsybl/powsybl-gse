@@ -107,6 +107,7 @@
         <slf4j.version>1.7.22</slf4j.version>
         <tiwulfx.version>2.0</tiwulfx.version>
 
+        <powsyblafs.version>3.1.0-SNAPSHOT</powsyblafs.version>
         <powsyblcore.version>3.1.0-SNAPSHOT</powsyblcore.version>
 
     </properties>
@@ -429,30 +430,43 @@
                 <version>${slf4j.version}</version>
             </dependency>
 
-            <!-- powsybl-core dependencies -->
-            <dependency>
-                <groupId>com.powsybl</groupId>
-                <artifactId>powsybl-action-dsl</artifactId>
-                <version>${powsyblcore.version}</version>
-            </dependency>
+            <!-- powsybl-afs dependencies -->
             <dependency>
                 <groupId>com.powsybl</groupId>
                 <artifactId>powsybl-afs-core</artifactId>
-                <version>${powsyblcore.version}</version>
+                <version>${powsyblafs.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.powsybl</groupId>
                 <artifactId>powsybl-afs-ext-base</artifactId>
-                <version>${powsyblcore.version}</version>
+                <version>${powsyblafs.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.powsybl</groupId>
-                <artifactId>powsybl-action-dsl-afs</artifactId>
-                <version>${powsyblcore.version}</version>
+                <artifactId>powsybl-afs-action-dsl</artifactId>
+                <version>${powsyblafs.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.powsybl</groupId>
-                <artifactId>powsybl-contingency-afs</artifactId>
+                <artifactId>powsybl-afs-contingency</artifactId>
+                <version>${powsyblafs.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-afs-security-analysis</artifactId>
+                <version>${powsyblafs.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-afs-ws-client-utils</artifactId>
+                <version>${powsyblafs.version}</version>
+            </dependency>
+
+
+            <!-- powsybl-core dependencies -->
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-action-dsl</artifactId>
                 <version>${powsyblcore.version}</version>
             </dependency>
             <dependency>
@@ -463,16 +477,6 @@
             <dependency>
                 <groupId>com.powsybl</groupId>
                 <artifactId>powsybl-iidm-xml-converter</artifactId>
-                <version>${powsyblcore.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.powsybl</groupId>
-                <artifactId>powsybl-security-analysis-afs</artifactId>
-                <version>${powsyblcore.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.powsybl</groupId>
-                <artifactId>powsybl-afs-ws-client-utils</artifactId>
                 <version>${powsyblcore.version}</version>
             </dependency>
 
@@ -486,14 +490,19 @@
             <dependency>
                 <groupId>com.powsybl</groupId>
                 <artifactId>powsybl-afs-local</artifactId>
-                <version>${powsyblcore.version}</version>
+                <version>${powsyblafs.version}</version>
                 <scope>runtime</scope>
             </dependency>
             <dependency>
                 <groupId>com.powsybl</groupId>
                 <artifactId>powsybl-afs-mapdb</artifactId>
-                <version>${powsyblcore.version}</version>
+                <version>${powsyblafs.version}</version>
                 <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-afs-security-analysis-local</artifactId>
+                <version>${powsyblafs.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.powsybl</groupId>
@@ -512,11 +521,6 @@
                 <artifactId>powsybl-iidm-impl</artifactId>
                 <version>${powsyblcore.version}</version>
                 <scope>runtime</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.powsybl</groupId>
-                <artifactId>powsybl-security-analysis-afs-local</artifactId>
-                <version>${powsyblcore.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.powsybl</groupId>
