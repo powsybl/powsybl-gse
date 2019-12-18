@@ -7,7 +7,9 @@
 package com.powsybl.gse.copy_paste.afs;
 
 import com.powsybl.afs.*;
+import com.powsybl.commons.config.PlatformConfig;
 import com.powsybl.commons.util.ServiceLoaderCache;
+import com.powsybl.computation.local.LocalComputationManager;
 import com.powsybl.gse.copy_paste.afs.exceptions.*;
 import com.powsybl.gse.spi.ProjectFileExecutionTaskExtension;
 import javafx.scene.input.Clipboard;
@@ -220,8 +222,9 @@ public final class CopyManager {
     }
 
     private Path resolveArchiveTargetDirectory(File directoryProp) throws IOException, CopyNotEmptyArchiveDirectoryException {
+
         if (directoryProp == null) {
-            return Files.createTempDirectory(TEMP_DIR_PREFIX);
+            return Files.createTempDirectory(LocalComputationManager.getDefault().getLocalDir(), TEMP_DIR_PREFIX);
         }
 
         if (!directoryProp.exists() || !directoryProp.canWrite() || !directoryProp.isDirectory()) {
@@ -257,7 +260,6 @@ public final class CopyManager {
     }
 
     private String renameAndPaste(AbstractNodeBase folder, List<? extends AbstractNodeBase> children, CopyInfo info) throws CopyPasteException {
-
         for (AbstractNodeBase child : children) {
             String name = child.getName();
             if (info.node.getName().equals(name)) {
