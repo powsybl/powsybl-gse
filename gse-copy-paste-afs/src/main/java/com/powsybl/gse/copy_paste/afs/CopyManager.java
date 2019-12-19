@@ -7,7 +7,6 @@
 package com.powsybl.gse.copy_paste.afs;
 
 import com.powsybl.afs.*;
-import com.powsybl.commons.config.PlatformConfig;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.computation.local.LocalComputationManager;
 import com.powsybl.gse.copy_paste.afs.exceptions.*;
