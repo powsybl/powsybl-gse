@@ -25,7 +25,7 @@ import com.powsybl.gse.util.editor.AbstractCodeEditorFactoryService;
 import com.powsybl.gse.util.editor.impl.GroovyCodeEditor;
 import groovy.lang.GroovyShell;
 import javafx.application.Platform;
-import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.*;
 import javafx.collections.FXCollections;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
@@ -50,6 +50,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -62,6 +63,8 @@ public class ModificationScriptEditor extends BorderPane
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ModificationScript");
 
     private static final int VALIDATION_INFO_TIMEOUT = 3000;
+
+    private static final double DIVIDER_POSITION = 0.05;
 
     private static final ServiceLoaderCache<AbstractCodeEditorFactoryService> CODE_EDITOR_FACTORIES = new ServiceLoaderCache<>(AbstractCodeEditorFactoryService.class);
 
@@ -89,9 +92,17 @@ public class ModificationScriptEditor extends BorderPane
 
     private final StackPane codeEditorWithProgressIndicator;
 
+    private final MasterDetailPane codeEditorWithIncludesPane;
+
+    private final ObjectProperty includedScriptsPaneProperty = new SimpleObjectProperty();
+
+    private final IntegerProperty includesScriptsProperty = new SimpleIntegerProperty();
+
     private final SplitPane splitPane;
 
     private AbstractCodeEditor codeEditor;
+
+    private Optional<AbstractCodeEditorFactoryService> preferredCodeEditor;
 
     private StorableScript storableScript;
 
@@ -103,21 +114,11 @@ public class ModificationScriptEditor extends BorderPane
         this.storableScript = storableScript;
         this.context = context;
 
-        Optional<AbstractCodeEditorFactoryService> preferredCodeEditor = CODE_EDITOR_FACTORIES.getServices()
+        preferredCodeEditor = CODE_EDITOR_FACTORIES.getServices()
                 .stream()
                 .findAny();
 
-        codeEditor = preferredCodeEditor
-                .map(codeEditorFactoryService -> {
-                    try {
-                        LOGGER.info("Trying to use custom editor {}", codeEditorFactoryService.getEditorClass());
-                        return codeEditorFactoryService.build();
-                    } catch (Exception e) {
-                        LOGGER.error("Failed to instanciate editor {}", codeEditorFactoryService.getEditorClass(), e);
-                    }
-                    return null;
-                })
-                .orElse(new GroovyCodeEditor());
+        codeEditor = createCodeEditor();
 
         //Adding  autocompletion keywords suggestions depending the context
         List<String> suggestions = new ArrayList<>();
@@ -125,7 +126,18 @@ public class ModificationScriptEditor extends BorderPane
         completionWordsProviderExtensions.forEach(extension -> suggestions.addAll(extension.completionKeyWords()));
 
         codeEditorWithProgressIndicator = new StackPane();
-        splitPane = new SplitPane(codeEditorWithProgressIndicator);
+        codeEditorWithIncludesPane = new MasterDetailPane();
+        codeEditorWithIncludesPane.setMasterNode(codeEditorWithProgressIndicator);
+        codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane());
+        codeEditorWithIncludesPane.detailNodeProperty().addListener((observable, oldDetailNode, newDetailNode) -> {
+            if (newDetailNode != null) {
+
+            }
+        });
+        codeEditorWithIncludesPane.setShowDetailNode(true);
+        codeEditorWithIncludesPane.setDetailSide(Side.TOP);
+        codeEditorWithIncludesPane.setDividerPosition(DIVIDER_POSITION);
+        splitPane = new SplitPane(codeEditorWithIncludesPane);
         setUpEditor(codeEditor, suggestions);
         codeEditor.setTabSize(4);
 
@@ -149,13 +161,7 @@ public class ModificationScriptEditor extends BorderPane
         Text plusGlyph = Glyph.createAwesomeFont('\uf055').size("1.3em");
         addVirtualScriptButton = new Button("", plusGlyph);
         addVirtualScriptButton.getStyleClass().add(GSE_TOOLBAR_BUTTON_STYLE);
-        addVirtualScriptButton.setOnAction(event -> {
-            VirtualScriptCreator virtualScriptCreator = new VirtualScriptCreator((AbstractScript) storableScript, scene, context);
-            Callback<ButtonType, Boolean> resultConverter = buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE;
-            Dialog<Boolean> dialog = new GseDialog<>(virtualScriptCreator.getTitle(), virtualScriptCreator, scene.getWindow(), virtualScriptCreator.okProperty().not(), resultConverter);
-            dialog.showAndWait().filter(result -> result).ifPresent(result -> {
-            });
-        });
+        addVirtualScriptButton.setOnAction(event -> addVirtualScript((AbstractScript) storableScript, scene, context));
 
         comboBox = new ComboBox(FXCollections.observableArrayList(2, 4, 8));
         comboBox.getSelectionModel().select(1);
@@ -176,6 +182,17 @@ public class ModificationScriptEditor extends BorderPane
 
         // listen to modifications
         storableScript.addListener(this);
+    }
+
+    private void addVirtualScript(AbstractScript script, Scene scene, GseContext context) {
+        VirtualScriptCreator virtualScriptCreator = new VirtualScriptCreator(script, scene, context);
+        Callback<ButtonType, Boolean> resultConverter = buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE;
+        Dialog<Boolean> dialog = new GseDialog<>(virtualScriptCreator.getTitle(), virtualScriptCreator, scene.getWindow(), virtualScriptCreator.okProperty().not(), resultConverter);
+        dialog.showAndWait().filter(result -> result).ifPresent(result -> virtualScriptCreator.create());
+    }
+
+    private void removeVirtualScript() {
+
     }
 
     private void setUpEditor(AbstractCodeEditor editor, List<String> completions) {
@@ -216,6 +233,50 @@ public class ModificationScriptEditor extends BorderPane
         } else {
             LOGGER.info("No validation process found for script type {}", storableScript.getScriptType());
         }
+    }
+
+    private Node createIncludedScriptsPane() {
+        List<AbstractScript> includedScripts = ((AbstractScript) storableScript).getIncludedScripts();
+        List<TitledPane> includedScriptsPanes = includedScripts.stream()
+                .map(this::includedPane)
+                .collect(Collectors.toList());
+
+        final Accordion accordion = new Accordion();
+        accordion.getPanes().addAll(includedScriptsPanes);
+
+        String includeScripts = includedScripts.size() + " " + RESOURCE_BUNDLE.getString("IncludedScripts");
+        TitledPane rootTitledPane = new TitledPane(includeScripts, accordion);
+        rootTitledPane.setExpanded(false);
+        rootTitledPane.expandedProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue) {
+                codeEditorWithIncludesPane.setDividerPosition(0.5);
+            } else {
+                codeEditorWithIncludesPane.setDividerPosition(DIVIDER_POSITION);
+            }
+        });
+
+        return rootTitledPane;
+    }
+
+    private TitledPane includedPane(AbstractScript script) {
+        AbstractCodeEditor includedScriptCodeEditor = createCodeEditor();
+        includedScriptCodeEditor.setCode(script.readScript());
+        includedScriptCodeEditor.setEditable(false);
+        return new TitledPane(script.getName(), includedScriptCodeEditor);
+    }
+
+    private AbstractCodeEditor createCodeEditor() {
+        return preferredCodeEditor
+                .map(codeEditorFactoryService -> {
+                    try {
+                        LOGGER.info("Trying to use custom editor {}", codeEditorFactoryService.getEditorClass());
+                        return codeEditorFactoryService.build();
+                    } catch (Exception e) {
+                        LOGGER.error("Failed to instanciate editor {}", codeEditorFactoryService.getEditorClass(), e);
+                    }
+                    return null;
+                })
+                .orElse(new GroovyCodeEditor());
     }
 
     private Node createScriptValidationNode(Text message, int prefHeight, TextAlignment alignment, Color backgroundColor, Runnable closeDetail) {
