@@ -6,11 +6,9 @@
  */
 package com.powsybl.gse.afs.ext.base;
 
-import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.ext.base.AbstractScript;
 import com.powsybl.afs.ext.base.ScriptListener;
 import com.powsybl.afs.ext.base.ScriptType;
-import com.powsybl.afs.ext.base.StorableScript;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.GseContext;
@@ -94,24 +92,22 @@ public class ModificationScriptEditor extends BorderPane
 
     private final MasterDetailPane codeEditorWithIncludesPane;
 
-    private final ObjectProperty includedScriptsPaneProperty = new SimpleObjectProperty();
-
-    private final IntegerProperty includesScriptsProperty = new SimpleIntegerProperty();
-
     private final SplitPane splitPane;
 
     private AbstractCodeEditor codeEditor;
 
     private Optional<AbstractCodeEditorFactoryService> preferredCodeEditor;
 
-    private StorableScript storableScript;
+    private AbstractScript abstractScript;
+
+    private TitledPane rootTitledPane;
 
     private final SimpleBooleanProperty saved = new SimpleBooleanProperty(true);
 
     private Service<String> scriptUpdateService;
 
-    public ModificationScriptEditor(StorableScript storableScript, Scene scene, GseContext context) {
-        this.storableScript = storableScript;
+    public ModificationScriptEditor(AbstractScript abstractScript, Scene scene, GseContext context) {
+        this.abstractScript = abstractScript;
         this.context = context;
 
         preferredCodeEditor = CODE_EDITOR_FACTORIES.getServices()
@@ -122,18 +118,13 @@ public class ModificationScriptEditor extends BorderPane
 
         //Adding  autocompletion keywords suggestions depending the context
         List<String> suggestions = new ArrayList<>();
-        List<AutoCompletionWordsProvider> completionWordsProviderExtensions = findCompletionWordsProviderExtensions(storableScript);
+        List<AutoCompletionWordsProvider> completionWordsProviderExtensions = findCompletionWordsProviderExtensions(abstractScript);
         completionWordsProviderExtensions.forEach(extension -> suggestions.addAll(extension.completionKeyWords()));
 
         codeEditorWithProgressIndicator = new StackPane();
         codeEditorWithIncludesPane = new MasterDetailPane();
         codeEditorWithIncludesPane.setMasterNode(codeEditorWithProgressIndicator);
-        codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane());
-        codeEditorWithIncludesPane.detailNodeProperty().addListener((observable, oldDetailNode, newDetailNode) -> {
-            if (newDetailNode != null) {
-
-            }
-        });
+        codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(false));
         codeEditorWithIncludesPane.setShowDetailNode(true);
         codeEditorWithIncludesPane.setDetailSide(Side.TOP);
         codeEditorWithIncludesPane.setDividerPosition(DIVIDER_POSITION);
@@ -161,7 +152,7 @@ public class ModificationScriptEditor extends BorderPane
         Text plusGlyph = Glyph.createAwesomeFont('\uf055').size("1.3em");
         addVirtualScriptButton = new Button("", plusGlyph);
         addVirtualScriptButton.getStyleClass().add(GSE_TOOLBAR_BUTTON_STYLE);
-        addVirtualScriptButton.setOnAction(event -> addVirtualScript((AbstractScript) storableScript, scene, context));
+        addVirtualScriptButton.setOnAction(event -> addVirtualScript(scene, context));
 
         comboBox = new ComboBox(FXCollections.observableArrayList(2, 4, 8));
         comboBox.getSelectionModel().select(1);
@@ -181,18 +172,19 @@ public class ModificationScriptEditor extends BorderPane
         setCenter(codeWithSyntaxCheckPane);
 
         // listen to modifications
-        storableScript.addListener(this);
+        abstractScript.addListener(this);
     }
 
-    private void addVirtualScript(AbstractScript script, Scene scene, GseContext context) {
-        VirtualScriptCreator virtualScriptCreator = new VirtualScriptCreator(script, scene, context);
+    private void addVirtualScript(Scene scene, GseContext context) {
+        VirtualScriptCreator virtualScriptCreator = new VirtualScriptCreator(abstractScript, scene, context);
         Callback<ButtonType, Boolean> resultConverter = buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE;
         Dialog<Boolean> dialog = new GseDialog<>(virtualScriptCreator.getTitle(), virtualScriptCreator, scene.getWindow(), virtualScriptCreator.okProperty().not(), resultConverter);
-        dialog.showAndWait().filter(result -> result).ifPresent(result -> virtualScriptCreator.create());
+        dialog.showAndWait().filter(result -> result).ifPresent(result -> updateIncludePane(virtualScriptCreator::create));
     }
 
-    private void removeVirtualScript() {
-
+    private void removeVirtualScript(AbstractScript script) {
+        Optional<ButtonType> result = GseAlerts.showRemoveConfirmationAlert(script.getName());
+        result.filter(type -> type == ButtonType.OK).ifPresent(okButton -> updateIncludePane(() -> abstractScript.removeScript(script.getId())));
     }
 
     private void setUpEditor(AbstractCodeEditor editor, List<String> completions) {
@@ -206,12 +198,12 @@ public class ModificationScriptEditor extends BorderPane
         codeEditorWithProgressIndicator.getChildren().addAll(codeEditor, new Group(progressIndicator));
     }
 
-    private List<AutoCompletionWordsProvider> findCompletionWordsProviderExtensions(StorableScript storableScript) {
-        return GroovyCodeEditor.findAutoCompletionWordProviderExtensions(storableScript.getClass());
+    private List<AutoCompletionWordsProvider> findCompletionWordsProviderExtensions(AbstractScript script) {
+        return GroovyCodeEditor.findAutoCompletionWordProviderExtensions(script.getClass());
     }
 
     private void validateScript(MasterDetailPane codeWithDetailPane) {
-        if (ScriptType.GROOVY.equals(storableScript.getScriptType())) {
+        if (ScriptType.GROOVY.equals(abstractScript.getScriptType())) {
             try {
                 GroovyShell groovyShell = new GroovyShell();
                 groovyShell.parse(codeEditor.getCode());
@@ -231,22 +223,39 @@ public class ModificationScriptEditor extends BorderPane
                 codeWithDetailPane.setShowDetailNode(true);
             }
         } else {
-            LOGGER.info("No validation process found for script type {}", storableScript.getScriptType());
+            LOGGER.info("No validation process found for script type {}", abstractScript.getScriptType());
         }
     }
 
-    private Node createIncludedScriptsPane() {
-        List<AbstractScript> includedScripts = ((AbstractScript) storableScript).getIncludedScripts();
-        List<TitledPane> includedScriptsPanes = includedScripts.stream()
+    private void updateIncludePane(Runnable runnable) {
+        Thread thread = new Thread(() -> {
+            runnable.run();
+            Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true)));
+        });
+        thread.start();
+    }
+
+    private Node createIncludedScriptsPane(boolean isExpanded) {
+        List<AbstractScript> includedScripts = abstractScript.getIncludedScripts();
+        List<IncludeScriptPane> includedScriptsPanes = includedScripts.stream()
                 .map(this::includedPane)
                 .collect(Collectors.toList());
 
-        final Accordion accordion = new Accordion();
-        accordion.getPanes().addAll(includedScriptsPanes);
+        List<HBox> allIncludesPanes = new ArrayList<>();
+        includedScriptsPanes.forEach(includedScriptPane -> {
+            Button removeButton = new Button("", Glyph.createAwesomeFont('\uf056').size("1.2em"));
+            HBox includePaneWithRemoveButton = new HBox(removeButton, includedScriptPane);
+            removeButton.setOnAction(event -> removeVirtualScript(includedScriptPane.getIncludedScript()));
+            allIncludesPanes.add(includePaneWithRemoveButton);
+            HBox.setHgrow(includedScriptPane, Priority.ALWAYS);
+        });
 
-        String includeScripts = includedScripts.size() + " " + RESOURCE_BUNDLE.getString("IncludedScripts");
-        TitledPane rootTitledPane = new TitledPane(includeScripts, accordion);
-        rootTitledPane.setExpanded(false);
+        VBox vBox = new VBox();
+        vBox.getChildren().addAll(allIncludesPanes);
+
+        String includeScriptsLabel = includedScripts.size() + " " + RESOURCE_BUNDLE.getString("IncludedScripts");
+        rootTitledPane = new TitledPane(includeScriptsLabel, vBox);
+        rootTitledPane.setExpanded(isExpanded);
         rootTitledPane.expandedProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue) {
                 codeEditorWithIncludesPane.setDividerPosition(0.5);
@@ -258,11 +267,13 @@ public class ModificationScriptEditor extends BorderPane
         return rootTitledPane;
     }
 
-    private TitledPane includedPane(AbstractScript script) {
+    private IncludeScriptPane includedPane(AbstractScript script) {
         AbstractCodeEditor includedScriptCodeEditor = createCodeEditor();
         includedScriptCodeEditor.setCode(script.readScript());
         includedScriptCodeEditor.setEditable(false);
-        return new TitledPane(script.getName(), includedScriptCodeEditor);
+        IncludeScriptPane titledPane = new IncludeScriptPane(script.getName(), includedScriptCodeEditor, script);
+        titledPane.setExpanded(false);
+        return titledPane;
     }
 
     private AbstractCodeEditor createCodeEditor() {
@@ -327,9 +338,9 @@ public class ModificationScriptEditor extends BorderPane
     public void save() {
         if (!saved.getValue()) {
             // write script but remove listener before to avoid double update
-            storableScript.removeListener(this);
-            storableScript.writeScript(codeEditor.getCode());
-            storableScript.addListener(this);
+            abstractScript.removeListener(this);
+            abstractScript.writeScript(codeEditor.getCode());
+            abstractScript.addListener(this);
             saved.setValue(true);
         }
     }
@@ -343,7 +354,7 @@ public class ModificationScriptEditor extends BorderPane
         scriptUpdateService = GseUtil.createService(new Task<String>() {
             @Override
             protected String call() {
-                return storableScript.readScript();
+                return abstractScript.readScript();
             }
         }, context.getExecutor());
         progressIndicator.visibleProperty().bind(scriptUpdateService.runningProperty());
@@ -374,15 +385,30 @@ public class ModificationScriptEditor extends BorderPane
 
     @Override
     public void dispose() {
-        storableScript.removeListener(this);
+        abstractScript.removeListener(this);
     }
 
     @Override
     public boolean isClosable() {
         if (!saved.get()) {
-            return GseAlerts.showSaveDialog(((ProjectFile) storableScript).getName(), this);
+            return GseAlerts.showSaveDialog(abstractScript.getName(), this);
         }
         return true;
+    }
+
+    private static class IncludeScriptPane extends TitledPane {
+
+        private AbstractScript includedScript;
+
+        IncludeScriptPane(String title, Node content, AbstractScript includedScript) {
+            super(title, content);
+            this.includedScript = includedScript;
+        }
+
+        public AbstractScript getIncludedScript() {
+            return includedScript;
+        }
+
     }
 
 }
