@@ -23,7 +23,7 @@ import com.powsybl.gse.util.editor.AbstractCodeEditorFactoryService;
 import com.powsybl.gse.util.editor.impl.GroovyCodeEditor;
 import groovy.lang.GroovyShell;
 import javafx.application.Platform;
-import javafx.beans.property.*;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
@@ -100,8 +100,6 @@ public class ModificationScriptEditor extends BorderPane
 
     private AbstractScript abstractScript;
 
-    private TitledPane rootTitledPane;
-
     private final SimpleBooleanProperty saved = new SimpleBooleanProperty(true);
 
     private Service<String> scriptUpdateService;
@@ -114,7 +112,7 @@ public class ModificationScriptEditor extends BorderPane
                 .stream()
                 .findAny();
 
-        codeEditor = createCodeEditor();
+        codeEditor = getCodeEditor();
 
         //Adding  autocompletion keywords suggestions depending the context
         List<String> suggestions = new ArrayList<>();
@@ -254,7 +252,7 @@ public class ModificationScriptEditor extends BorderPane
         vBox.getChildren().addAll(allIncludesPanes);
 
         String includeScriptsLabel = includedScripts.size() + " " + RESOURCE_BUNDLE.getString("IncludedScripts");
-        rootTitledPane = new TitledPane(includeScriptsLabel, vBox);
+        TitledPane rootTitledPane = new TitledPane(includeScriptsLabel, vBox);
         rootTitledPane.setExpanded(isExpanded);
         rootTitledPane.expandedProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue) {
@@ -268,7 +266,7 @@ public class ModificationScriptEditor extends BorderPane
     }
 
     private IncludeScriptPane includedPane(AbstractScript script) {
-        AbstractCodeEditor includedScriptCodeEditor = createCodeEditor();
+        AbstractCodeEditor includedScriptCodeEditor = getCodeEditor();
         includedScriptCodeEditor.setCode(script.readScript());
         includedScriptCodeEditor.setEditable(false);
         IncludeScriptPane titledPane = new IncludeScriptPane(script.getName(), includedScriptCodeEditor, script);
@@ -276,7 +274,7 @@ public class ModificationScriptEditor extends BorderPane
         return titledPane;
     }
 
-    private AbstractCodeEditor createCodeEditor() {
+    private AbstractCodeEditor getCodeEditor() {
         return preferredCodeEditor
                 .map(codeEditorFactoryService -> {
                     try {
