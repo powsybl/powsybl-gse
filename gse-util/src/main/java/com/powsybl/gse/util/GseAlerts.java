@@ -33,7 +33,7 @@ public final class GseAlerts {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         final String remove = RESOURCE_BUNDLE.getString("Remove");
         alert.setTitle(remove);
-        alert.setHeaderText(remove + " \'" + removeElementName + " \'?");
+        alert.setHeaderText(remove + " \'" + removeElementName + "\' ?");
         return alert.showAndWait();
     }
 

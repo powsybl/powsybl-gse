@@ -226,10 +226,12 @@ public class ModificationScriptEditor extends BorderPane
     }
 
     private void updateIncludePane(Runnable runnable) {
-        Thread thread = new Thread(() -> {
-            runnable.run();
-            Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true)));
-        });
+        Thread thread = new Thread(() ->
+                Platform.runLater(() -> {
+                    runnable.run();
+                    codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true));
+                })
+        );
         thread.start();
     }
 
@@ -248,11 +250,11 @@ public class ModificationScriptEditor extends BorderPane
             HBox.setHgrow(includedScriptPane, Priority.ALWAYS);
         });
 
-        VBox vBox = new VBox();
-        vBox.getChildren().addAll(allIncludesPanes);
+        VBox includesPanesBox = new VBox();
+        includesPanesBox.getChildren().addAll(allIncludesPanes);
 
         String includeScriptsLabel = includedScripts.size() + " " + RESOURCE_BUNDLE.getString("IncludedScripts");
-        TitledPane rootTitledPane = new TitledPane(includeScriptsLabel, vBox);
+        TitledPane rootTitledPane = new TitledPane(includeScriptsLabel, includesPanesBox);
         rootTitledPane.setExpanded(isExpanded);
         rootTitledPane.expandedProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue) {
