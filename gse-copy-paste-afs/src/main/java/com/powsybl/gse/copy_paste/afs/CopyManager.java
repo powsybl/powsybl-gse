@@ -38,7 +38,7 @@ public final class CopyManager {
     private static final String PROJECT_NODE_COPY_TYPE = "@PROJECT_NODE@";
     private static final String NODE_COPY_TYPE = "@NODE@";
     private static final String COPY_SIGNATURE = "@COPY_SIGNATURE@";
-    private static final long COPY_EXPIRATION_TIME = 12;
+    private static final long COPY_EXPIRATION_TIME = 6;
     private static final Logger LOGGER = LoggerFactory.getLogger(CopyManager.class);
     private static final String TEMP_DIR_PREFIX = "powsybl_node_export";
     private static final long CLEANUP_DELAY = 36000;
