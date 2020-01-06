@@ -24,8 +24,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -39,6 +37,7 @@ public final class CopyManager {
     private static final String NODE_COPY_TYPE = "@NODE@";
     private static final String COPY_SIGNATURE = "@COPY_SIGNATURE@";
     private static final long COPY_EXPIRATION_TIME = 6;
+    private static final long MIN_DISK_SPACE_THRESHOLD = 10;
     private static final Logger LOGGER = LoggerFactory.getLogger(CopyManager.class);
     private static final String TEMP_DIR_PREFIX = "powsybl_node_export";
     private static final long CLEANUP_DELAY = 36000;
@@ -49,7 +48,6 @@ public final class CopyManager {
 
     private static CopyManager INSTANCE = null;
 
-    private ExecutorService tPool = Executors.newCachedThreadPool();
     private Map<String, CopyInfo> currentCopies = new HashMap<>();
 
     public static CopyManager getInstance() {
@@ -107,6 +105,14 @@ public final class CopyManager {
                 copyInfo.nodeId = node.getId();
                 copyInfo.node = node;
                 copyInfo.archivePath = resolveArchiveTargetDirectory(targetDirectory);
+
+                File archiveFile = copyInfo.archivePath.toFile();
+                long freeSpacePercent = 100 * archiveFile.getFreeSpace() / archiveFile.getTotalSpace();
+                LOGGER.info("Copying into drive with {}% free space", freeSpacePercent);
+                if (freeSpacePercent < MIN_DISK_SPACE_THRESHOLD) {
+                    throw new CopyPasteException("Not enough space");
+                }
+
                 copyInfo.expirationDate = ZonedDateTime.now().plusHours(COPY_EXPIRATION_TIME);
 
                 currentCopies.put(copyInfo.nodeId, copyInfo);
@@ -221,7 +227,6 @@ public final class CopyManager {
     }
 
     private Path resolveArchiveTargetDirectory(File directoryProp) throws IOException, CopyNotEmptyArchiveDirectoryException {
-
         if (directoryProp == null) {
             return Files.createTempDirectory(LocalComputationManager.getDefault().getLocalDir(), TEMP_DIR_PREFIX);
         }

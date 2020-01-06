@@ -761,7 +761,6 @@ public class ProjectPane extends Tab {
                     }
 
                     List<CopyManager.CopyParams.NodeInfo> nodesInfos = cpInfo.getNodeInfos();
-                    String fileSystemName = cpInfo.getFileSystem();
                     ProjectFolder projectFolder = (ProjectFolder) selectedTreeItem.getValue();
                     String nodeNames = nodesInfos.stream().map(CopyManager.CopyParams.NodeInfo::getName).collect(Collectors.joining(", "));
 
