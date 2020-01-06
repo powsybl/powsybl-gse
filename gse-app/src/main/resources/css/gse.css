@@ -142,3 +142,8 @@
 .replace-button : hover {
     -fx-fill: lightgrey;
 }
+
+.up-down-button {
+    -fx-padding: 5, 5, 5, 5;
+}
+

@@ -27,6 +27,8 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -226,13 +228,8 @@ public class ModificationScriptEditor extends BorderPane
     }
 
     private void updateIncludePane(Runnable runnable) {
-        Thread thread = new Thread(() ->
-                Platform.runLater(() -> {
-                    runnable.run();
-                    codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true));
-                })
-        );
-        thread.start();
+        runnable.run();
+        Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true)));
     }
 
     private Node createIncludedScriptsPane(boolean isExpanded) {
@@ -243,9 +240,14 @@ public class ModificationScriptEditor extends BorderPane
 
         List<HBox> allIncludesPanes = new ArrayList<>();
         includedScriptsPanes.forEach(includedScriptPane -> {
-            Button removeButton = new Button("", Glyph.createAwesomeFont('\uf056').size("1.2em"));
-            HBox includePaneWithRemoveButton = new HBox(removeButton, includedScriptPane);
-            removeButton.setOnAction(event -> removeVirtualScript(includedScriptPane.getIncludedScript()));
+            Button removeButton = createIncludedButton('\uf056', null, "1.1em", event -> removeVirtualScript(includedScriptPane.getIncludedScript()));
+            Button upButton = createIncludedButton('\uf062', "green", "0.9em", event -> {
+            });
+            Button downButton = createIncludedButton('\uf063', "red", "0.9em", event -> {
+            });
+            upButton.getStyleClass().add("up-down-button");
+            downButton.getStyleClass().add("up-down-button");
+            HBox includePaneWithRemoveButton = new HBox(includedScriptPane, removeButton, upButton, downButton);
             allIncludesPanes.add(includePaneWithRemoveButton);
             HBox.setHgrow(includedScriptPane, Priority.ALWAYS);
         });
@@ -274,6 +276,19 @@ public class ModificationScriptEditor extends BorderPane
         IncludeScriptPane titledPane = new IncludeScriptPane(script.getName(), includedScriptCodeEditor, script);
         titledPane.setExpanded(false);
         return titledPane;
+    }
+
+    private Button createIncludedButton(char font, String color, String size, EventHandler<ActionEvent> eventHandler) {
+        Glyph glyph = Glyph.createAwesomeFont(font);
+        if (size != null) {
+            glyph.size(size);
+        }
+        if (color != null) {
+            glyph.color(color);
+        }
+        Button btn = new Button("", glyph);
+        btn.setOnAction(eventHandler);
+        return btn;
     }
 
     private AbstractCodeEditor getCodeEditor() {
