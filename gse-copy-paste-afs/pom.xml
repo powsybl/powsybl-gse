@@ -18,6 +18,11 @@
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-afs-core</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-gse-spi</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
 

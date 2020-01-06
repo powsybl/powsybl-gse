@@ -7,10 +7,10 @@
 package com.powsybl.gse.security;
 
 import com.google.auto.service.AutoService;
+import com.powsybl.afs.security.SecurityAnalysisRunner;
 import com.powsybl.gse.spi.ExecutionTaskConfigurator;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileExecutionTaskExtension;
-import com.powsybl.security.afs.SecurityAnalysisRunner;
 import javafx.scene.Scene;
 
 import java.util.ResourceBundle;
@@ -41,6 +41,11 @@ public class SecurityAnalysisExecutionTaskExtension implements ProjectFileExecut
     @Override
     public void execute(SecurityAnalysisRunner runner, Void config) {
         runner.run();
+    }
+
+    @Override
+    public void clearResults(SecurityAnalysisRunner projectFile) {
+        projectFile.clearResult();
     }
 
     @Override

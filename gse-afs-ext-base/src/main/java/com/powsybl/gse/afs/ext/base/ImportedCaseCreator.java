@@ -6,20 +6,27 @@
  */
 package com.powsybl.gse.afs.ext.base;
 
+import com.powsybl.afs.ProjectFile;
 import com.powsybl.afs.ProjectFolder;
+import com.powsybl.afs.ProjectNode;
 import com.powsybl.afs.ext.base.Case;
 import com.powsybl.afs.ext.base.ImportedCaseBuilder;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectCreationTask;
 import com.powsybl.gse.spi.ProjectFileCreator;
+import com.powsybl.gse.util.GseAlerts;
 import com.powsybl.gse.util.NodeSelectionPane;
+import com.powsybl.gse.util.RenamePane;
 import com.powsybl.iidm.parameters.Parameter;
+import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -31,6 +38,10 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ImportedCaseCreator");
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ImportedCaseCreator.class);
+
+    private static final String TEMPORARY_NAME = "temporaryName";
+
     private final ProjectFolder folder;
 
     private final VBox parametersBox = new VBox(10);
@@ -39,9 +50,11 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
 
     private final Map<String, String> parametersValue = new HashMap<>();
 
+    private final Scene scene;
+
     ImportedCaseCreator(ProjectFolder folder, Scene scene, GseContext context) {
         this.folder = Objects.requireNonNull(folder);
-        Objects.requireNonNull(scene);
+        this.scene = Objects.requireNonNull(scene);
         caseSelectionPane = new NodeSelectionPane<>(folder.getFileSystem().getData(), RESOURCE_BUNDLE.getString("Case"),
                                                     scene.getWindow(), context, Case.class);
         setVgap(5);
@@ -131,10 +144,12 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
 
             @Override
             public void run() {
-                folder.fileBuilder(ImportedCaseBuilder.class)
-                        .withCase(aCase)
-                        .withParameters(parametersValue)
-                        .build();
+                Optional<ProjectNode> child = folder.getChild(aCase.getName());
+                if (child.isPresent()) {
+                    Platform.runLater(() -> replaceNode(folder, aCase, scene));
+                } else {
+                    buildFile(aCase, folder, null);
+                }
             }
 
             @Override
@@ -162,5 +177,47 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
 
     @Override
     public void dispose() {
+    }
+
+    private void replaceNode(ProjectFolder folder, Case aCase, Scene scene) {
+        String name = aCase.getName();
+        Optional<ButtonType> result = GseAlerts.showReplaceAndQuitDialog(folder.getName(), name);
+        result.ifPresent(buttonType -> {
+            if (buttonType.getButtonData() == ButtonBar.ButtonData.YES) {
+                folder.getChild(name).ifPresent(projectNode -> {
+                    List<ProjectFile> backwardDependencies = projectNode.getBackwardDependencies();
+                    projectNode.rename(TEMPORARY_NAME + UUID.randomUUID());
+                    buildFile(aCase, folder, null);
+                    Optional<ProjectNode> importedNode = folder.getChild(name);
+                    if (importedNode.isPresent()) {
+                        backwardDependencies.forEach(projectFile -> projectFile.replaceDependency(projectNode.getId(), importedNode.get()));
+                        projectNode.delete();
+                    } else {
+                        projectNode.rename(name);
+                    }
+                });
+            } else if (buttonType.getButtonData() == ButtonBar.ButtonData.OTHER) {
+                folder.getChild(name).ifPresent(projectNode -> {
+                    Optional<String> text = RenamePane.showAndWaitDialog(scene.getWindow(), projectNode);
+                    text.ifPresent(newName -> {
+                        if (!folder.getChild(newName).isPresent()) {
+                            buildFile(aCase, folder, newName);
+                        } else {
+                            LOGGER.warn("The renaming was not completed");
+                        }
+                    });
+                });
+            }
+        });
+    }
+
+    private void buildFile(Case aCase, ProjectFolder folder, String name) {
+        ImportedCaseBuilder importedCaseBuilder = folder.fileBuilder(ImportedCaseBuilder.class)
+                .withCase(aCase)
+                .withParameters(parametersValue);
+        if (name != null) {
+            importedCaseBuilder.withName(name);
+        }
+        importedCaseBuilder.build();
     }
 }

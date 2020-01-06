@@ -7,11 +7,11 @@
 package com.powsybl.gse.security;
 
 import com.google.auto.service.AutoService;
-import com.powsybl.action.dsl.afs.ActionScript;
+import com.powsybl.afs.action.dsl.ActionScript;
+import com.powsybl.afs.security.SecurityAnalysisRunner;
 import com.powsybl.contingency.ContingenciesProvider;
 import com.powsybl.gse.spi.NodeGraphicProvider;
 import com.powsybl.gse.util.Glyph;
-import com.powsybl.security.afs.SecurityAnalysisRunner;
 import javafx.scene.Node;
 
 /**

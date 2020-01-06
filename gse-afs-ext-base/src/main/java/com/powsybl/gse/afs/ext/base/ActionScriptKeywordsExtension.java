@@ -8,7 +8,7 @@ package com.powsybl.gse.afs.ext.base;
 
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableSet;
-import com.powsybl.action.dsl.afs.ActionScript;
+import com.powsybl.afs.action.dsl.ActionScript;
 import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import javafx.util.Pair;
 

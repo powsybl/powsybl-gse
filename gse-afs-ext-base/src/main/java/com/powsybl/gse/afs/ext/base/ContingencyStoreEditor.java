@@ -7,7 +7,7 @@
 package com.powsybl.gse.afs.ext.base;
 
 import com.powsybl.contingency.*;
-import com.powsybl.contingency.afs.ContingencyStore;
+import com.powsybl.afs.contingency.ContingencyStore;
 import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.spi.Savable;
 import com.powsybl.gse.util.EquipmentInfo;
