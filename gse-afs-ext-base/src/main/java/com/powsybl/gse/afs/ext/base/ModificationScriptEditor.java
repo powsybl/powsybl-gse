@@ -124,7 +124,7 @@ public class ModificationScriptEditor extends BorderPane
         codeEditorWithProgressIndicator = new StackPane();
         codeEditorWithIncludesPane = new MasterDetailPane();
         codeEditorWithIncludesPane.setMasterNode(codeEditorWithProgressIndicator);
-        codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(false));
+        codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(false, abstractScript.getIncludedScripts()));
         codeEditorWithIncludesPane.setShowDetailNode(true);
         codeEditorWithIncludesPane.setDetailSide(Side.TOP);
         codeEditorWithIncludesPane.setDividerPosition(DIVIDER_POSITION);
@@ -152,7 +152,7 @@ public class ModificationScriptEditor extends BorderPane
         Text plusGlyph = Glyph.createAwesomeFont('\uf055').size("1.3em");
         addVirtualScriptButton = new Button("", plusGlyph);
         addVirtualScriptButton.getStyleClass().add(GSE_TOOLBAR_BUTTON_STYLE);
-        addVirtualScriptButton.setOnAction(event -> addVirtualScript(scene, context));
+        addVirtualScriptButton.setOnAction(event -> addIncludedScript(scene, context));
 
         comboBox = new ComboBox(FXCollections.observableArrayList(2, 4, 8));
         comboBox.getSelectionModel().select(1);
@@ -175,14 +175,14 @@ public class ModificationScriptEditor extends BorderPane
         abstractScript.addListener(this);
     }
 
-    private void addVirtualScript(Scene scene, GseContext context) {
+    private void addIncludedScript(Scene scene, GseContext context) {
         VirtualScriptCreator virtualScriptCreator = new VirtualScriptCreator(abstractScript, scene, context);
         Callback<ButtonType, Boolean> resultConverter = buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE;
         Dialog<Boolean> dialog = new GseDialog<>(virtualScriptCreator.getTitle(), virtualScriptCreator, scene.getWindow(), virtualScriptCreator.okProperty().not(), resultConverter);
         dialog.showAndWait().filter(result -> result).ifPresent(result -> updateIncludePane(virtualScriptCreator::create));
     }
 
-    private void removeVirtualScript(AbstractScript script) {
+    private void removeIncludedScript(AbstractScript script) {
         Optional<ButtonType> result = GseAlerts.showRemoveConfirmationAlert(script.getName());
         result.filter(type -> type == ButtonType.OK).ifPresent(okButton -> updateIncludePane(() -> abstractScript.removeScript(script.getId())));
     }
@@ -229,26 +229,33 @@ public class ModificationScriptEditor extends BorderPane
 
     private void updateIncludePane(Runnable runnable) {
         runnable.run();
-        Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true)));
+        Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true, abstractScript.getIncludedScripts())));
     }
 
-    private Node createIncludedScriptsPane(boolean isExpanded) {
-        List<AbstractScript> includedScripts = abstractScript.getIncludedScripts();
+    private Node createIncludedScriptsPane(boolean isExpanded, List<AbstractScript> includedScripts) {
         List<IncludeScriptPane> includedScriptsPanes = includedScripts.stream()
                 .map(this::includedPane)
                 .collect(Collectors.toList());
 
         List<HBox> allIncludesPanes = new ArrayList<>();
         includedScriptsPanes.forEach(includedScriptPane -> {
-            Button removeButton = createIncludedButton('\uf056', null, "1.1em", event -> removeVirtualScript(includedScriptPane.getIncludedScript()));
+            List<AbstractScript> orderedIncludedScripts = new ArrayList<>(includedScripts);
+            int index = includedScripts.indexOf(includedScriptPane.getIncludedScript());
+            Button removeButton = createIncludedButton('\uf056', null, "1.1em", event -> removeIncludedScript(includedScriptPane.getIncludedScript()));
             Button upButton = createIncludedButton('\uf062', "green", "0.9em", event -> {
+                orderedIncludedScripts.set(index, includedScripts.get(index - 1));
+                orderedIncludedScripts.set(index - 1, includedScripts.get(index));
+                Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true, orderedIncludedScripts)));
             });
             Button downButton = createIncludedButton('\uf063', "red", "0.9em", event -> {
+                orderedIncludedScripts.set(index, includedScripts.get(index + 1));
+                orderedIncludedScripts.set(index + 1, includedScripts.get(index));
+                Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true, orderedIncludedScripts)));
             });
             upButton.getStyleClass().add("up-down-button");
             downButton.getStyleClass().add("up-down-button");
-            HBox includePaneWithRemoveButton = new HBox(includedScriptPane, removeButton, upButton, downButton);
-            allIncludesPanes.add(includePaneWithRemoveButton);
+            HBox includePaneWithEditingButtons = new HBox(includedScriptPane, removeButton, upButton, downButton);
+            allIncludesPanes.add(includePaneWithEditingButtons);
             HBox.setHgrow(includedScriptPane, Priority.ALWAYS);
         });
 
