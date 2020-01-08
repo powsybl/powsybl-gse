@@ -17,16 +17,6 @@ jobs:
           java-version: 1.8
           java-package: jdk+fx
 
-      - name: Checkout powsybl-core
-        uses: actions/checkout@v1
-        with:
-          repository: powsybl/powsybl-core
-          ref: refs/heads/master
-
-      - name: Build powsybl-core with Maven
-        run: mvn --batch-mode -DskipTests install
-        working-directory: ../powsybl-core
-
       - name: Checkout powsybl-afs
         uses: actions/checkout@v1
         with:
