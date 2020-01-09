@@ -241,19 +241,17 @@ public class ModificationScriptEditor extends BorderPane
         includedScriptsPanes.forEach(includedScriptPane -> {
             List<AbstractScript> orderedIncludedScripts = new ArrayList<>(includedScripts);
             int index = includedScripts.indexOf(includedScriptPane.getIncludedScript());
-            Button removeButton = createIncludedButton('\uf056', null, "1.1em", event -> removeIncludedScript(includedScriptPane.getIncludedScript()));
-            Button upButton = createIncludedButton('\uf062', "green", "0.9em", event -> {
-                orderedIncludedScripts.set(index, includedScripts.get(index - 1));
-                orderedIncludedScripts.set(index - 1, includedScripts.get(index));
+            Button removeButton = createIncludedButton('\uf00d', "1.1em", event -> removeIncludedScript(includedScriptPane.getIncludedScript()));
+            Button upButton = createIncludedButton('\uf062', "0.9em", event -> {
+                reOrderIncludedScripts(includedScripts, orderedIncludedScripts, index, index - 1);
                 Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true, orderedIncludedScripts)));
             });
-            Button downButton = createIncludedButton('\uf063', "red", "0.9em", event -> {
-                orderedIncludedScripts.set(index, includedScripts.get(index + 1));
-                orderedIncludedScripts.set(index + 1, includedScripts.get(index));
+            Button downButton = createIncludedButton('\uf063', "0.9em", event -> {
+                reOrderIncludedScripts(includedScripts, orderedIncludedScripts, index, index + 1);
                 Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true, orderedIncludedScripts)));
             });
-            upButton.getStyleClass().add("up-down-button");
-            downButton.getStyleClass().add("up-down-button");
+            upButton.setPadding(new Insets(5, 5, 5, 5));
+            downButton.setPadding(new Insets(5, 5, 5, 5));
             HBox includePaneWithEditingButtons = new HBox(includedScriptPane, removeButton, upButton, downButton);
             allIncludesPanes.add(includePaneWithEditingButtons);
             HBox.setHgrow(includedScriptPane, Priority.ALWAYS);
@@ -276,6 +274,14 @@ public class ModificationScriptEditor extends BorderPane
         return rootTitledPane;
     }
 
+    private void reOrderIncludedScripts(List<AbstractScript> scripts, List<AbstractScript> orderedScripts, int currentIndex, int newIndex) {
+        try {
+            orderedScripts.set(currentIndex, scripts.get(newIndex));
+            orderedScripts.set(newIndex, scripts.get(currentIndex));
+        } catch (IndexOutOfBoundsException ignored) {
+        }
+    }
+
     private IncludeScriptPane includedPane(AbstractScript script) {
         AbstractCodeEditor includedScriptCodeEditor = getCodeEditor();
         includedScriptCodeEditor.setCode(script.readScript());
@@ -285,13 +291,10 @@ public class ModificationScriptEditor extends BorderPane
         return titledPane;
     }
 
-    private Button createIncludedButton(char font, String color, String size, EventHandler<ActionEvent> eventHandler) {
+    private Button createIncludedButton(char font, String size, EventHandler<ActionEvent> eventHandler) {
         Glyph glyph = Glyph.createAwesomeFont(font);
         if (size != null) {
             glyph.size(size);
-        }
-        if (color != null) {
-            glyph.color(color);
         }
         Button btn = new Button("", glyph);
         btn.setOnAction(eventHandler);

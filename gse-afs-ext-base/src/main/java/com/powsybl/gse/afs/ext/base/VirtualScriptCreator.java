@@ -9,7 +9,6 @@ package com.powsybl.gse.afs.ext.base;
 import com.powsybl.afs.Project;
 import com.powsybl.afs.ext.base.AbstractScript;
 import com.powsybl.afs.ext.base.GenericScript;
-import com.powsybl.afs.ext.base.ModificationScript;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.util.ProjectNodeSelectionPane;
 import javafx.beans.binding.BooleanBinding;
@@ -30,7 +29,7 @@ public class VirtualScriptCreator extends GridPane {
 
     private final AbstractScript script;
 
-    private final ProjectNodeSelectionPane<ModificationScript> scriptSelectionPane;
+    private final ProjectNodeSelectionPane<AbstractScript> scriptSelectionPane;
 
     public VirtualScriptCreator(AbstractScript script, Scene scene, GseContext context) {
         this.script = Objects.requireNonNull(script);
@@ -51,8 +50,12 @@ public class VirtualScriptCreator extends GridPane {
     }
 
     public void create() {
-        ModificationScript modificationScript = scriptSelectionPane.nodeProperty().getValue();
-        script.addScript(modificationScript);
+        AbstractScript abstractScript = scriptSelectionPane.nodeProperty().getValue();
+        if (abstractScript instanceof GenericScript) {
+            script.addGenericScript((GenericScript) abstractScript);
+        } else {
+            script.addScript(abstractScript);
+        }
     }
 
     public BooleanBinding okProperty() {
