@@ -35,6 +35,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.Objects;
 import java.util.ResourceBundle;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -127,6 +128,9 @@ public final class GseUtil {
         executor.execute(() -> {
             try {
                 task.run();
+            } catch (CancellationException e) {
+                Platform.runLater(() -> GseAlerts.showDialogError("Task has been cancelled"));
+                LOGGER.warn("Task has been cancelled", e);
             } catch (Throwable t) {
                 Platform.runLater(() -> GseUtil.showDialogError(t));
             }
