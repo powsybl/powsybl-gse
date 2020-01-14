@@ -15,10 +15,10 @@ import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectCreationTask;
 import com.powsybl.gse.spi.ProjectFileCreator;
 import com.powsybl.gse.util.GseAlerts;
+import com.powsybl.gse.util.GseUtil;
 import com.powsybl.gse.util.NodeSelectionPane;
 import com.powsybl.gse.util.RenamePane;
 import com.powsybl.iidm.parameters.Parameter;
-import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
@@ -146,7 +146,7 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
             public void run() {
                 Optional<ProjectNode> child = folder.getChild(aCase.getName());
                 if (child.isPresent()) {
-                    Platform.runLater(() -> replaceNode(folder, aCase, scene));
+                    replaceNode(folder, aCase, scene);
                 } else {
                     buildFile(aCase, folder, null);
                 }
@@ -181,7 +181,7 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
 
     private void replaceNode(ProjectFolder folder, Case aCase, Scene scene) {
         String name = aCase.getName();
-        Optional<ButtonType> result = GseAlerts.showReplaceAndQuitDialog(folder.getName(), name);
+        Optional<ButtonType> result = GseUtil.runOnPlatformAndWait(() -> GseAlerts.showReplaceAndQuitDialog(folder.getName(), name).orElse(null));
         result.ifPresent(buttonType -> {
             if (buttonType.getButtonData() == ButtonBar.ButtonData.YES) {
                 folder.getChild(name).ifPresent(projectNode -> {
@@ -198,7 +198,7 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
                 });
             } else if (buttonType.getButtonData() == ButtonBar.ButtonData.OTHER) {
                 folder.getChild(name).ifPresent(projectNode -> {
-                    Optional<String> text = RenamePane.showAndWaitDialog(scene.getWindow(), projectNode);
+                    Optional<String> text = GseUtil.runOnPlatformAndWait(() -> RenamePane.showAndWaitDialog(scene.getWindow(), projectNode).orElse(null));
                     text.ifPresent(newName -> {
                         if (!folder.getChild(newName).isPresent()) {
                             buildFile(aCase, folder, newName);
