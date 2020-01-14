@@ -705,7 +705,6 @@ public class ProjectPane extends Tab {
         DirectoryChooser directoryChooser = new DirectoryChooser();
         java.io.File selectedDirectory = directoryChooser.showDialog(getContent().getScene().getWindow());
         if (selectedDirectory != null) {
-            ProjectFolder targetFolder = (ProjectFolder) folder;
             context.getExecutor().execute(() -> {
                 TaskMonitor.Task task = project.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("UnarchiveTask"), selectedDirectory.getName()), project);
                 try {
