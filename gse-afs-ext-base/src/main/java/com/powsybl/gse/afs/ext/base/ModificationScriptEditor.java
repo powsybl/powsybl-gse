@@ -9,6 +9,8 @@ package com.powsybl.gse.afs.ext.base;
 import com.powsybl.afs.ext.base.AbstractScript;
 import com.powsybl.afs.ext.base.ScriptListener;
 import com.powsybl.afs.ext.base.ScriptType;
+import com.powsybl.afs.storage.events.DependencyAdded;
+import com.powsybl.afs.storage.events.DependencyRemoved;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.GseContext;
@@ -116,6 +118,23 @@ public class ModificationScriptEditor extends BorderPane
 
         codeEditor = getCodeEditor();
 
+        abstractScript.getFileSystem().getEventBus().addListener(eventList -> {
+            LOGGER.info(abstractScript.getId());
+            eventList.getEvents().forEach(nodeEvent -> {
+                Platform.runLater(() -> {
+                    LOGGER.info(nodeEvent.getId());
+                    boolean nodeEventEqualsAbstractScript = nodeEvent.getId().equals(abstractScript.getId());
+                    boolean isDependencyAddedType = DependencyAdded.TYPENAME.equals(nodeEvent.getType());
+                    boolean isDependencyRemovedType = DependencyRemoved.TYPENAME.equals(nodeEvent.getType());
+
+                    if (nodeEventEqualsAbstractScript && (isDependencyAddedType || isDependencyRemovedType)) {
+                        updateIncludePane();
+                    }
+                });
+
+            });
+        });
+
         //Adding  autocompletion keywords suggestions depending the context
         List<String> suggestions = new ArrayList<>();
         List<AutoCompletionWordsProvider> completionWordsProviderExtensions = findCompletionWordsProviderExtensions(abstractScript);
@@ -179,12 +198,12 @@ public class ModificationScriptEditor extends BorderPane
         VirtualScriptCreator virtualScriptCreator = new VirtualScriptCreator(abstractScript, scene, context);
         Callback<ButtonType, Boolean> resultConverter = buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE;
         Dialog<Boolean> dialog = new GseDialog<>(virtualScriptCreator.getTitle(), virtualScriptCreator, scene.getWindow(), virtualScriptCreator.okProperty().not(), resultConverter);
-        dialog.showAndWait().filter(result -> result).ifPresent(result -> updateIncludePane(virtualScriptCreator::create));
+        dialog.showAndWait().filter(result -> result).ifPresent(result -> virtualScriptCreator.create());
     }
 
     private void removeIncludedScript(AbstractScript script) {
         Optional<ButtonType> result = GseAlerts.showRemoveConfirmationAlert(script.getName());
-        result.filter(type -> type == ButtonType.OK).ifPresent(okButton -> updateIncludePane(() -> abstractScript.removeScript(script.getId())));
+        result.filter(type -> type == ButtonType.OK).ifPresent(okButton -> abstractScript.removeScript(script.getId()));
     }
 
     private void setUpEditor(AbstractCodeEditor editor, List<String> completions) {
@@ -227,8 +246,7 @@ public class ModificationScriptEditor extends BorderPane
         }
     }
 
-    private void updateIncludePane(Runnable runnable) {
-        runnable.run();
+    private void updateIncludePane() {
         Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true, abstractScript.getIncludedScripts())));
     }
 
@@ -285,7 +303,14 @@ public class ModificationScriptEditor extends BorderPane
     private IncludeScriptPane includedPane(AbstractScript script) {
         AbstractCodeEditor includedScriptCodeEditor = getCodeEditor();
         includedScriptCodeEditor.setCode(script.readScript());
-        includedScriptCodeEditor.setEditable(false);
+        int editableTimeOut = 2000;
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                Platform.runLater(() -> includedScriptCodeEditor.setEditable(false));
+            }
+        }, editableTimeOut);
         IncludeScriptPane titledPane = new IncludeScriptPane(script.getName(), includedScriptCodeEditor, script);
         titledPane.setExpanded(false);
         return titledPane;
@@ -308,7 +333,7 @@ public class ModificationScriptEditor extends BorderPane
                         LOGGER.info("Trying to use custom editor {}", codeEditorFactoryService.getEditorClass());
                         return codeEditorFactoryService.build();
                     } catch (Exception e) {
-                        LOGGER.error("Failed to instanciate editor {}", codeEditorFactoryService.getEditorClass(), e);
+                        LOGGER.error("Failed to instantiate editor {}", codeEditorFactoryService.getEditorClass(), e);
                     }
                     return null;
                 })
