@@ -9,6 +9,7 @@ package com.powsybl.gse.afs.ext.base;
 import com.powsybl.afs.ext.base.AbstractScript;
 import com.powsybl.afs.ext.base.ScriptListener;
 import com.powsybl.afs.ext.base.ScriptType;
+import com.powsybl.afs.storage.events.AppStorageListener;
 import com.powsybl.afs.storage.events.DependencyAdded;
 import com.powsybl.afs.storage.events.DependencyRemoved;
 import com.powsybl.commons.util.ServiceLoaderCache;
@@ -102,7 +103,7 @@ public class ModificationScriptEditor extends BorderPane
 
     private Optional<AbstractCodeEditorFactoryService> preferredCodeEditor;
 
-    private AbstractScript abstractScript;
+    private AbstractScript<? extends AbstractScript> abstractScript;
 
     private final SimpleBooleanProperty saved = new SimpleBooleanProperty(true);
 
@@ -118,23 +119,25 @@ public class ModificationScriptEditor extends BorderPane
 
         codeEditor = getCodeEditor();
 
-        abstractScript.getFileSystem().getEventBus().addListener(eventList -> {
-            LOGGER.info(abstractScript.getId());
-            eventList.getEvents().forEach(nodeEvent -> {
-                Platform.runLater(() -> {
-                    LOGGER.info(nodeEvent.getId());
-                    boolean nodeEventEqualsAbstractScript = nodeEvent.getId().equals(abstractScript.getId());
-                    boolean isDependencyAddedType = DependencyAdded.TYPENAME.equals(nodeEvent.getType());
-                    boolean isDependencyRemovedType = DependencyRemoved.TYPENAME.equals(nodeEvent.getType());
+        AppStorageListener l = eventList ->
+                eventList.getEvents().forEach(nodeEvent ->
+                        Platform.runLater(() -> {
+                            boolean nodeEventEqualsAbstractScript = nodeEvent.getId().equals(abstractScript.getId());
+                            boolean oneOrMoreDependenciesHaveChanged = this.abstractScript.getIncludedScripts().stream().anyMatch(includeScript -> includeScript.getId().equals(nodeEvent.getId()));
+                            if (oneOrMoreDependenciesHaveChanged || nodeEventEqualsAbstractScript) {
+                                boolean isDependencyAddedType = DependencyAdded.TYPENAME.equals(nodeEvent.getType());
+                                boolean isDependencyRemovedType = DependencyRemoved.TYPENAME.equals(nodeEvent.getType());
 
-                    if (nodeEventEqualsAbstractScript && (isDependencyAddedType || isDependencyRemovedType)) {
-                        updateIncludePane();
-                    }
-                });
+                                boolean dependenciesAreAddedOrRemoved = nodeEventEqualsAbstractScript && (isDependencyAddedType || isDependencyRemovedType);
 
-            });
-        });
+                                if (dependenciesAreAddedOrRemoved || oneOrMoreDependenciesHaveChanged) {
+                                    abstractScript.clearDependenciesCache();
+                                    updateIncludePane();
+                                }
+                            }
+                        }));
 
+        abstractScript.getFileSystem().getEventBus().addListener(l);
         //Adding  autocompletion keywords suggestions depending the context
         List<String> suggestions = new ArrayList<>();
         List<AutoCompletionWordsProvider> completionWordsProviderExtensions = findCompletionWordsProviderExtensions(abstractScript);
@@ -143,7 +146,7 @@ public class ModificationScriptEditor extends BorderPane
         codeEditorWithProgressIndicator = new StackPane();
         codeEditorWithIncludesPane = new MasterDetailPane();
         codeEditorWithIncludesPane.setMasterNode(codeEditorWithProgressIndicator);
-        codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(false, abstractScript.getIncludedScripts()));
+        codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(false));
         codeEditorWithIncludesPane.setShowDetailNode(true);
         codeEditorWithIncludesPane.setDetailSide(Side.TOP);
         codeEditorWithIncludesPane.setDividerPosition(DIVIDER_POSITION);
@@ -247,27 +250,33 @@ public class ModificationScriptEditor extends BorderPane
     }
 
     private void updateIncludePane() {
-        Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true, abstractScript.getIncludedScripts())));
+        Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true)));
     }
 
-    private Node createIncludedScriptsPane(boolean isExpanded, List<AbstractScript> includedScripts) {
+    private Node createIncludedScriptsPane(boolean isExpanded) {
+        List<AbstractScript> includedScripts = abstractScript.getIncludedScripts();
         List<IncludeScriptPane> includedScriptsPanes = includedScripts.stream()
                 .map(this::includedPane)
                 .collect(Collectors.toList());
 
         List<HBox> allIncludesPanes = new ArrayList<>();
         includedScriptsPanes.forEach(includedScriptPane -> {
-            List<AbstractScript> orderedIncludedScripts = new ArrayList<>(includedScripts);
             int index = includedScripts.indexOf(includedScriptPane.getIncludedScript());
             Button removeButton = createIncludedButton('\uf00d', "1.1em", event -> removeIncludedScript(includedScriptPane.getIncludedScript()));
             Button upButton = createIncludedButton('\uf062', "0.9em", event -> {
-                reOrderIncludedScripts(includedScripts, orderedIncludedScripts, index, index - 1);
-                Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true, orderedIncludedScripts)));
+                abstractScript.switchIncludedDependencies(index, index - 1);
+                Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true)));
             });
+            if (includedScriptsPanes.get(0) == includedScriptPane) {
+                upButton.setDisable(true);
+            }
             Button downButton = createIncludedButton('\uf063', "0.9em", event -> {
-                reOrderIncludedScripts(includedScripts, orderedIncludedScripts, index, index + 1);
-                Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true, orderedIncludedScripts)));
+                abstractScript.switchIncludedDependencies(index, index + 1);
+                Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true)));
             });
+            if (includedScriptsPanes.get(includedScriptsPanes.size() - 1) == includedScriptPane) {
+                downButton.setDisable(true);
+            }
             upButton.setPadding(new Insets(5, 5, 5, 5));
             downButton.setPadding(new Insets(5, 5, 5, 5));
             HBox includePaneWithEditingButtons = new HBox(includedScriptPane, removeButton, upButton, downButton);
@@ -292,19 +301,11 @@ public class ModificationScriptEditor extends BorderPane
         return rootTitledPane;
     }
 
-    private void reOrderIncludedScripts(List<AbstractScript> scripts, List<AbstractScript> orderedScripts, int currentIndex, int newIndex) {
-        try {
-            orderedScripts.set(currentIndex, scripts.get(newIndex));
-            orderedScripts.set(newIndex, scripts.get(currentIndex));
-        } catch (IndexOutOfBoundsException ignored) {
-        }
-    }
-
     private IncludeScriptPane includedPane(AbstractScript script) {
         AbstractCodeEditor includedScriptCodeEditor = getCodeEditor();
         includedScriptCodeEditor.setCode(script.readScript());
         int editableTimeOut = 2000;
-        Timer timer = new Timer();
+        Timer timer = new Timer(true);
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
