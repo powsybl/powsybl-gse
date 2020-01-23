@@ -39,6 +39,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.DirectoryChooser;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.Pair;
@@ -83,7 +84,6 @@ public class ProjectPane extends Tab {
     private final TaskItemList taskItems;
     private final TaskMonitorPane taskMonitorPane;
     private final Map<String, ProjectPaneProjectFolderListener> lCache = new HashMap<>();
-    private final CopyManager localArchiveManager = CopyManager.getInstance();
 
     public ProjectPane(Scene scene, Project project, GseContext context) {
         this.project = Objects.requireNonNull(project);
@@ -686,9 +686,11 @@ public class ProjectPane extends Tab {
             context.getExecutor().execute(() -> {
                 TaskMonitor.Task task = project.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("ArchiveTask"), selectedDirectory.getName()), project);
                 try {
-                    localArchiveManager.copy(Collections.singletonList(item), selectedDirectory);
-                } catch (CopyPasteException e) {
+                    item.archive(selectedDirectory.toPath(), true);
+                    LOGGER.info("Archiving node {} ({}) is complete", item.getName(), item.getId());
+                } catch (AfsException e) {
                     GseAlerts.showDialogError(e.getMessage());
+                    LOGGER.error("Archiving has failed for node {}", item.getId(), e);
                 } finally {
                     project.getFileSystem().getTaskMonitor().stopTask(task.getId());
                 }
@@ -702,13 +704,14 @@ public class ProjectPane extends Tab {
             throw new IllegalStateException("Can't unarchive item if target is not a project folder!");
         }
 
-        DirectoryChooser directoryChooser = new DirectoryChooser();
-        java.io.File selectedDirectory = directoryChooser.showDialog(getContent().getScene().getWindow());
-        if (selectedDirectory != null) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("ZIP", "*.zip"));
+        java.io.File selectedFile = fileChooser.showOpenDialog(getContent().getScene().getWindow());
+        if (selectedFile != null) {
             context.getExecutor().execute(() -> {
-                TaskMonitor.Task task = project.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("UnarchiveTask"), selectedDirectory.getName()), project);
+                TaskMonitor.Task task = project.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("UnarchiveTask"), selectedFile.getName()), project);
                 try {
-                    ((ProjectFolder) folder).unarchive(selectedDirectory.toPath());
+                    ((ProjectFolder) folder).unarchive(selectedFile.toPath(),true);
                     Platform.runLater(() -> refresh(folderItem));
                 } catch (Exception e) {
                     Platform.runLater(() -> GseAlerts.showDialogError(e.getMessage()));
