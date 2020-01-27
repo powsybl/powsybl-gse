@@ -223,7 +223,7 @@ public class GsePane extends StackPane {
                 return 1;
             }
             return o1.compareTo(o2);
-        })).forEach((shortcutGroup) -> {
+        })).forEach(shortcutGroup -> {
             VBox vbox = new VBox();
             vbox.setPrefHeight(20);
             if (shortcutGroup != null) {
