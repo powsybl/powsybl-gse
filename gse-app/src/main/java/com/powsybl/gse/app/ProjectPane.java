@@ -680,6 +680,11 @@ public class ProjectPane extends Tab {
     }
 
     private void archive(AbstractNodeBase item) {
+
+        GseArchiveDialog archivedialog = new GseArchiveDialog<ProjectNode>((ProjectNode) item, getContent().getScene());
+        Dialog<Boolean> dialog = createProjectItemDialog(archivedialog.getTitle(), archivedialog.okProperty(), archivedialog.getContent());
+        dialog.showAndWait();
+
         DirectoryChooser directoryChooser = new DirectoryChooser();
         java.io.File selectedDirectory = directoryChooser.showDialog(getContent().getScene().getWindow());
         if (selectedDirectory != null) {
