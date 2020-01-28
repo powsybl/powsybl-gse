@@ -12,6 +12,7 @@ import com.panemu.tiwulfx.control.DetachableTabPane;
 import com.powsybl.afs.*;
 import com.powsybl.afs.storage.AppStorage;
 import com.powsybl.afs.storage.NodeInfo;
+import com.powsybl.afs.storage.Utils;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.copy_paste.afs.CopyManager;
 import com.powsybl.gse.copy_paste.afs.CopyService;
@@ -47,6 +48,7 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -686,9 +688,10 @@ public class ProjectPane extends Tab {
             context.getExecutor().execute(() -> {
                 TaskMonitor.Task task = project.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("ArchiveTask"), selectedDirectory.getName()), project);
                 try {
+                    Utils.checkDiskSpace(selectedDirectory.toPath());
                     item.archive(selectedDirectory.toPath(), true);
                     LOGGER.info("Archiving node {} ({}) is complete", item.getName(), item.getId());
-                } catch (AfsException e) {
+                } catch (AfsException | IOException e) {
                     GseAlerts.showDialogError(e.getMessage());
                     LOGGER.error("Archiving has failed for node {}", item.getId(), e);
                 } finally {
@@ -711,7 +714,7 @@ public class ProjectPane extends Tab {
             context.getExecutor().execute(() -> {
                 TaskMonitor.Task task = project.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("UnarchiveTask"), selectedFile.getName()), project);
                 try {
-                    ((ProjectFolder) folder).unarchive(selectedFile.toPath(),true);
+                    ((ProjectFolder) folder).unarchive(selectedFile.toPath(), true);
                     Platform.runLater(() -> refresh(folderItem));
                 } catch (Exception e) {
                     Platform.runLater(() -> GseAlerts.showDialogError(e.getMessage()));
@@ -792,7 +795,7 @@ public class ProjectPane extends Tab {
                         Platform.runLater(() -> {
                             GseAlerts.showPasteCompleteInfo(nodeNames, projectFolder.getName());
                         });
-                    } catch (CopyPasteException e) {
+                    } catch (CopyPasteException | IOException e) {
                         LOGGER.error("Failed to copy nodes {}", projectNodes, e);
                         Platform.runLater(() -> GseAlerts.showDialogCopyError(e));
                     } finally {
