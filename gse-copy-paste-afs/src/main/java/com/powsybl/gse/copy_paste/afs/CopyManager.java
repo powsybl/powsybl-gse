@@ -7,6 +7,7 @@
 package com.powsybl.gse.copy_paste.afs;
 
 import com.powsybl.afs.*;
+import com.powsybl.afs.storage.Utils;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.computation.local.LocalComputationManager;
 import com.powsybl.gse.copy_paste.afs.exceptions.*;
@@ -61,7 +62,7 @@ public final class CopyManager {
         init();
     }
 
-    public void copyPaste(List<? extends AbstractNodeBase> nodes, AbstractNodeBase targetFolder) throws CopyPasteException {
+    public void copyPaste(List<? extends AbstractNodeBase> nodes, AbstractNodeBase targetFolder) throws CopyPasteException, IOException {
         String fileSystem = getCommonFileSystem(nodes);
         Optional<Project> targetProjectOpt = (targetFolder instanceof ProjectNode) ? Optional.of(((ProjectNode) targetFolder).getProject()) : Optional.empty();
         Optional<TaskMonitor.Task> task = targetProjectOpt.map(targetProject -> targetProject.getFileSystem().getTaskMonitor().startTask("Copying", targetProject));
@@ -105,14 +106,6 @@ public final class CopyManager {
                 copyInfo.nodeId = node.getId();
                 copyInfo.node = node;
                 copyInfo.archivePath = resolveArchiveTargetDirectory(targetDirectory);
-
-                File archiveFile = copyInfo.archivePath.toFile();
-                long freeSpacePercent = 100 * archiveFile.getFreeSpace() / archiveFile.getTotalSpace();
-                LOGGER.info("Copying into drive with {}% free space", freeSpacePercent);
-                if (freeSpacePercent < MIN_DISK_SPACE_THRESHOLD) {
-                    throw new CopyPasteException("Not enough space");
-                }
-
                 copyInfo.expirationDate = ZonedDateTime.now().plusHours(COPY_EXPIRATION_TIME);
 
                 currentCopies.put(copyInfo.nodeId, copyInfo);
@@ -120,6 +113,7 @@ public final class CopyManager {
                 LOGGER.info("Copying (archiving) node {} ({})", node.getName(), node.getId());
                 logger.accept(String.format("Copying node %s", copyInfo.getNode().getName()));
                 try {
+                    Utils.checkDiskSpace(copyInfo.archivePath);
                     node.archive(copyInfo.archivePath);
                     copyInfo.archiveSuccess = true;
                     LOGGER.info("Copying (archiving) node {} ({}) is complete", node.getName(), node.getId());
@@ -134,7 +128,7 @@ public final class CopyManager {
         return currentCopies;
     }
 
-    public void paste(String fileSystemName, List<String> nodesIds, AbstractNodeBase folder) throws CopyPasteException {
+    public void paste(String fileSystemName, List<String> nodesIds, AbstractNodeBase folder) throws CopyPasteException, IOException {
         paste(fileSystemName, nodesIds, folder, LOGGER::debug);
     }
 
@@ -142,7 +136,7 @@ public final class CopyManager {
      * @param nodesIds the copied node's id
      * @param folder   the archive destination's folder
      */
-    public void paste(String fileSystemName, List<String> nodesIds, AbstractNodeBase folder, Consumer<String> logger) throws CopyPasteException {
+    public void paste(String fileSystemName, List<String> nodesIds, AbstractNodeBase folder, Consumer<String> logger) throws CopyPasteException, IOException {
         Objects.requireNonNull(nodesIds);
         throwBadArgumentException(fileSystemName, folder);
 
@@ -263,7 +257,7 @@ public final class CopyManager {
         }, CLEANUP_DELAY, CLEANUP_PERIOD);
     }
 
-    private String renameAndPaste(AbstractNodeBase folder, List<? extends AbstractNodeBase> children, CopyInfo info) throws CopyPasteException {
+    private String renameAndPaste(AbstractNodeBase folder, List<? extends AbstractNodeBase> children, CopyInfo info) throws CopyPasteException, IOException {
         for (AbstractNodeBase child : children) {
             String name = child.getName();
             if (info.node.getName().equals(name)) {
@@ -276,7 +270,7 @@ public final class CopyManager {
         throw new CopyPasteException("Failed to rename new node");
     }
 
-    private String renameSameTypeNode(ProjectFolder projectFolder, AbstractNodeBase child, CopyInfo info) throws CopyPasteFileAlreadyExistException {
+    private String renameSameTypeNode(ProjectFolder projectFolder, AbstractNodeBase child, CopyInfo info) throws IOException {
         String name = info.node.getName();
         String copyDuplicated = " - " + "Copy";
         String copyNameBaseName = name + copyDuplicated;
@@ -304,7 +298,6 @@ public final class CopyManager {
 
                 newNode.rename(copyName.get());
             });
-
         } finally {
             child.rename(name);
         }

@@ -7,9 +7,9 @@
 package com.powsybl.gse.util;
 
 import com.powsybl.afs.*;
+import com.powsybl.afs.storage.Utils;
 import com.powsybl.gse.copy_paste.afs.CopyManager;
 import com.powsybl.gse.copy_paste.afs.CopyService;
-import com.powsybl.gse.copy_paste.afs.exceptions.CopyPasteException;
 import com.powsybl.gse.spi.GseContext;
 import impl.org.controlsfx.skin.BreadCrumbBarSkin;
 import javafx.application.Platform;
@@ -27,11 +27,11 @@ import javafx.scene.text.FontPosture;
 import javafx.scene.text.Text;
 import javafx.stage.*;
 import javafx.util.Callback;
-import org.apache.commons.compress.archivers.ArchiveException;
 import org.controlsfx.control.BreadCrumbBar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.prefs.Preferences;
@@ -689,10 +689,11 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             context.getExecutor().execute(() -> {
                 InfoDialog infoDialog = new InfoDialog(String.format(RESOURCE_BUNDLE.getString("ArchiveTask"), item.getName()), true);
                 try {
+                    Utils.checkDiskSpace(selectedDirectory.toPath());
                     item.archive(selectedDirectory.toPath(), true);
                     infoDialog.updateStage(RESOURCE_BUNDLE.getString("CompleteTask"));
                     LOGGER.info("Archiving node {} ({}) is complete", item.getName(), item.getId());
-                } catch (AfsException e) {
+                } catch (AfsException | IOException e) {
                     Platform.runLater(() -> GseAlerts.showDialogError(e.getMessage()));
                     infoDialog.updateStage(RESOURCE_BUNDLE.getString("ErrorTask"), Color.RED);
                     LOGGER.error("Archiving has failed for node {}", item.getId(), e);
@@ -714,7 +715,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             context.getExecutor().execute(() -> {
                 InfoDialog infoDialog = new InfoDialog(String.format(RESOURCE_BUNDLE.getString("UnarchiveTask"), selectedFile.getName()), true);
                 try {
-                    ((Folder) folder).unarchive(selectedFile.toPath(),true);
+                    ((Folder) folder).unarchive(selectedFile.toPath(), true);
                     infoDialog.updateStage(RESOURCE_BUNDLE.getString("CompleteTask"));
                     Platform.runLater(() -> refresh(folderItem));
                 } catch (Exception e) {
