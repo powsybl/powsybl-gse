@@ -13,7 +13,12 @@ import com.powsybl.afs.ext.base.ModificationScript;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileCreator;
 import com.powsybl.gse.spi.ProjectFileCreatorExtension;
+import com.powsybl.gse.util.Glyph;
+import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 
 import java.util.ResourceBundle;
 
@@ -31,8 +36,25 @@ public class ActionScriptCreatorExtension implements ProjectFileCreatorExtension
     }
 
     @Override
+    public Node getMenuGraphic() {
+        return Glyph.createAwesomeFont('\uf0e7')
+                .size("1.4em")
+                .color("orange");
+    }
+
+    @Override
     public String getMenuText() {
         return RESOURCE_BUNDLE.getString("CreateActionScript") + "...";
+    }
+
+    @Override
+    public int getMenuOrder() {
+        return 18;
+    }
+
+    @Override
+    public KeyCodeCombination getMenuKeycode() {
+        return new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
     }
 
     @Override

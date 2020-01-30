@@ -60,7 +60,7 @@ public class NewProjectPane extends GridPane {
 
     public NewProjectPane(Window window, AppData appData, GseContext context) {
         folderSelectionButton.setOnAction(event -> {
-            Optional<Folder> folder = NodeChooser.showAndWaitDialog(window, appData, context,
+            Optional<Folder> folder = NodeChooser.showAndWaitDialog(window, appData, context, true,
                 (node, treeModel) -> Folder.class.isAssignableFrom(node.getClass()) && ((Folder) node).isWritable());
             folder.ifPresent(folderProperty::setValue);
         });

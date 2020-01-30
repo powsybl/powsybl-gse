@@ -12,7 +12,11 @@ import com.powsybl.afs.ext.base.ModificationScript;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileCreator;
 import com.powsybl.gse.spi.ProjectFileCreatorExtension;
+import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 
 import java.util.ResourceBundle;
 
@@ -30,8 +34,23 @@ public class ModificationScriptCreatorExtension implements ProjectFileCreatorExt
     }
 
     @Override
+    public Node getMenuGraphic() {
+        return BaseExtNodeGraphicProvider.createModificationScriptGlyph();
+    }
+
+    @Override
     public String getMenuText() {
         return RESOURCE_BUNDLE.getString("CreateModificationScript") + "...";
+    }
+
+    @Override
+    public int getMenuOrder() {
+        return 19;
+    }
+
+    @Override
+    public KeyCodeCombination getMenuKeycode() {
+        return new KeyCodeCombination(KeyCode.X, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
     }
 
     @Override

@@ -8,11 +8,16 @@ package com.powsybl.gse.afs.ext.base;
 
 import com.google.auto.service.AutoService;
 import com.powsybl.afs.ProjectFolder;
-import com.powsybl.contingency.afs.ContingencyStore;
+import com.powsybl.afs.contingency.ContingencyStore;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileCreator;
 import com.powsybl.gse.spi.ProjectFileCreatorExtension;
+import com.powsybl.gse.util.NodeGraphics;
+import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 
 import java.util.ResourceBundle;
 
@@ -30,8 +35,23 @@ public class ContingencyStoreCreatorExtension implements ProjectFileCreatorExten
     }
 
     @Override
+    public Node getMenuGraphic() {
+        return NodeGraphics.createFileGraphic();
+    }
+
+    @Override
     public String getMenuText() {
         return RESOURCE_BUNDLE.getString("CreateContingencies") + "...";
+    }
+
+    @Override
+    public int getMenuOrder() {
+        return 20;
+    }
+
+    @Override
+    public KeyCodeCombination getMenuKeycode() {
+        return new KeyCodeCombination(KeyCode.Z, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
     }
 
     @Override

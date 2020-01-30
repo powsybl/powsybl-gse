@@ -7,6 +7,9 @@
 package com.powsybl.gse.util;
 
 import com.powsybl.afs.*;
+import com.powsybl.gse.copy_paste.afs.CopyManager;
+import com.powsybl.gse.copy_paste.afs.CopyService;
+import com.powsybl.gse.copy_paste.afs.exceptions.CopyPasteException;
 import com.powsybl.gse.spi.GseContext;
 import impl.org.controlsfx.skin.BreadCrumbBarSkin;
 import javafx.application.Platform;
@@ -14,14 +17,17 @@ import javafx.beans.property.*;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
-import javafx.scene.layout.ColumnConstraints;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.RowConstraints;
-import javafx.scene.layout.HBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontPosture;
+import javafx.scene.text.Text;
+import javafx.stage.DirectoryChooser;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 import javafx.stage.Window;
 import javafx.util.Callback;
 import org.controlsfx.control.BreadCrumbBar;
@@ -48,6 +54,9 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private boolean success;
     private Set<String> openedProjects = new HashSet<>();
     private SimpleBooleanProperty deleteMenuItemDisableProperty = new SimpleBooleanProperty(false);
+    private final CopyManager localArchiveManager = CopyManager.getInstance();
+
+    private BooleanProperty copied = new SimpleBooleanProperty(false);
 
     public interface TreeModel<N, F, D> {
         Collection<N> getChildren(D folder);
@@ -235,6 +244,11 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     public NodeChooser(Window window, TreeModel<N, F, D> treeModel, AppData appData, GseContext context,
                        BiPredicate<N, TreeModel<N, F, D>> filter, Set<String>... openedProjectsList) {
+        this(window, treeModel, appData, context, filter, null, openedProjectsList);
+    }
+
+    public NodeChooser(Window window, TreeModel<N, F, D> treeModel, AppData appData, GseContext context,
+                       BiPredicate<N, TreeModel<N, F, D>> filter, Boolean writableFsDisplayPriority, Set<String>... openedProjectsList) {
         this.window = Objects.requireNonNull(window);
         this.treeModel = Objects.requireNonNull(treeModel);
         this.appData = Objects.requireNonNull(appData);
@@ -247,6 +261,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         tree.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         tree.setShowRoot(false);
         rootItem.getChildren().add(new TreeItem<>());
+
         TreeTableColumn<N, N> fileColumn = new TreeTableColumn<>(RESOURCE_BUNDLE.getString("File"));
         fileColumn.setPrefWidth(415);
         fileColumn.setCellValueFactory((TreeTableColumn.CellDataFeatures<N, N> callback) -> {
@@ -341,9 +356,13 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 List<TreeItem<N>> nodes = new ArrayList<>();
                 for (D rootFolder : treeModel.getRootFolders()) {
                     TreeItem<N> node = createCollapsedFolderItem(rootFolder);
-                    node.setExpanded(true);
+                    if (writableFsDisplayPriority == null || writableFsDisplayPriority == treeModel.isWritable(rootFolder)) {
+                        node.setExpanded(true);
+                    }
                     nodes.add(node);
                 }
+                Collections.sort(nodes, Comparator.comparing(item -> !item.isExpanded()));
+
                 Platform.runLater(() -> {
                     rootItem.getChildren().setAll(nodes);
                     // select first root
@@ -363,6 +382,28 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 LOGGER.error(t.toString(), t);
             }
         });
+
+        final Clipboard systemClipboard = Clipboard.getSystemClipboard();
+        new com.sun.glass.ui.ClipboardAssistance(com.sun.glass.ui.Clipboard.SYSTEM) {
+            @Override
+            public void contentChanged() {
+                copiedChangedListener(systemClipboard);
+            }
+        };
+    }
+
+    private CopyService initCopyService(Folder folder) {
+        try {
+            return folder.findService(CopyService.class);
+        } catch (AfsException e) {
+            LOGGER.warn("Failed to initiate copy service", e);
+        }
+        return null;
+    }
+
+    private void copiedChangedListener(Clipboard systemClipboard) {
+        boolean canPaste = CopyManager.getCopyInfo(systemClipboard).map(copyParams -> !copyParams.getProjectNodeType()).orElse(false);
+        copied.set(canPaste);
     }
 
     public ReadOnlyObjectProperty<T> selectedNodeProperty() {
@@ -449,11 +490,11 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private boolean isChildOf(TreeItem<N> targetTreeItem) {
-        return targetTreeItem == dragAndDropMove.getSourceTreeItem().getParent();
+        return dragAndDropMove.getSourceTreeItem().size() == 1 && targetTreeItem == dragAndDropMove.getSourceTreeItem().get(0).getParent();
     }
 
     public boolean isMovable(N item, TreeItem<N> targetTreeItem) {
-        return dragAndDropMove != null && item != dragAndDropMove.getSource() && !isChildOf(targetTreeItem);
+        return dragAndDropMove != null && dragAndDropMove.getSourceTreeItem().size() == 1 && targetTreeItem != dragAndDropMove.getSourceTreeItem().get(0) && !isChildOf(targetTreeItem);
     }
 
     private void dragOverEvent(DragEvent event, N item, TreeTableRow<N> treeTableRow, TreeTableCell<N, N> treeTableCell) {
@@ -472,8 +513,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private void dragDetectedEvent(N value, TreeItem<N> treeItem, MouseEvent event) {
         dragAndDropMove = new DragAndDropMove();
-        dragAndDropMove.setSource(value);
-        dragAndDropMove.setSourceTreeItem(treeItem);
+        dragAndDropMove.setSourceTreeItem(Collections.singletonList(treeItem));
         if (value instanceof Project && treeItem != tree.getRoot()) {
             Dragboard db = tree.startDragAndDrop(TransferMode.ANY);
             ClipboardContent cb = new ClipboardContent();
@@ -484,14 +524,14 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private void dragDroppedEvent(Object value, TreeItem<N> treeItem, DragEvent event, Node node) {
-        if (value instanceof Folder && value != dragAndDropMove.getSource()) {
+        if (dragAndDropMove.getSourceTreeItem().size() == 1 && value instanceof Folder && treeItem != dragAndDropMove.getSourceTreeItem().get(0)) {
             Folder folder = (Folder) node;
             int count = 0;
             success = false;
             treeItemChildrenSize(treeItem, count);
             accepTransferDrag(folder, success);
             event.setDropCompleted(success);
-            refreshTreeItem(dragAndDropMove.getSourceTreeItem().getParent());
+            refreshTreeItem(dragAndDropMove.getSourceTreeItem().get(0).getParent());
             refreshTreeItem(treeItem);
             tree.getSelectionModel().clearSelection();
             event.consume();
@@ -506,6 +546,9 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private void treeItemChildrenSize(TreeItem<N> treeItem, int compte) {
+        if (dragAndDropMove.getSourceTreeItem().size() != 1) {
+            throw new RuntimeException("Should not happen");
+        }
         counter = compte;
         if (!treeItem.isLeaf()) {
             Folder folder = (Folder) treeItem.getValue();
@@ -513,7 +556,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 for (Node node : folder.getChildren()) {
                     if (node == null) {
                         break;
-                    } else if (node.getName().equals(dragAndDropMove.getSource().toString())) {
+                    } else if (node.getName().equals(dragAndDropMove.getSourceTreeItem().get(0).getValue().toString())) {
                         counter++;
                     }
                 }
@@ -523,10 +566,10 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
 
     private void accepTransferDrag(Folder folder, boolean s) {
         success = s;
-        if (getCounter() >= 1) {
+        if (getCounter() >= 1 || dragAndDropMove.getSourceTreeItem().size() != 1) {
             GseAlerts.showDraggingError();
         } else if (getCounter() < 1) {
-            Project monfichier = (Project) dragAndDropMove.getSource();
+            Project monfichier = (Project) dragAndDropMove.getSourceTreeItem().get(0).getValue();
             monfichier.moveTo(folder);
             success = true;
         }
@@ -567,25 +610,33 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     }
 
     private ContextMenu createFolderContextMenu(TreeItem<N> selectedTreeItem) {
+        N value = selectedTreeItem.getValue();
         ContextMenu contextMenu = new ContextMenu();
         List<MenuItem> items = new ArrayList<>();
-        items.add(createRenameProjectMenuItem());
         items.add(createCreateFolderMenuItem());
-        items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
-        contextMenu.getItems().addAll(items.stream()
-                .sorted(Comparator.comparing(MenuItem::getText))
-                .collect(Collectors.toList()));
+        items.add(createRenameProjectMenuItem());
+
+        if (value instanceof Folder && ((Folder) value).isWritable()) {
+            if (((Folder) value).getChildren().isEmpty()) {
+                items.add(new SeparatorMenuItem());
+                items.add(createUnarchiveMenuItem(selectedTreeItem));
+            }
+            items.add(new SeparatorMenuItem());
+            items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
+        }
+        contextMenu.getItems().addAll(items);
         return contextMenu;
     }
 
     private ContextMenu createProjectContextMenu(TreeItem<N> selectedTreeItem) {
         ContextMenu contextMenu = new ContextMenu();
         List<MenuItem> items = new ArrayList<>();
-        items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
         items.add(createRenameProjectMenuItem());
-        contextMenu.getItems().addAll(items.stream()
-                .sorted(Comparator.comparing(MenuItem::getText))
-                .collect(Collectors.toList()));
+        items.add(new SeparatorMenuItem());
+        items.add(createArchiveMenuItem(selectedTreeItem));
+        items.add(new SeparatorMenuItem());
+        items.add(createDeleteNodeMenuItem(Collections.singletonList(selectedTreeItem)));
+        contextMenu.getItems().addAll(new ArrayList<>(items));
         return contextMenu;
     }
 
@@ -620,14 +671,72 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         });
     }
 
+    private MenuItem createArchiveMenuItem(TreeItem<N> selectedTreeItem) {
+        MenuItem archiveMenuItem = GseMenuItem.createArchiveMenuItem();
+        archiveMenuItem.setDisable(!(selectedTreeItem.getValue() instanceof AbstractNodeBase));
+        archiveMenuItem.setOnAction(event -> archive((AbstractNodeBase) selectedTreeItem.getValue()));
+        return archiveMenuItem;
+    }
+
+    private MenuItem createUnarchiveMenuItem(TreeItem<N> selectedTreeItem) {
+        MenuItem unarchiveMenuItem = GseMenuItem.createUnarchiveMenuItem();
+        unarchiveMenuItem.setOnAction(event -> unarchiveItems(selectedTreeItem));
+        return unarchiveMenuItem;
+    }
+
+    private void archive(AbstractNodeBase item) {
+        DirectoryChooser directoryChooser = new DirectoryChooser();
+        java.io.File selectedDirectory = directoryChooser.showDialog(window);
+        if (selectedDirectory != null) {
+            context.getExecutor().execute(() -> {
+                InfoDialog infoDialog = new InfoDialog(String.format(RESOURCE_BUNDLE.getString("ArchiveTask"), item.getName()), true);
+                try {
+                    localArchiveManager.copy(Collections.singletonList(item), selectedDirectory);
+                    infoDialog.updateStage(RESOURCE_BUNDLE.getString("CompleteTask"));
+                } catch (CopyPasteException e) {
+                    Platform.runLater(() -> GseAlerts.showDialogError(e.getMessage()));
+                    infoDialog.updateStage(RESOURCE_BUNDLE.getString("ErrorTask"), Color.RED);
+                }
+            });
+        }
+    }
+
+    private void unarchiveItems(TreeItem<N> folderItem) {
+        Object folder = folderItem.getValue();
+        if (!(folder instanceof Folder)) {
+            throw new IllegalStateException("Can't unarchive item if target is not a folder!");
+        }
+
+        DirectoryChooser directoryChooser = new DirectoryChooser();
+        java.io.File selectedDirectory = directoryChooser.showDialog(window);
+        if (selectedDirectory != null) {
+            context.getExecutor().execute(() -> {
+                InfoDialog infoDialog = new InfoDialog(String.format(RESOURCE_BUNDLE.getString("UnarchiveTask"), selectedDirectory.getName()), true);
+                try {
+                    ((Folder) folder).unarchive(selectedDirectory.toPath());
+                    infoDialog.updateStage(RESOURCE_BUNDLE.getString("CompleteTask"));
+                    Platform.runLater(() -> refresh(folderItem));
+                } catch (Exception e) {
+                    Platform.runLater(() -> GseAlerts.showDialogError(e.getMessage()));
+                    infoDialog.updateStage(RESOURCE_BUNDLE.getString("ErrorTask"), Color.RED);
+                }
+            });
+        }
+    }
+
+    private static Optional<CopyManager.CopyParams> getCopyInfo() {
+        final Clipboard clipboard = Clipboard.getSystemClipboard();
+        return CopyManager.getCopyInfo(clipboard);
+    }
+
     private MenuItem createDeleteNodeMenuItem(List<? extends TreeItem<N>> selectedTreeItems) {
-        MenuItem deleteMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Delete"), Glyph.createAwesomeFont('\uf1f8').size(ICON_SIZE));
+        MenuItem deleteMenuItem = GseMenuItem.createDeleteMenuItem();
         if (selectedTreeItems.size() == 1) {
             TreeItem<N> selectedTreeItem = selectedTreeItems.get(0);
             N selectedTreeItemValue = selectedTreeItem.getValue();
             if (selectedTreeItemValue instanceof Folder) {
                 Folder folder = (Folder) selectedTreeItemValue;
-                if (!folder.getChildren().isEmpty()) {
+                if (!folder.getChildren().isEmpty() || !folder.isWritable()) {
                     deleteMenuItem.setDisable(true);
                 }
             } else if (selectedTreeItemValue instanceof Project) {
@@ -640,9 +749,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             selectionContainsOpenedProjects(selectedTreeItems, deleteMenuItem);
         }
         deleteMenuItem.setOnAction(event -> createDeleteAlert(selectedTreeItems));
-        deleteMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
         return deleteMenuItem;
-
     }
 
     private void selectionContainsOpenedProjects(List<? extends TreeItem<N>> selectedTreeItems, MenuItem menuItem) {
@@ -770,11 +877,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         }
     }
 
-    public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context,
-                                                                 BiPredicate<Node, TreeModel<Node, File, Folder>> filter) {
-        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, filter);
-    }
-
     private static <N, T extends N> boolean testNode(N node, Class<T> filter, Class<?>... otherFilters) {
         if (!filter.isAssignableFrom(node.getClass())) {
             return false;
@@ -787,12 +889,30 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
         return true;
     }
 
+    public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Boolean writableFsPriorityDisplay, Class<T> filter, Class<?>... otherFilters) {
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, writableFsPriorityDisplay, (node, treeModel) -> testNode(node, filter, otherFilters));
+    }
+
     public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Class<T> filter, Class<?>... otherFilters) {
         return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters));
     }
 
+    public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Boolean writableFsPriorityDisplay, Class<T> filter, Set<String> openedProjectsList, Class<?>... otherFilters) {
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, writableFsPriorityDisplay, (node, treeModel) -> testNode(node, filter, otherFilters), openedProjectsList);
+    }
+
     public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Class<T> filter, Set<String> openedProjectsList, Class<?>... otherFilters) {
         return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, (node, treeModel) -> testNode(node, filter, otherFilters), openedProjectsList);
+    }
+
+    public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context, Boolean writableFsPriorityDisplay,
+                                                                 BiPredicate<Node, TreeModel<Node, File, Folder>> filter) {
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, writableFsPriorityDisplay, filter);
+    }
+
+    public static <T extends Node> Optional<T> showAndWaitDialog(Window window, AppData appData, GseContext context,
+                                                                 BiPredicate<Node, TreeModel<Node, File, Folder>> filter) {
+        return showAndWaitDialog(new TreeModelImpl(appData), window, appData, context, filter);
     }
 
     public static <T extends ProjectNode> Optional<T> showAndWaitDialog(Project project, Window window, GseContext context, BiPredicate<ProjectNode, TreeModel<ProjectNode, ProjectFile, ProjectFolder>> filter) {
@@ -807,9 +927,15 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     public static <N, F extends N, D extends N, T extends N> Optional<T> showAndWaitDialog(
             TreeModel<N, F, D> treeModel, Window window, AppData appData, GseContext context,
             BiPredicate<N, TreeModel<N, F, D>> filter, Set<String>... openedProjectsList) {
+        return showAndWaitDialog(treeModel, window, appData, context, null, filter, openedProjectsList);
+    }
+
+    public static <N, F extends N, D extends N, T extends N> Optional<T> showAndWaitDialog(
+            TreeModel<N, F, D> treeModel, Window window, AppData appData, GseContext context, Boolean writableFsPriorityDisplay,
+            BiPredicate<N, TreeModel<N, F, D>> filter, Set<String>... openedProjectsList) {
         Dialog<T> dialog = null;
         try {
-            NodeChooser<N, F, D, T> nodeChooser = new NodeChooser<>(window, treeModel, appData, context, filter, openedProjectsList);
+            NodeChooser<N, F, D, T> nodeChooser = new NodeChooser<>(window, treeModel, appData, context, filter, writableFsPriorityDisplay, openedProjectsList);
             Callback<ButtonType, T> resultConverter = buttonType -> buttonType == ButtonType.OK ? nodeChooser.selectedNodeProperty().get() : null;
             dialog = new GseDialog<>(RESOURCE_BUNDLE.getString("OpenFile"), nodeChooser, window, nodeChooser.selectedNodeProperty().isNull(), resultConverter);
             Button button = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
@@ -825,6 +951,57 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             if (dialog != null) {
                 dialog.close();
             }
+        }
+    }
+
+    class InfoDialog {
+        private final VBox content = new VBox(20);
+        private final String initialText;
+
+        InfoDialog(String message, boolean showProgress) {
+            initialText = message;
+            Platform.runLater(() -> {
+                Stage stage = new Stage();
+                stage.setTitle("Information");
+                stage.initModality(Modality.NONE);
+                stage.initOwner(window);
+
+                BorderPane contentPane = new BorderPane();
+                contentPane.setPadding(new Insets(5, 5, 5, 5));
+                content.setPadding(new Insets(5, 5, 5, 5));
+                contentPane.getChildren().add(content);
+
+                AnchorPane pane = new AnchorPane();
+                pane.getChildren().add(content);
+                Text hint = new Text(RESOURCE_BUNDLE.getString("InfoDialogHint"));
+                hint.setFont(Font.font(hint.getFont().getName(), FontPosture.ITALIC, hint.getFont().getSize()));
+                pane.getChildren().add(hint);
+                AnchorPane.setBottomAnchor(hint, 0.0);
+                AnchorPane.setRightAnchor(hint, 0.0);
+                content.getChildren().add(new Text(initialText));
+                if (showProgress) {
+                    ProgressBar progressBar = new ProgressBar();
+                    progressBar.setPrefWidth(350);
+                    content.getChildren().add(progressBar);
+                }
+                Scene dialogScene = new Scene(pane, 400, 100);
+                stage.setScene(dialogScene);
+                stage.show();
+            });
+        }
+
+        void updateStage(String message, Color color) {
+            Platform.runLater(() -> {
+                content.getChildren().clear();
+                content.getChildren().add(new Text(initialText));
+                Text txtMessage = new Text(message);
+                txtMessage.setFill(color);
+                content.getChildren().add(txtMessage);
+            });
+        }
+
+        private void updateStage(String message) {
+            updateStage(message, Color.BLACK);
         }
     }
 }

@@ -15,7 +15,7 @@
     <parent>
         <groupId>com.powsybl</groupId>
         <artifactId>powsybl-gse</artifactId>
-        <version>1.5.0-SNAPSHOT</version>
+        <version>1.9.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>powsybl-gse-afs-ext-base</artifactId>
@@ -43,6 +43,14 @@
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-action-dsl</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-afs-action-dsl</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-afs-contingency</artifactId>
         </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>

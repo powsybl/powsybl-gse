@@ -53,7 +53,7 @@ class UserSessionPane extends StackPane {
         this.context = Objects.requireNonNull(context);
         this.authenticator = Objects.requireNonNull(authenticator);
 
-        Text signInGlyph = Glyph.createAwesomeFont('\uf090');
+        Text signInGlyph = Glyph.createAwesomeFont('\uf007');
         signInGlyph.getStyleClass().add("gse-app-bar-icon");
         signInButton = new Button("", signInGlyph);
         signInButton.getStyleClass().add("gse-app-bar-button");

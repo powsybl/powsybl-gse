@@ -7,11 +7,11 @@
 package com.powsybl.gse.security;
 
 import com.google.auto.service.AutoService;
-import com.powsybl.action.dsl.afs.ActionScript;
+import com.powsybl.afs.action.dsl.ActionScript;
+import com.powsybl.afs.security.SecurityAnalysisRunner;
 import com.powsybl.contingency.ContingenciesProvider;
 import com.powsybl.gse.spi.NodeGraphicProvider;
 import com.powsybl.gse.util.Glyph;
-import com.powsybl.security.afs.SecurityAnalysisRunner;
 import javafx.scene.Node;
 
 /**
@@ -19,6 +19,12 @@ import javafx.scene.Node;
  */
 @AutoService(NodeGraphicProvider.class)
 public class SecurityAnalysisNodeGraphicProvider implements NodeGraphicProvider {
+
+    public static Node createSecurityAnalysisRunnerGlyph() {
+        return Glyph.createAwesomeFont('\uf132')
+                .size("1.4em")
+                .color("dimgray");
+    }
 
     @Override
     public Node getGraphic(Object file) {
@@ -30,9 +36,7 @@ public class SecurityAnalysisNodeGraphicProvider implements NodeGraphicProvider 
                     .size("1.4em")
                     .color("orange");
         } else if (file instanceof SecurityAnalysisRunner) {
-            return Glyph.createAwesomeFont('\uf132')
-                    .size("1.4em")
-                    .color("dimgray");
+            return createSecurityAnalysisRunnerGlyph();
         }
         return null;
     }

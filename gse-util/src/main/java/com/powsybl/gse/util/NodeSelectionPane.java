@@ -21,7 +21,7 @@ public class NodeSelectionPane<T extends Node> extends AbstractNodeSelectionPane
     }
 
     public NodeSelectionPane(AppData data, String label, boolean mandatory, Window window, GseContext context, Class<T> filter, Class<?>... otherFilters) {
-        super(label, () -> NodeChooser.showAndWaitDialog(window, data, context, filter, otherFilters), mandatory, context);
+        super(label, () -> NodeChooser.showAndWaitDialog(window, data, context, false, filter, otherFilters), mandatory, context);
     }
 }
 

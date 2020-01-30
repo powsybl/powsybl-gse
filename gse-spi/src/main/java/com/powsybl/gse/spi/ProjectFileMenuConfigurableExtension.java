@@ -8,6 +8,7 @@ package com.powsybl.gse.spi;
 
 import com.powsybl.afs.ProjectFile;
 import javafx.scene.Node;
+import javafx.scene.input.KeyCombination;
 
 /**
  * @author Sebastien Murgey <sebastien.murgey at rte-france.com>
@@ -19,6 +20,18 @@ public interface ProjectFileMenuConfigurableExtension<T extends ProjectFile> {
     }
 
     String getMenuText(T file);
+
+    default String getMenuGroup() {
+        return null;
+    }
+
+    default int getMenuOrder() {
+        return 0;
+    }
+
+    default KeyCombination getMenuKeyCode() {
+        return null;
+    }
 
     default boolean isMenuEnabled(T file) {
         return true;

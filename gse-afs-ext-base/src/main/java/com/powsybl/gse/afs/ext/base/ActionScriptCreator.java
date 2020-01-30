@@ -6,8 +6,8 @@
  */
 package com.powsybl.gse.afs.ext.base;
 
-import com.powsybl.action.dsl.afs.ActionScriptBuilder;
 import com.powsybl.afs.ProjectFolder;
+import com.powsybl.afs.action.dsl.ActionScriptBuilder;
 
 import java.util.ResourceBundle;
 

@@ -11,10 +11,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Sets;
+import com.powsybl.afs.security.SubjectInfoExtension;
 import com.powsybl.iidm.network.Country;
 import com.powsybl.security.LimitViolation;
 import com.powsybl.security.LimitViolationType;
-import com.powsybl.security.afs.SubjectInfoExtension;
 import javafx.beans.binding.Bindings;
 import javafx.collections.ListChangeListener;
 import javafx.geometry.Insets;
@@ -91,9 +91,18 @@ class LimitViolationsFilterPane extends GridPane {
                 if (extension == null) {
                     return true;
                 }
-                if (checkedCountries.isPresent() && checkedCountries.get().stream().noneMatch(extension.getCountries()::contains)) {
-                    return false;
+
+                if (checkedCountries.isPresent()) {
+                    // if violation has no defined country, display only if no filter country is checked or if all filter countries are checked
+                    if (extension.getCountries().isEmpty()) {
+                        if (!checkedCountries.get().containsAll(countryListView.getItems()) && !checkedCountries.get().isEmpty()) {
+                            return false;
+                        }
+                    } else if (checkedCountries.get().stream().noneMatch(extension.getCountries()::contains)) {
+                        return false;
+                    }
                 }
+
                 return !checkedNominaVoltages.isPresent() || checkedNominaVoltages.get().stream().anyMatch(extension.getNominalVoltages()::contains);
             });
         }

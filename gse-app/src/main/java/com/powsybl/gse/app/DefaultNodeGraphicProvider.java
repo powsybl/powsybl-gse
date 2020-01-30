@@ -12,12 +12,16 @@ import com.powsybl.gse.spi.NodeGraphicProvider;
 import com.powsybl.gse.util.Glyph;
 import javafx.scene.Node;
 import javafx.scene.text.Text;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
 @AutoService(NodeGraphicProvider.class)
 public class DefaultNodeGraphicProvider implements NodeGraphicProvider {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultNodeGraphicProvider.class);
 
     private static Text createFolder() {
         return Glyph.createAwesomeFont('\uf07b')
@@ -45,21 +49,26 @@ public class DefaultNodeGraphicProvider implements NodeGraphicProvider {
 
     @Override
     public Node getGraphic(Object node) {
-        if (node instanceof Folder) {
-            if (((Folder) node).getParent().isPresent()) {
-                return createFolder();
-            } else {
-                return createDatabase();
-            }
-        } else if (node instanceof ProjectFolder) {
-            if (((ProjectFolder) node).getParent().isPresent()) {
-                return createFolder();
-            } else {
+        try {
+            if (node instanceof Folder) {
+                if (((Folder) node).getParent().isPresent()) {
+                    return createFolder();
+                } else {
+                    return createDatabase();
+                }
+            } else if (node instanceof ProjectFolder) {
+                if (((ProjectFolder) node).getParent().isPresent()) {
+                    return createFolder();
+                } else {
+                    return createProject();
+                }
+            } else if (node instanceof Project) {
                 return createProject();
+            } else if (node instanceof UnknownFile || node instanceof UnknownProjectFile) {
+                return createUnknown();
             }
-        } else if (node instanceof Project) {
-            return createProject();
-        } else if (node instanceof UnknownFile || node instanceof UnknownProjectFile) {
+        } catch (Exception e) {
+            LOGGER.error("Failed to resolve graphic for node {}", node, e);
             return createUnknown();
         }
         return null;

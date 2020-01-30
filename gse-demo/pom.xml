@@ -15,7 +15,7 @@
     <parent>
         <artifactId>powsybl-gse</artifactId>
         <groupId>com.powsybl</groupId>
-        <version>1.5.0-SNAPSHOT</version>
+        <version>1.9.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>powsybl-gse-demo</artifactId>
@@ -23,6 +23,17 @@
     <description>A demonstration module of GSE</description>
 
     <profiles>
+      <profile>
+          <id>windows</id>
+          <activation>
+            <os>
+              <family>windows</family>
+            </os>
+          </activation>
+          <properties>
+            <javafx.bundler>windows.app</javafx.bundler>
+          </properties>
+        </profile>
         <profile>
             <id>windows</id>
             <activation>
@@ -318,6 +329,11 @@
         </dependency>
 
         <!-- Runtime dependencies -->
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-config-classic</artifactId>
+            <scope>runtime</scope>
+        </dependency>
 
         <!-- logging -->
         <dependency>
@@ -344,6 +360,11 @@
             <artifactId>powsybl-afs-local</artifactId>
             <scope>runtime</scope>
         </dependency>
+     <!--   <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>powsybl-gse-copypaste-afs-local</artifactId>
+            <version>${project.version}</version>
+        </dependency>-->
 
         <!-- Converters -->
         <dependency>
@@ -389,16 +410,17 @@
             <scope>runtime</scope>
         </dependency>
 
+
         <!-- Security analysis -->
         <dependency>
             <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-gse-security-analysis</artifactId>
-            <version>${project.version}</version>
+            <artifactId>powsybl-afs-security-analysis-local</artifactId>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-security-analysis-afs-local</artifactId>
+            <artifactId>powsybl-gse-security-analysis</artifactId>
+            <version>${project.version}</version>
             <scope>runtime</scope>
         </dependency>
     </dependencies>
