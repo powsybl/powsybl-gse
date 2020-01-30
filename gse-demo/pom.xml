@@ -23,38 +23,47 @@
     <description>A demonstration module of GSE</description>
 
     <profiles>
-      <profile>
-          <id>windows</id>
-          <activation>
-            <os>
-              <family>windows</family>
-            </os>
-          </activation>
-          <properties>
-            <javafx.bundler>windows.app</javafx.bundler>
-          </properties>
+        <profile>
+            <id>windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <jpackage.archive>openjdk-14-ea+33_windows-x64_bin.zip</jpackage.archive>
+                <jpackage.zip>true</jpackage.zip>
+                <powsybl-logo>logo.ico</powsybl-logo>
+                <gtk2-linux-jvm-arg/>
+            </properties>
         </profile>
         <profile>
-          <id>mac</id>
-          <activation>
-            <os>
-              <family>mac</family>
-            </os>
-          </activation>
-          <properties>
-            <javafx.bundler>mac.app</javafx.bundler>
-          </properties>
+            <id>mac</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                </os>
+            </activation>
+            <properties>
+                <jpackage.archive>openjdk-14-ea+33_osx-x64_bin.tar.gz</jpackage.archive>
+                <jpackage.tar>true</jpackage.tar>
+                <powsybl-logo>logo.png</powsybl-logo>
+                <gtk2-linux-jvm-arg/>
+            </properties>
         </profile>
         <profile>
-          <id>unix</id>
-          <activation>
-            <os>
-              <family>unix</family>
-            </os>
-          </activation>
-          <properties>
-            <javafx.bundler>linux.app</javafx.bundler>
-          </properties>
+            <id>unix</id>
+            <activation>
+                <os>
+                    <family>unix</family>
+                </os>
+            </activation>
+            <properties>
+                <jpackage.archive>openjdk-14-ea+33_linux-x64_bin.tar.gz</jpackage.archive>
+                <jpackage.tar>true</jpackage.tar>
+                <powsybl-logo>logo.png</powsybl-logo>
+                <gtk2-linux-jvm-arg>-Djdk.gtk.version=2</gtk2-linux-jvm-arg>
+            </properties>
         </profile>
         <profile>
             <id>native-package</id>
@@ -63,6 +72,22 @@
             </activation>
             <build>
                 <plugins>
+                    <plugin>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <version>${maven.dependency.version}</version>
+                        <executions>
+                            <execution>
+                                <id>copy-libs</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>copy-dependencies</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}/jpackage-input/lib</outputDirectory>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-resources-plugin</artifactId>
@@ -75,7 +100,7 @@
                                     <goal>copy-resources</goal>
                                 </goals>
                                 <configuration>
-                                    <outputDirectory>${basedir}/target/jfx/app</outputDirectory>
+                                    <outputDirectory>${project.build.directory}/jpackage-input</outputDirectory>
                                     <resources>
                                         <resource>
                                             <directory>src/main/config</directory>
@@ -87,41 +112,191 @@
                                     </resources>
                                 </configuration>
                             </execution>
+                            <execution>
+                                <id>copy-package</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}/jpackage-input/lib</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>${project.build.directory}</directory>
+                                            <includes>
+                                                <include>${project.artifactId}-${project.version}.jar</include>
+                                            </includes>
+                                            <filtering>false</filtering>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
                         </executions>
                     </plugin>
                     <plugin>
-                        <groupId>com.zenjava</groupId>
-                        <artifactId>javafx-maven-plugin</artifactId>
-                        <version>${maven.javafx.version}</version>
+                        <groupId>com.googlecode.maven-download-plugin</groupId>
+                        <artifactId>download-maven-plugin</artifactId>
+                        <version>${maven.download.version}</version>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>wget</goal>
+                                </goals>
+                                <configuration>
+                                    <url>https://download.java.net/java/early_access/jdk14/33/GPL/${jpackage.archive}</url>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>${maven.antrun.version}</version>
+                        <executions>
+                            <execution>
+                                <id>unzip-jpackage</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target name="unzip" if="${jpackage.zip}">
+                                        <unzip src="${project.build.directory}/${jpackage.archive}" dest="${project.build.directory}/jpackage"/>
+                                    </target>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>untar-jpackage</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target name="untar" if="${jpackage.tar}">
+                                        <untar src="${project.build.directory}/${jpackage.archive}" compression="gzip" dest="${project.build.directory}/jpackage"/>
+                                        <chmod file="${project.build.directory}/jpackage/jdk-14/bin/jpackage" perm="u+x"/>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <!--
+                            jlink errors when the directory already exist. Remove it.
+                            There is no force option like with jpackager.
+                        -->
+                        <artifactId>maven-clean-plugin</artifactId>
+                        <version>${maven.clean.version}</version>
+                        <executions>
+                            <execution>
+                                <id>clean-jlink-runtime</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>clean</goal>
+                                </goals>
+                                <configuration>
+                                    <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                                    <filesets>
+                                        <fileset>
+                                            <directory>target/jlink-runtime</directory>
+                                            <includes>
+                                                <include>**</include>
+                                            </includes>
+                                            <followSymlinks>false</followSymlinks>
+                                        </fileset>
+                                    </filesets>
+                                </configuration>
+                            </execution>
+                            <execution>
+                               <id>clean-jpackage</id>
+                               <phase>package</phase>
+                               <goals>
+                                   <goal>clean</goal>
+                               </goals>
+                                <configuration>
+                                    <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                                    <filesets>
+                                        <fileset>
+                                            <directory>target/native</directory>
+                                            <includes>
+                                                <include>**</include>
+                                            </includes>
+                                            <followSymlinks>false</followSymlinks>
+                                        </fileset>
+                                    </filesets>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>${maven.exec.version}</version>
                         <configuration>
-                            <vendor>PowSyBl</vendor>
-                            <appName>gse</appName>
-                            <nativeReleaseVersion>${project.version}</nativeReleaseVersion>
-                            <mainClass>com.powsybl.gse.demo.GseDemo</mainClass>
-                            <skipJNLP>true</skipJNLP>
-                            <jvmProperties>
-                                <app.root>$APPDIR</app.root>
-                                <http.agent>Powsybl-Gse</http.agent>
-                                <powsybl.config.dirs>${user_home}/.powsybl:${app.root}/app</powsybl.config.dirs>
-                                <javafx.preloader>com.powsybl.gse.app.GsePreloader</javafx.preloader>
-                            </jvmProperties>
-                            <bundler>${javafx.bundler}</bundler>
+                            <!-- fix for https://github.com/mojohaus/exec-maven-plugin/issues/75 -->
+                            <longModulepath>false</longModulepath>
                         </configuration>
                         <executions>
                             <execution>
-                                <!-- required before build-native -->
-                                <id>create-jfxjar</id>
+                                <id>create-runtime</id>
                                 <phase>package</phase>
                                 <goals>
-                                    <goal>build-jar</goal>
+                                    <goal>exec</goal>
                                 </goals>
+                                <configuration>
+                                    <executable>${java.home}/bin/jlink</executable>
+                                    <arguments>
+                                        <!-- packager arguments -->
+                                        <argument>--add-modules</argument>
+                                        <argument>java.base,java.compiler,java.datatransfer,java.desktop,java.logging,java.management,java.management.rmi,java.naming,java.prefs,java.rmi,java.scripting,java.security.jgss,java.sql,java.xml,java.xml.crypto,jdk.javadoc,jdk.jsobject,jdk.unsupported,jdk.unsupported.desktop</argument>
+                                        <argument>--output</argument>
+                                        <argument>${project.build.directory}/jlink-runtime</argument>
+										<argument>--strip-native-commands</argument>
+										<argument>--strip-debug</argument>
+										<argument>--no-header-files</argument>
+										<argument>--no-man-pages</argument>
+                                    </arguments>
+                                </configuration>
                             </execution>
                             <execution>
                                 <id>create-native</id>
                                 <phase>package</phase>
                                 <goals>
-                                    <goal>build-native</goal>
+                                    <goal>exec</goal>
                                 </goals>
+                                <configuration>
+                                    <executable>${project.build.directory}/jpackage/jdk-14/bin/jpackage</executable>
+                                    <workingDirectory>${project.build.directory}</workingDirectory>
+                                    <arguments>
+                                        <!-- packager arguments -->
+                                        <argument>--type</argument>
+                                        <argument>app-image</argument>
+                                        <argument>--verbose</argument>
+                                        <argument>--input</argument>
+                                        <argument>jpackage-input</argument>
+                                        <argument>--main-class</argument>
+                                        <argument>com.powsybl.gse.demo.GseDemo</argument>
+                                        <argument>--main-jar</argument>
+                                        <argument>lib/${project.artifactId}-${project.version}.jar</argument>
+                                        <argument>--dest</argument>
+                                        <argument>${project.build.directory}/native</argument>
+                                        <argument>--runtime-image</argument>
+                                        <argument>${project.build.directory}/jlink-runtime</argument>
+<!--                                        <argument>&#45;&#45;identifier</argument>-->
+<!--                                        <argument>com.powsybl.gse.demo</argument>-->
+                                        <argument>--name</argument>
+                                        <argument>gse</argument>
+                                        <argument>--app-version</argument>
+                                        <argument>${project.version}</argument>
+                                        <argument>--java-options</argument>
+                                        <argument>-Dapp.root=$APPDIR -Dpowsybl.config.dirs=${user_home}/.powsybl:${app.root}/app -Djavafx.preloader=com.powsybl.gse.app.GsePreloader ${gtk2-linux-jvm-arg}</argument>
+                                        <argument>--vendor</argument>
+                                        <argument>PowSyBl</argument>
+                                        <argument>--icon</argument>
+                                        <argument>classes/images/${powsybl-logo}</argument>
+                                    </arguments>
+                                </configuration>
                             </execution>
                         </executions>
                     </plugin>

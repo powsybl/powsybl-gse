@@ -19,7 +19,6 @@ import com.powsybl.gse.copy_paste.afs.exceptions.CopyDifferentFileSystemNameExce
 import com.powsybl.gse.copy_paste.afs.exceptions.CopyPasteException;
 import com.powsybl.gse.spi.*;
 import com.powsybl.gse.util.*;
-import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.BooleanProperty;
@@ -40,6 +39,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 import javafx.util.Callback;
 import javafx.util.Pair;
 import org.apache.commons.lang3.NotImplementedException;
@@ -877,9 +877,9 @@ public class ProjectPane extends Tab {
         List<DetachableTabPane> detachableTabPanes = new ArrayList<>();
         findDetachableTabPanes(viewPane, detachableTabPanes);
         // also scan for DetachableTabPane in floating windows
-        for (Stage stage : StageHelper.getStages()) {
-            if (stage.getScene() instanceof FloatingScene) {
-                findDetachableTabPanes(stage.getScene().getRoot(), detachableTabPanes);
+        for (Window window : Window.getWindows()) {
+            if (window.getScene() instanceof FloatingScene) {
+                findDetachableTabPanes(window.getScene().getRoot(), detachableTabPanes);
             }
         }
         return detachableTabPanes;
