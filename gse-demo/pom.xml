@@ -23,17 +23,6 @@
     <description>A demonstration module of GSE</description>
 
     <profiles>
-      <profile>
-          <id>windows</id>
-          <activation>
-            <os>
-              <family>windows</family>
-            </os>
-          </activation>
-          <properties>
-            <javafx.bundler>windows.app</javafx.bundler>
-          </properties>
-        </profile>
         <profile>
             <id>windows</id>
             <activation>
@@ -42,7 +31,7 @@
                 </os>
             </activation>
             <properties>
-                <jpackage.archive>openjdk-13-jpackage+49_windows-x64_bin.zip</jpackage.archive>
+                <jpackage.archive>openjdk-14-ea+33_windows-x64_bin.zip</jpackage.archive>
                 <jpackage.zip>true</jpackage.zip>
                 <powsybl-logo>logo.ico</powsybl-logo>
                 <gtk2-linux-jvm-arg/>
@@ -56,7 +45,7 @@
                 </os>
             </activation>
             <properties>
-                <jpackage.archive>openjdk-13-jpackage+49_osx-x64_bin.tar.gz</jpackage.archive>
+                <jpackage.archive>openjdk-14-ea+33_osx-x64_bin.tar.gz</jpackage.archive>
                 <jpackage.tar>true</jpackage.tar>
                 <powsybl-logo>logo.png</powsybl-logo>
                 <gtk2-linux-jvm-arg/>
@@ -70,7 +59,7 @@
                 </os>
             </activation>
             <properties>
-                <jpackage.archive>openjdk-13-jpackage+49_linux-x64_bin.tar.gz</jpackage.archive>
+                <jpackage.archive>openjdk-14-ea+33_linux-x64_bin.tar.gz</jpackage.archive>
                 <jpackage.tar>true</jpackage.tar>
                 <powsybl-logo>logo.png</powsybl-logo>
                 <gtk2-linux-jvm-arg>-Djdk.gtk.version=2</gtk2-linux-jvm-arg>
@@ -155,7 +144,7 @@
                                     <goal>wget</goal>
                                 </goals>
                                 <configuration>
-                                    <url>https://download.java.net/java/early_access/jpackage/49/${jpackage.archive}</url>
+                                    <url>https://download.java.net/java/early_access/jdk14/33/GPL/${jpackage.archive}</url>
                                 </configuration>
                             </execution>
                         </executions>
@@ -186,7 +175,7 @@
                                 <configuration>
                                     <target name="untar" if="${jpackage.tar}">
                                         <untar src="${project.build.directory}/${jpackage.archive}" compression="gzip" dest="${project.build.directory}/jpackage"/>
-                                        <chmod file="${project.build.directory}/jpackage/jdk-13/bin/jpackage" perm="u+x"/>
+                                        <chmod file="${project.build.directory}/jpackage/jdk-14/bin/jpackage" perm="u+x"/>
                                     </target>
                                 </configuration>
                             </execution>
@@ -277,11 +266,12 @@
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <executable>${project.build.directory}/jpackage/jdk-13/bin/jpackage</executable>
+                                    <executable>${project.build.directory}/jpackage/jdk-14/bin/jpackage</executable>
                                     <workingDirectory>${project.build.directory}</workingDirectory>
                                     <arguments>
                                         <!-- packager arguments -->
-                                        <argument>create-app-image</argument>
+                                        <argument>--type</argument>
+                                        <argument>app-image</argument>
                                         <argument>--verbose</argument>
                                         <argument>--input</argument>
                                         <argument>jpackage-input</argument>
@@ -289,12 +279,12 @@
                                         <argument>com.powsybl.gse.demo.GseDemo</argument>
                                         <argument>--main-jar</argument>
                                         <argument>lib/${project.artifactId}-${project.version}.jar</argument>
-                                        <argument>--output</argument>
+                                        <argument>--dest</argument>
                                         <argument>${project.build.directory}/native</argument>
                                         <argument>--runtime-image</argument>
                                         <argument>${project.build.directory}/jlink-runtime</argument>
-                                        <argument>--identifier</argument>
-                                        <argument>com.powsybl.gse.demo</argument>
+<!--                                        <argument>&#45;&#45;identifier</argument>-->
+<!--                                        <argument>com.powsybl.gse.demo</argument>-->
                                         <argument>--name</argument>
                                         <argument>gse</argument>
                                         <argument>--app-version</argument>
