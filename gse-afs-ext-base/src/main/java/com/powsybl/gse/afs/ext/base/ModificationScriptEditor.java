@@ -9,10 +9,7 @@ package com.powsybl.gse.afs.ext.base;
 import com.powsybl.afs.ext.base.AbstractScript;
 import com.powsybl.afs.ext.base.ScriptListener;
 import com.powsybl.afs.ext.base.ScriptType;
-import com.powsybl.afs.storage.events.AppStorageListener;
-import com.powsybl.afs.storage.events.DependencyAdded;
-import com.powsybl.afs.storage.events.DependencyRemoved;
-import com.powsybl.afs.storage.events.NodeEvent;
+import com.powsybl.afs.storage.events.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.GseContext;
@@ -122,7 +119,7 @@ public class ModificationScriptEditor extends BorderPane
 
         codeEditor = getCodeEditor();
 
-        appStorageListener = eventList -> eventList.getEvents().forEach(nodeEvent -> Platform.runLater(() -> updateDependenciesView(abstractScript, nodeEvent)));
+        appStorageListener = eventList -> eventList.getEvents().forEach(nodeEvent -> Platform.runLater(() -> handleEvent(nodeEvent)));
 
         abstractScript.getFileSystem().getEventBus().addListener(appStorageListener);
         //Adding  autocompletion keywords suggestions depending the context
@@ -184,20 +181,23 @@ public class ModificationScriptEditor extends BorderPane
         abstractScript.addListener(this);
     }
 
-    private void updateDependenciesView(AbstractScript abstractScript, NodeEvent nodeEvent) {
-        boolean nodeEventEqualsAbstractScript = nodeEvent.getId().equals(abstractScript.getId());
-        boolean oneOrMoreDependenciesHaveChanged = this.abstractScript.getIncludedScripts().stream().anyMatch(includeScript -> includeScript.getId().equals(nodeEvent.getId()));
-        if (oneOrMoreDependenciesHaveChanged || nodeEventEqualsAbstractScript) {
-            boolean isDependencyAddedType = DependencyAdded.TYPENAME.equals(nodeEvent.getType());
-            boolean isDependencyRemovedType = DependencyRemoved.TYPENAME.equals(nodeEvent.getType());
-
-            boolean dependenciesAreAddedOrRemoved = nodeEventEqualsAbstractScript && (isDependencyAddedType || isDependencyRemovedType);
-
-            if (dependenciesAreAddedOrRemoved || oneOrMoreDependenciesHaveChanged) {
-                abstractScript.clearDependenciesCache();
-                updateIncludePane();
-            }
+    private void handleEvent(NodeEvent nodeEvent) {
+        if (numberOfDependenciesHaveChanged(nodeEvent)) {
+            updateIncludePane();
+        } else if (dependenciesHaveChanged(nodeEvent)) {
+            abstractScript.clearDependenciesCache();
+            updateIncludePane();
         }
+    }
+
+    private boolean numberOfDependenciesHaveChanged(NodeEvent nodeEvent) {
+        return nodeEvent.getId().equals(abstractScript.getId()) && (DependencyAdded.TYPENAME.equals(nodeEvent.getType()) || DependencyRemoved.TYPENAME.equals(nodeEvent.getType()));
+    }
+
+    private boolean dependenciesHaveChanged(NodeEvent nodeEvent) {
+        return abstractScript.getIncludedScripts().stream()
+                .anyMatch(script -> nodeEvent.getId().equals(script.getId())
+                        && (NodeNameUpdated.TYPENAME.equals(nodeEvent.getType()) || NodeDataUpdated.TYPENAME.equals(nodeEvent.getType())));
     }
 
     private void addIncludedScript(Scene scene, GseContext context) {
