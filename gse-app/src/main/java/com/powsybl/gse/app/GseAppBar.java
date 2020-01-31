@@ -6,7 +6,9 @@
  */
 package com.powsybl.gse.app;
 
+import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.BrandingConfig;
+import com.powsybl.gse.spi.GseAppExtension;
 import com.powsybl.gse.spi.GseAuthenticator;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.util.Glyph;
@@ -20,6 +22,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.text.Text;
 
+import java.util.List;
 import java.util.ResourceBundle;
 
 /**
@@ -28,6 +31,7 @@ import java.util.ResourceBundle;
 public class GseAppBar extends HBox {
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.GseAppBar");
+    private static final ServiceLoaderCache<GseAppExtension> APP_EXTENSION = new ServiceLoaderCache<>(GseAppExtension.class);
 
     private final Button createButton;
 
@@ -38,6 +42,10 @@ public class GseAppBar extends HBox {
     private UserSessionPane userSessionPane;
 
     public GseAppBar(GseContext context, BrandingConfig brandingConfig) {
+        this(context, brandingConfig, null);
+    }
+
+    public GseAppBar(GseContext context, BrandingConfig brandingConfig, List<Button> extButtons) {
         getStyleClass().add("gse-app-bar");
         setPadding(new Insets(3, 5, 3, 5));
         setAlignment(Pos.CENTER_LEFT);
@@ -45,9 +53,9 @@ public class GseAppBar extends HBox {
         Region logo = brandingConfig.getLogo();
         logo.setPrefSize(32, 32);
 
-        createButton = createButton(RESOURCE_BUNDLE.getString("Create"), null);
+        createButton = createButton(RESOURCE_BUNDLE.getString("Create"));
         createButton.getStyleClass().add("gse-app-bar-text");
-        openButton = createButton(RESOURCE_BUNDLE.getString("Open"), null);
+        openButton = createButton(RESOURCE_BUNDLE.getString("Open"));
         openButton.getStyleClass().add("gse-app-bar-text");
 
         Text questionGlyph = Glyph.createAwesomeFont('\uf059');
@@ -58,7 +66,13 @@ public class GseAppBar extends HBox {
         Pane gluePanel = new Pane();
         setHgrow(gluePanel, Priority.ALWAYS);
 
-        getChildren().addAll(logo, createButton, openButton, gluePanel);
+        getChildren().addAll(logo, createButton, openButton);
+
+        if (extButtons != null) {
+            getChildren().addAll(extButtons);
+        }
+
+        getChildren().add(gluePanel);
         GseAuthenticator.find().ifPresent(authenticator -> {
             userSessionPane = new UserSessionPane(context, authenticator);
             getChildren().add(userSessionPane);
@@ -66,9 +80,16 @@ public class GseAppBar extends HBox {
         getChildren().add(helpButton);
     }
 
-    private static Button createButton(String text, Node graphic) {
+    static Button createButton(String text, Node graphic) {
         Button createButton = new Button(text, graphic);
         createButton.getStyleClass().add("gse-app-bar-button");
+        return createButton;
+    }
+
+    static Button createButton(String text) {
+        Button createButton = new Button(text, null);
+        createButton.getStyleClass().add("gse-app-bar-button");
+        createButton.getStyleClass().add("gse-app-bar-text");
         return createButton;
     }
 
