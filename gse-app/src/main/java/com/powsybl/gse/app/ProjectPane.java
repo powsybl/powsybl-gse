@@ -12,6 +12,10 @@ import com.panemu.tiwulfx.control.DetachableTabPane;
 import com.powsybl.afs.*;
 import com.powsybl.afs.storage.AppStorage;
 import com.powsybl.afs.storage.NodeInfo;
+import com.powsybl.afs.storage.events.AppStorageListener;
+import com.powsybl.afs.storage.events.DependencyAdded;
+import com.powsybl.afs.storage.events.NodeDataUpdated;
+import com.powsybl.afs.storage.events.NodeEvent;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.copy_paste.afs.CopyManager;
 import com.powsybl.gse.copy_paste.afs.CopyService;
@@ -26,6 +30,7 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.geometry.Orientation;
@@ -84,6 +89,7 @@ public class ProjectPane extends Tab {
     private final TaskMonitorPane taskMonitorPane;
     private final Map<String, ProjectPaneProjectFolderListener> lCache = new HashMap<>();
     private final CopyManager localArchiveManager = CopyManager.getInstance();
+    private final AppStorageListener appStorageListener;
 
     public ProjectPane(Scene scene, Project project, GseContext context) {
         this.project = Objects.requireNonNull(project);
@@ -93,6 +99,9 @@ public class ProjectPane extends Tab {
         taskMonitorPane = new TaskMonitorPane(taskItems);
         copyService = initCopyService();
         treeView = createProjectTreeview();
+
+        appStorageListener = eventList -> eventList.getEvents().forEach(this::handleEvent);
+        project.getFileSystem().getEventBus().addListener(appStorageListener);
 
         DetachableTabPane ctrlTabPane1 = new DetachableTabPane();
         DetachableTabPane ctrlTabPane2 = new DetachableTabPane();
@@ -159,6 +168,28 @@ public class ProjectPane extends Tab {
                 }
             }
         };
+    }
+
+    private void handleEvent(NodeEvent nodeEvent) {
+        if (NodeDataUpdated.TYPENAME.equals(nodeEvent.getType()) || DependencyAdded.TYPENAME.equals(nodeEvent.getType())) {
+            ProjectFile projectFile = project.getFileSystem().findProjectFile(nodeEvent.getId(), ProjectFile.class);
+            if (projectFile != null) {
+                List<TreeItem<Object>> allVisibleTreeItems = new ArrayList<>();
+                findAllVisibleTreeItems(treeView.getRoot(), allVisibleTreeItems);
+                Optional<TreeItem<Object>> projectFileItem = allVisibleTreeItems.stream()
+                        .filter(item -> ((ProjectNode) item.getValue()).getId().equals(projectFile.getId()))
+                        .findFirst();
+                projectFileItem.ifPresent(treeItem -> refresh(treeItem.getParent()));
+            }
+        }
+    }
+
+    private void findAllVisibleTreeItems(TreeItem<Object> folderTreeItem, List<TreeItem<Object>> allVisibleTreeItems) {
+        ObservableList<TreeItem<Object>> children = folderTreeItem.getChildren();
+        allVisibleTreeItems.addAll(children);
+        children.stream()
+                .filter(item -> ((ProjectNode) item.getValue()).isFolder() && item.isExpanded())
+                .forEach(folderItem -> findAllVisibleTreeItems(folderItem, allVisibleTreeItems));
     }
 
     private Optional<CopyService> initCopyService() {
