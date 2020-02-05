@@ -689,7 +689,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 InfoDialog infoDialog = new InfoDialog(String.format(RESOURCE_BUNDLE.getString("ArchiveTask"), item.getName()), true);
                 try {
                     Utils.checkDiskSpace(selectedDirectory.toPath());
-                    item.archive(selectedDirectory.toPath(), true);
+                    item.archive(selectedDirectory.toPath(), true, false);
                     infoDialog.updateStage(RESOURCE_BUNDLE.getString("CompleteTask"));
                     LOGGER.info("Archiving node {} ({}) is complete", item.getName(), item.getId());
                 } catch (AfsException | IOException e) {

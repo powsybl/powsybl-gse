@@ -12,7 +12,6 @@ import com.panemu.tiwulfx.control.DetachableTabPane;
 import com.powsybl.afs.*;
 import com.powsybl.afs.storage.AppStorage;
 import com.powsybl.afs.storage.NodeInfo;
-import com.powsybl.afs.storage.Utils;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.copy_paste.afs.CopyManager;
 import com.powsybl.gse.copy_paste.afs.CopyService;
@@ -39,7 +38,6 @@ import javafx.scene.input.*;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
-import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
@@ -671,7 +669,7 @@ public class ProjectPane extends Tab {
     private GseMenuItem createArchiveMenuItem(TreeItem<Object> selectedTreeItem) {
         GseMenuItem archiveMenuItem = GseMenuItem.createArchiveMenuItem();
         archiveMenuItem.setDisable(!(selectedTreeItem.getValue() instanceof AbstractNodeBase));
-        archiveMenuItem.setOnAction(event -> archive((AbstractNodeBase) selectedTreeItem.getValue()));
+        archiveMenuItem.setOnAction(event -> archive(selectedTreeItem));
         return archiveMenuItem;
     }
 
@@ -681,23 +679,21 @@ public class ProjectPane extends Tab {
         return unarchiveMenuItem;
     }
 
-    private void archive(AbstractNodeBase item) {
-        DirectoryChooser directoryChooser = new DirectoryChooser();
-        java.io.File selectedDirectory = directoryChooser.showDialog(getContent().getScene().getWindow());
-        if (selectedDirectory != null) {
-            context.getExecutor().execute(() -> {
-                TaskMonitor.Task task = project.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("ArchiveTask"), selectedDirectory.getName()), project);
-                try {
-                    Utils.checkDiskSpace(selectedDirectory.toPath());
-                    item.archive(selectedDirectory.toPath(), true);
-                    LOGGER.info("Archiving node {} ({}) is complete", item.getName(), item.getId());
-                } catch (AfsException | IOException e) {
-                    GseAlerts.showDialogError(e.getMessage());
-                    LOGGER.error("Archiving has failed for node {}", item.getId(), e);
-                } finally {
-                    project.getFileSystem().getTaskMonitor().stopTask(task.getId());
-                }
+    private void archive(TreeItem<Object> item) {
+        ArchivePane archivePane = new ArchivePane((ProjectNode) item.getValue(), getContent().getScene(), context);
+        Dialog<Boolean> dialog = createProjectItemDialog(archivePane.getTitle(), archivePane.okProperty(), archivePane.getContent());
+        try {
+            dialog.showAndWait().filter(result -> result).ifPresent(result -> {
+                GseUtil.execute(context.getExecutor(), () -> {
+                    try {
+                        archivePane.run(project);
+                    } finally {
+                        Platform.runLater(() -> refresh(item));
+                    }
+                });
             });
+        } finally {
+            dialog.close();
         }
     }
 
@@ -1138,17 +1134,15 @@ public class ProjectPane extends Tab {
         if (copyService.isPresent()) {
             items.add(createPasteProjectNodeItem(selectedTreeItem).order(102));
         }
-        if (folder != null && (folder.getChildren() == null || folder.getChildren().isEmpty())) {
-            items.add(createUnarchiveMenuItem(selectedTreeItem).order(110));
-        }
         if (selectedTreeItem != treeView.getRoot()) {
             items.add(createRenameProjectNodeItem(selectedTreeItem).order(100));
             if (copyService.isPresent()) {
                 items.add(createCopyProjectNodeItem(Collections.singletonList(selectedTreeItem)).order(101));
             }
-            items.add(createArchiveMenuItem(selectedTreeItem).order(109));
             items.add(createDeleteProjectNodeItem(Collections.singletonList(selectedTreeItem)).order(108));
         }
+        items.add(createArchiveMenuItem(selectedTreeItem).order(109));
+        items.add(createUnarchiveMenuItem(selectedTreeItem).order(110));
 
         items.sort(Comparator.comparing(GseMenuItem::getOrder));
         contextMenu.getItems().addAll(items);
