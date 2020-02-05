@@ -52,7 +52,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private boolean success;
     private Set<String> openedProjects = new HashSet<>();
     private SimpleBooleanProperty deleteMenuItemDisableProperty = new SimpleBooleanProperty(false);
-    private final CopyManager localArchiveManager = CopyManager.getInstance();
 
     private BooleanProperty copied = new SimpleBooleanProperty(false);
 
