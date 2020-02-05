@@ -168,16 +168,23 @@ public class ProjectPane extends Tab {
     }
 
     private void handleEvent(NodeEvent nodeEvent) {
-        if (NodeNameUpdated.TYPENAME.equals(nodeEvent.getType()) || NodeDataUpdated.TYPENAME.equals(nodeEvent.getType()) || DependencyAdded.TYPENAME.equals(nodeEvent.getType())) {
-            ProjectFile projectFile = project.getFileSystem().findProjectFile(nodeEvent.getId(), ProjectFile.class);
-            if (projectFile != null) {
-                List<TreeItem<Object>> allVisibleTreeItems = new ArrayList<>();
-                findAllVisibleTreeItems(treeView.getRoot(), allVisibleTreeItems);
-                Optional<TreeItem<Object>> projectFileItem = allVisibleTreeItems.stream()
-                        .filter(item -> ((ProjectNode) item.getValue()).getId().equals(projectFile.getId()))
-                        .findFirst();
-                projectFileItem.ifPresent(treeItem -> refresh(treeItem.getParent()));
-            }
+        ProjectFile projectFile = project.getFileSystem().findProjectFile(nodeEvent.getId(), ProjectFile.class);
+        if (NodeDataUpdated.TYPENAME.equals(nodeEvent.getType()) || DependencyAdded.TYPENAME.equals(nodeEvent.getType())) {
+            refreshProjectFile(projectFile);
+        } else if (NodeNameUpdated.TYPENAME.equals(nodeEvent.getType())) {
+            List<ProjectFile> backwardDependencies = projectFile.getBackwardDependencies();
+            backwardDependencies.forEach(this::refreshProjectFile);
+        }
+    }
+
+    private void refreshProjectFile(ProjectFile projectFile) {
+        if (projectFile != null) {
+            List<TreeItem<Object>> allVisibleTreeItems = new ArrayList<>();
+            findAllVisibleTreeItems(treeView.getRoot(), allVisibleTreeItems);
+            Optional<TreeItem<Object>> projectFileItem = allVisibleTreeItems.stream()
+                    .filter(item -> ((ProjectNode) item.getValue()).getId().equals(projectFile.getId()))
+                    .findFirst();
+            projectFileItem.ifPresent(treeItem -> refresh(treeItem.getParent()));
         }
     }
 
