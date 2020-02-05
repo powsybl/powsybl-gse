@@ -12,10 +12,7 @@ import com.panemu.tiwulfx.control.DetachableTabPane;
 import com.powsybl.afs.*;
 import com.powsybl.afs.storage.AppStorage;
 import com.powsybl.afs.storage.NodeInfo;
-import com.powsybl.afs.storage.events.AppStorageListener;
-import com.powsybl.afs.storage.events.DependencyAdded;
-import com.powsybl.afs.storage.events.NodeDataUpdated;
-import com.powsybl.afs.storage.events.NodeEvent;
+import com.powsybl.afs.storage.events.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.copy_paste.afs.CopyManager;
 import com.powsybl.gse.copy_paste.afs.CopyService;
@@ -171,7 +168,7 @@ public class ProjectPane extends Tab {
     }
 
     private void handleEvent(NodeEvent nodeEvent) {
-        if (NodeDataUpdated.TYPENAME.equals(nodeEvent.getType()) || DependencyAdded.TYPENAME.equals(nodeEvent.getType())) {
+        if (NodeNameUpdated.TYPENAME.equals(nodeEvent.getType()) || NodeDataUpdated.TYPENAME.equals(nodeEvent.getType()) || DependencyAdded.TYPENAME.equals(nodeEvent.getType())) {
             ProjectFile projectFile = project.getFileSystem().findProjectFile(nodeEvent.getId(), ProjectFile.class);
             if (projectFile != null) {
                 List<TreeItem<Object>> allVisibleTreeItems = new ArrayList<>();
