@@ -169,31 +169,34 @@ public class ProjectPane extends Tab {
 
     private void handleEvent(NodeEvent nodeEvent) {
         ProjectFile projectFile = project.getFileSystem().findProjectFile(nodeEvent.getId(), ProjectFile.class);
-        if (NodeDataUpdated.TYPENAME.equals(nodeEvent.getType()) || DependencyAdded.TYPENAME.equals(nodeEvent.getType())) {
-            refreshProjectFile(projectFile);
-        } else if (NodeNameUpdated.TYPENAME.equals(nodeEvent.getType())) {
-            List<ProjectFile> backwardDependencies = projectFile.getBackwardDependencies();
-            backwardDependencies.forEach(this::refreshProjectFile);
+        if (projectFile.getProject().getId().equals(getProject().getId())) {
+            if (NodeDataUpdated.TYPENAME.equals(nodeEvent.getType()) || DependencyAdded.TYPENAME.equals(nodeEvent.getType())) {
+                refreshProjectFile(projectFile);
+            } else if (NodeNameUpdated.TYPENAME.equals(nodeEvent.getType())) {
+                List<ProjectFile> backwardDependencies = projectFile.getBackwardDependencies();
+                backwardDependencies.forEach(this::refreshProjectFile);
+            }
         }
     }
 
     private void refreshProjectFile(ProjectFile projectFile) {
         if (projectFile != null) {
-            List<TreeItem<Object>> allVisibleTreeItems = new ArrayList<>();
-            findAllVisibleTreeItems(treeView.getRoot(), allVisibleTreeItems);
-            Optional<TreeItem<Object>> projectFileItem = allVisibleTreeItems.stream()
+            List<TreeItem<Object>> allTreeItems = new ArrayList<>();
+            findAllTreeItems(treeView.getRoot(), allTreeItems);
+            System.out.println(allTreeItems);
+            Optional<TreeItem<Object>> projectFileItem = allTreeItems.stream()
                     .filter(item -> ((ProjectNode) item.getValue()).getId().equals(projectFile.getId()))
                     .findFirst();
             projectFileItem.ifPresent(treeItem -> refresh(treeItem.getParent()));
         }
     }
 
-    private void findAllVisibleTreeItems(TreeItem<Object> folderTreeItem, List<TreeItem<Object>> allVisibleTreeItems) {
+    private void findAllTreeItems(TreeItem<Object> folderTreeItem, List<TreeItem<Object>> allVisibleTreeItems) {
         ObservableList<TreeItem<Object>> children = folderTreeItem.getChildren();
         allVisibleTreeItems.addAll(children);
         children.stream()
-                .filter(item -> ((ProjectNode) item.getValue()).isFolder() && item.isExpanded())
-                .forEach(folderItem -> findAllVisibleTreeItems(folderItem, allVisibleTreeItems));
+                .filter(item -> ((ProjectNode) item.getValue()).isFolder())
+                .forEach(folderItem -> findAllTreeItems(folderItem, allVisibleTreeItems));
     }
 
     private Optional<CopyService> initCopyService() {
