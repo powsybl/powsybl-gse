@@ -59,7 +59,6 @@ public class ArchivePane <T extends ProjectNode> extends GridPane {
     public ArchivePane(T node, Scene scene, GseContext context) {
         this.node = Objects.requireNonNull(node);
 
-        Project project = node.getProject();
         nameTextField = NameTextField.create(node);
         setVgap(5);
         setHgap(5);

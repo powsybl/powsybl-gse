@@ -12,6 +12,7 @@ import com.panemu.tiwulfx.control.DetachableTabPane;
 import com.powsybl.afs.*;
 import com.powsybl.afs.storage.AppStorage;
 import com.powsybl.afs.storage.NodeInfo;
+import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.copy_paste.afs.CopyManager;
 import com.powsybl.gse.copy_paste.afs.CopyService;
@@ -48,6 +49,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -698,7 +700,7 @@ public class ProjectPane extends Tab {
     }
 
     private void unarchiveItems(TreeItem<Object> folderItem) {
-        Object folder = folderItem.getValue();
+        ProjectFolder folder = (ProjectFolder) folderItem.getValue();
         if (!(folder instanceof ProjectFolder)) {
             throw new IllegalStateException("Can't unarchive item if target is not a project folder!");
         }
@@ -710,7 +712,14 @@ public class ProjectPane extends Tab {
             context.getExecutor().execute(() -> {
                 TaskMonitor.Task task = project.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("UnarchiveTask"), selectedFile.getName()), project);
                 try {
-                    ((ProjectFolder) folder).unarchive(selectedFile.toPath(), true);
+                    String filename = selectedFile.getName();
+                    filename = filename.substring(0, filename.length() - 4);
+                    Optional<ProjectNode> child = folder.getChild(filename);
+                    if (child.isPresent()) {
+                        replaceNode(folder, filename, selectedFile.toPath(), getContent().getScene());
+                    } else {
+                        folder.unarchive(selectedFile.toPath(), true);
+                    }
                     Platform.runLater(() -> refresh(folderItem));
                 } catch (Exception e) {
                     Platform.runLater(() -> GseAlerts.showDialogError(e.getMessage()));
@@ -719,6 +728,44 @@ public class ProjectPane extends Tab {
                 }
             });
         }
+    }
+
+    private void replaceNode(ProjectFolder folder, String name, Path archivePath, Scene scene) {
+        Optional<ButtonType> result = GseUtil.runOnPlatformAndWait(() -> GseAlerts.showReplaceAndQuitDialog(folder.getName(), name).orElse(null));
+        result.ifPresent(buttonType -> {
+            if (buttonType.getButtonData() == ButtonBar.ButtonData.YES) {
+                folder.getChild(name).ifPresent(projectNode -> {
+                    List<ProjectFile> backwardDependencies = projectNode.getBackwardDependencies();
+                    projectNode.rename("temporaryName" + UUID.randomUUID());
+                    try {
+                        ProjectFolder newFolder = folder.createFolder(name);
+                        newFolder.unarchive(archivePath, true);
+                        Optional<ProjectNode> importedNode = folder.getChild(name);
+                        if (importedNode.isPresent()) {
+                            backwardDependencies.forEach(projectFile -> projectFile.replaceDependency(projectNode.getId(), importedNode.get()));
+                            projectNode.delete();
+                        } else {
+                            projectNode.rename(name);
+                        }
+                    } catch (PowsyblException e) {
+                        LOGGER.error("Failed to build timeserie store", e);
+                        projectNode.rename(name);
+                    }
+                });
+            } else if (buttonType.getButtonData() == ButtonBar.ButtonData.OTHER) {
+                folder.getChild(name).ifPresent(projectNode -> {
+                    Optional<String> text = GseUtil.runOnPlatformAndWait(() -> RenamePane.showAndWaitDialog(scene.getWindow(), projectNode).orElse(null));
+                    text.ifPresent(newName -> {
+                        if (!folder.getChild(newName).isPresent()) {
+                            ProjectFolder newFolder = folder.createFolder(newName);
+                            newFolder.unarchive(archivePath, true);
+                        } else {
+                            LOGGER.warn("The renaming was not completed");
+                        }
+                    });
+                });
+            }
+        });
     }
 
     private GseMenuItem createCopyProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
