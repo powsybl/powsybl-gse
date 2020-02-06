@@ -327,7 +327,7 @@ public final class CopyManager {
                 .append(COPY_INFO_SEPARATOR)
                 .append(fileSystemName)
                 .append(COPY_INFO_SEPARATOR);
-        nodes.forEach(nod -> copyParameters.append(nod.getId()).append(COPY_NODE_INFO_SEPARATOR).append(node.getName().replaceAll(COPY_INFO_SEPARATOR, "").replaceAll(COPY_NODE_INFO_SEPARATOR, "")).append(COPY_INFO_SEPARATOR));
+        nodes.forEach(nod -> copyParameters.append(nod.getId()).append(COPY_NODE_INFO_SEPARATOR).append(nod.getName().replaceAll(COPY_INFO_SEPARATOR, "").replaceAll(COPY_NODE_INFO_SEPARATOR, "")).append(COPY_INFO_SEPARATOR));
         return copyParameters;
     }
 
