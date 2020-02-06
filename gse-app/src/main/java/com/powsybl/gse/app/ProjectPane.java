@@ -718,7 +718,8 @@ public class ProjectPane extends Tab {
                     if (child.isPresent()) {
                         replaceNode(folder, filename, selectedFile.toPath(), getContent().getScene());
                     } else {
-                        folder.unarchive(selectedFile.toPath(), true);
+                        ProjectFolder childFolder = folder.createFolder(filename);
+                        childFolder.unarchive(selectedFile.toPath(), true);
                     }
                     Platform.runLater(() -> refresh(folderItem));
                 } catch (Exception e) {
