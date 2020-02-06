@@ -9,7 +9,6 @@ package com.powsybl.gse.copy_paste.afs;
 import com.powsybl.afs.AbstractNodeBase;
 import com.powsybl.gse.copy_paste.afs.exceptions.CopyPasteException;
 
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -17,9 +16,9 @@ import java.util.List;
  */
 public interface CopyService {
 
-    void copyPaste(String fileSystemName, List<? extends AbstractNodeBase> nodes, AbstractNodeBase targetFolder) throws CopyPasteException, IOException;
+    void copyPaste(String fileSystemName, List<? extends AbstractNodeBase> nodes, AbstractNodeBase targetFolder) throws CopyPasteException;
 
     void copy(String fileSystemName, List<? extends AbstractNodeBase> nodes) throws CopyPasteException;
 
-    void paste(String fileSystemName, List<String> nodesIds, AbstractNodeBase folder) throws CopyPasteException, IOException;
+    void paste(String fileSystemName, List<String> nodesIds, AbstractNodeBase folder) throws CopyPasteException;
 }
