@@ -7,6 +7,7 @@
 package com.powsybl.gse.copy_paste.afs;
 
 import com.powsybl.afs.*;
+import com.powsybl.afs.storage.Utils;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.computation.local.LocalComputationManager;
 import com.powsybl.gse.copy_paste.afs.exceptions.*;
@@ -37,7 +38,6 @@ public final class CopyManager {
     private static final String NODE_COPY_TYPE = "@NODE@";
     private static final String COPY_SIGNATURE = "@COPY_SIGNATURE@";
     private static final long COPY_EXPIRATION_TIME = 6;
-    private static final long MIN_DISK_SPACE_THRESHOLD = 10;
     private static final Logger LOGGER = LoggerFactory.getLogger(CopyManager.class);
     private static final String TEMP_DIR_PREFIX = "powsybl_node_export";
     private static final long CLEANUP_DELAY = 36000;
@@ -105,14 +105,6 @@ public final class CopyManager {
                 copyInfo.nodeId = node.getId();
                 copyInfo.node = node;
                 copyInfo.archivePath = resolveArchiveTargetDirectory(targetDirectory);
-
-                File archiveFile = copyInfo.archivePath.toFile();
-                long freeSpacePercent = 100 * archiveFile.getFreeSpace() / archiveFile.getTotalSpace();
-                LOGGER.info("Copying into drive with {}% free space", freeSpacePercent);
-                if (freeSpacePercent < MIN_DISK_SPACE_THRESHOLD) {
-                    throw new CopyPasteException("Not enough space");
-                }
-
                 copyInfo.expirationDate = ZonedDateTime.now().plusHours(COPY_EXPIRATION_TIME);
 
                 currentCopies.put(copyInfo.nodeId, copyInfo);
@@ -120,6 +112,7 @@ public final class CopyManager {
                 LOGGER.info("Copying (archiving) node {} ({})", node.getName(), node.getId());
                 logger.accept(String.format("Copying node %s", copyInfo.getNode().getName()));
                 try {
+                    Utils.checkDiskSpace(copyInfo.archivePath);
                     node.archive(copyInfo.archivePath);
                     copyInfo.archiveSuccess = true;
                     LOGGER.info("Copying (archiving) node {} ({}) is complete", node.getName(), node.getId());
@@ -276,7 +269,7 @@ public final class CopyManager {
         throw new CopyPasteException("Failed to rename new node");
     }
 
-    private String renameSameTypeNode(ProjectFolder projectFolder, AbstractNodeBase child, CopyInfo info) throws CopyPasteFileAlreadyExistException {
+    private String renameSameTypeNode(ProjectFolder projectFolder, AbstractNodeBase child, CopyInfo info) {
         String name = info.node.getName();
         String copyDuplicated = " - " + "Copy";
         String copyNameBaseName = name + copyDuplicated;
@@ -304,7 +297,6 @@ public final class CopyManager {
 
                 newNode.rename(copyName.get());
             });
-
         } finally {
             child.rename(name);
         }

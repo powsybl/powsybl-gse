@@ -7,9 +7,9 @@
 package com.powsybl.gse.util;
 
 import com.powsybl.afs.*;
+import com.powsybl.afs.storage.Utils;
 import com.powsybl.gse.copy_paste.afs.CopyManager;
 import com.powsybl.gse.copy_paste.afs.CopyService;
-import com.powsybl.gse.copy_paste.afs.exceptions.CopyPasteException;
 import com.powsybl.gse.spi.GseContext;
 import impl.org.controlsfx.skin.BreadCrumbBarSkin;
 import javafx.application.Platform;
@@ -25,15 +25,13 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.Text;
-import javafx.stage.DirectoryChooser;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
-import javafx.stage.Window;
+import javafx.stage.*;
 import javafx.util.Callback;
 import org.controlsfx.control.BreadCrumbBar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.prefs.Preferences;
@@ -54,7 +52,6 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
     private boolean success;
     private Set<String> openedProjects = new HashSet<>();
     private SimpleBooleanProperty deleteMenuItemDisableProperty = new SimpleBooleanProperty(false);
-    private final CopyManager localArchiveManager = CopyManager.getInstance();
 
     private BooleanProperty copied = new SimpleBooleanProperty(false);
 
@@ -691,11 +688,14 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             context.getExecutor().execute(() -> {
                 InfoDialog infoDialog = new InfoDialog(String.format(RESOURCE_BUNDLE.getString("ArchiveTask"), item.getName()), true);
                 try {
-                    localArchiveManager.copy(Collections.singletonList(item), selectedDirectory);
+                    Utils.checkDiskSpace(selectedDirectory.toPath());
+                    item.archive(selectedDirectory.toPath(), true);
                     infoDialog.updateStage(RESOURCE_BUNDLE.getString("CompleteTask"));
-                } catch (CopyPasteException e) {
+                    LOGGER.info("Archiving node {} ({}) is complete", item.getName(), item.getId());
+                } catch (AfsException | IOException e) {
                     Platform.runLater(() -> GseAlerts.showDialogError(e.getMessage()));
                     infoDialog.updateStage(RESOURCE_BUNDLE.getString("ErrorTask"), Color.RED);
+                    LOGGER.error("Archiving has failed for node {}", item.getId(), e);
                 }
             });
         }
@@ -707,13 +707,14 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
             throw new IllegalStateException("Can't unarchive item if target is not a folder!");
         }
 
-        DirectoryChooser directoryChooser = new DirectoryChooser();
-        java.io.File selectedDirectory = directoryChooser.showDialog(window);
-        if (selectedDirectory != null) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("ZIP", "*.zip"));
+        java.io.File selectedFile = fileChooser.showOpenDialog(window);
+        if (selectedFile != null) {
             context.getExecutor().execute(() -> {
-                InfoDialog infoDialog = new InfoDialog(String.format(RESOURCE_BUNDLE.getString("UnarchiveTask"), selectedDirectory.getName()), true);
+                InfoDialog infoDialog = new InfoDialog(String.format(RESOURCE_BUNDLE.getString("UnarchiveTask"), selectedFile.getName()), true);
                 try {
-                    ((Folder) folder).unarchive(selectedDirectory.toPath());
+                    ((Folder) folder).unarchive(selectedFile.toPath(), true);
                     infoDialog.updateStage(RESOURCE_BUNDLE.getString("CompleteTask"));
                     Platform.runLater(() -> refresh(folderItem));
                 } catch (Exception e) {
