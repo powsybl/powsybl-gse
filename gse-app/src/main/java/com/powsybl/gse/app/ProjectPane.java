@@ -673,6 +673,32 @@ public class ProjectPane extends Tab {
 
     // contextual menu
 
+    private GseMenuItem createMultipleDependenciesFileItem(List<? extends TreeItem<Object>> selectedTreeItems) {
+        GseMenuItem menuItem = null;
+        List<? extends Class<?>> selectedItemsTypes = selectedTreeItems.stream().map(iem -> iem.getValue().getClass()).collect(Collectors.toList());
+        int numberOfSelectedItems = selectedTreeItems.size();
+
+        for (Class<? extends ProjectFile> type : project.getFileSystem().getData().getProjectFileClasses()) {
+            for (ProjectFileCreatorExtension creatorExtension : findCreatorExtension(type)) {
+                if (creatorExtension != null && !creatorExtension.getDependenciesTypes().isEmpty()) {
+                    if (areAssignable(creatorExtension.getDependenciesTypes(), selectedItemsTypes) && creatorExtension.numberOfDependencies() == numberOfSelectedItems) {
+                        menuItem = new GseMenuItem(creatorExtension.getMenuText());
+                        menuItem.setOrder(creatorExtension.getMenuOrder());
+                        menuItem.setGraphic(creatorExtension.getMenuGraphic());
+                        menuItem.setAccelerator(creatorExtension.getMenuKeycode());
+                        menuItem.setOnAction(event -> showProjectItemCreatorDialogWithFilledPaths(selectedTreeItems, creatorExtension));
+                    }
+                }
+            }
+        }
+        return menuItem;
+    }
+
+    private boolean areAssignable(List<Class<?>> dependenciesTypes, List<? extends Class<?>> selectedItemsTypes) {
+        return dependenciesTypes.stream()
+                .allMatch(dependencyType -> selectedItemsTypes.stream().filter(dependencyType::isAssignableFrom).count() == 1);
+    }
+
     private GseMenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
         GseMenuItem deleteMenuItem = GseMenuItem.createDeleteMenuItem();
         deleteMenuItem.setOnAction(event -> deleteNodesAlert(selectedTreeItems));
@@ -1095,6 +1121,10 @@ public class ProjectPane extends Tab {
         if (copyService.isPresent()) {
             contextMenu.getItems().add(createCopyProjectNodeItem(selectedTreeItems));
         }
+        GseMenuItem multipleDependenciesFileItem = createMultipleDependenciesFileItem(selectedTreeItems);
+        if (multipleDependenciesFileItem != null) {
+            contextMenu.getItems().add(multipleDependenciesFileItem);
+        }
         contextMenu.getItems().add(createDeleteProjectNodeItem(selectedTreeItems));
         return contextMenu;
     }
@@ -1117,6 +1147,34 @@ public class ProjectPane extends Tab {
                     } finally {
                         tasks.remove(folder, task.getNamePreview());
                         Platform.runLater(() -> refresh(selectedTreeItem));
+                    }
+                });
+            });
+        } finally {
+            dialog.close();
+            creator.dispose();
+        }
+    }
+
+    private void showProjectItemCreatorDialogWithFilledPaths(List<? extends TreeItem<Object>> selectedTreeItems, ProjectFileCreatorExtension creatorExtension) {
+        TreeItem<Object> treeItem = selectedTreeItems.get(0);
+        List<ProjectFile> selectedFiles = selectedTreeItems.stream().map(item -> (ProjectFile) item.getValue()).collect(Collectors.toList());
+        ProjectFolder folder = (ProjectFolder) treeItem.getParent().getValue();
+        ProjectFileCreator creator = creatorExtension.newCreatorWithParameters(folder, getContent().getScene(), context, selectedFiles);
+        Dialog<Boolean> dialog = createProjectItemDialog(creator.getTitle(), creator.okProperty(), creator.getContent());
+        try {
+            dialog.showAndWait().filter(result -> result).ifPresent(result -> {
+                ProjectCreationTask task = creator.createTask();
+
+                tasks.add(folder, task.getNamePreview());
+                refresh(treeItem.getParent());
+
+                GseUtil.execute(context.getExecutor(), () -> {
+                    try {
+                        task.run();
+                    } finally {
+                        tasks.remove(folder, task.getNamePreview());
+                        Platform.runLater(() -> refresh(treeItem));
                     }
                 });
             });

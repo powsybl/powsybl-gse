@@ -15,7 +15,7 @@ import javafx.scene.input.KeyCombination;
 import java.util.ResourceBundle;
 
 /**
- * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
+ * @author Nassirou Nambiema <nassirou.nambiena at rte-france.com>
  */
 public class GseMenuItem extends MenuItem {
 

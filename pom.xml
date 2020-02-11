@@ -85,8 +85,8 @@
         <slf4j.version>1.7.22</slf4j.version>
         <tiwulfx.version>2.0</tiwulfx.version>
 
-        <powsyblafs.version>3.1.0</powsyblafs.version>
-        <powsyblcore.version>3.1.0</powsyblcore.version>
+        <powsyblafs.version>3.2.0-SNAPSHOT</powsyblafs.version>
+        <powsyblcore.version>3.2.0-SNAPSHOT</powsyblcore.version>
 
     </properties>
 
