@@ -168,16 +168,14 @@ public class ProjectPane extends Tab {
     }
 
     private void handleEvent(NodeEvent nodeEvent) {
+        if (NodeDataRemoved.TYPENAME.equals(nodeEvent.getType())) {
+            //Deleted node can not be fetched
+            return;
+        }
         ProjectFile projectFile = project.getFileSystem().findProjectFile(nodeEvent.getId(), ProjectFile.class);
-        Timer timer = new Timer();
         if (projectFile != null && projectFile.getProject().getId().equals(getProject().getId())) {
             if (NodeDataUpdated.TYPENAME.equals(nodeEvent.getType()) || DependencyAdded.TYPENAME.equals(nodeEvent.getType())) {
-                timer.schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        refreshProjectFile(projectFile);
-                    }
-                }, 1000);
+                refreshProjectFile(projectFile);
             } else if (NodeNameUpdated.TYPENAME.equals(nodeEvent.getType())) {
                 List<ProjectFile> backwardDependencies = projectFile.getBackwardDependencies();
                 backwardDependencies.forEach(this::refreshProjectFile);
@@ -189,6 +187,7 @@ public class ProjectPane extends Tab {
         List<TreeItem<Object>> allTreeItems = new ArrayList<>();
         findAllTreeItems(treeView.getRoot(), allTreeItems);
         Optional<TreeItem<Object>> projectFileItem = allTreeItems.stream()
+                .filter(item -> item.getValue() instanceof ProjectNode)
                 .filter(item -> ((ProjectNode) item.getValue()).getId().equals(projectFile.getId()))
                 .findFirst();
         projectFileItem.ifPresent(treeItem -> refresh(treeItem.getParent()));
@@ -198,7 +197,8 @@ public class ProjectPane extends Tab {
         ObservableList<TreeItem<Object>> children = folderTreeItem.getChildren();
         allTreeItems.addAll(children);
         children.stream()
-                .filter(item -> ((ProjectNode) item.getValue()).isFolder())
+                .filter(item -> item.getValue() instanceof ProjectNode)
+                .filter(item -> item.getValue() instanceof ProjectNode && ((ProjectNode) item.getValue()).isFolder())
                 .forEach(folderItem -> findAllTreeItems(folderItem, allTreeItems));
     }
 
