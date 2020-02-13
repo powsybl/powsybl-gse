@@ -198,7 +198,7 @@ public class ProjectPane extends Tab {
         allTreeItems.addAll(children);
         children.stream()
                 .filter(item -> item.getValue() instanceof ProjectNode)
-                .filter(item -> item.getValue() instanceof ProjectNode && ((ProjectNode) item.getValue()).isFolder())
+                .filter(item -> ((ProjectNode) item.getValue()).isFolder())
                 .forEach(folderItem -> findAllTreeItems(folderItem, allTreeItems));
     }
 
