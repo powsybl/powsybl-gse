@@ -169,9 +169,15 @@ public class ProjectPane extends Tab {
 
     private void handleEvent(NodeEvent nodeEvent) {
         ProjectFile projectFile = project.getFileSystem().findProjectFile(nodeEvent.getId(), ProjectFile.class);
+        Timer timer = new Timer();
         if (projectFile != null && projectFile.getProject().getId().equals(getProject().getId())) {
             if (NodeDataUpdated.TYPENAME.equals(nodeEvent.getType()) || DependencyAdded.TYPENAME.equals(nodeEvent.getType())) {
-                refreshProjectFile(projectFile);
+                timer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        refreshProjectFile(projectFile);
+                    }
+                }, 1000);
             } else if (NodeNameUpdated.TYPENAME.equals(nodeEvent.getType())) {
                 List<ProjectFile> backwardDependencies = projectFile.getBackwardDependencies();
                 backwardDependencies.forEach(this::refreshProjectFile);
