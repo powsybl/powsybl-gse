@@ -45,11 +45,6 @@ public class VirtualCaseCreatorExtension implements ProjectFileCreatorExtension 
     }
 
     @Override
-    public int numberOfDependencies() {
-        return 2;
-    }
-
-    @Override
     public Node getMenuGraphic() {
         return BaseExtNodeGraphicProvider.createVirtualCaseGlyph();
     }
@@ -76,9 +71,6 @@ public class VirtualCaseCreatorExtension implements ProjectFileCreatorExtension 
 
     @Override
     public ProjectFileCreator newCreatorWithParameters(ProjectFolder folder, Scene scene, GseContext context, List<ProjectFile> parameters) {
-        if (numberOfDependencies() < parameters.size()) {
-            throw new IllegalArgumentException(String.format("parameters size exceeds the number '%s' of dependencies ", numberOfDependencies()));
-        }
         VirtualCaseCreator virtualCaseCreator = new VirtualCaseCreator(folder, scene, context);
         for (ProjectFile value : parameters) {
             if (value instanceof ImportedCase) {

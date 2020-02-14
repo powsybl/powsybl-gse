@@ -26,10 +26,6 @@ public interface ProjectFileCreatorExtension {
         return Collections.emptyList();
     }
 
-    default int numberOfDependencies() {
-        return 0;
-    }
-
     default Node getMenuGraphic() {
         return null;
     }

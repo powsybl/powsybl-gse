@@ -676,12 +676,12 @@ public class ProjectPane extends Tab {
     private GseMenuItem createMultipleDependenciesFileItem(List<? extends TreeItem<Object>> selectedTreeItems) {
         GseMenuItem menuItem = null;
         List<? extends Class<?>> selectedItemsTypes = selectedTreeItems.stream().map(iem -> iem.getValue().getClass()).collect(Collectors.toList());
-        int numberOfSelectedItems = selectedTreeItems.size();
 
         for (Class<? extends ProjectFile> type : project.getFileSystem().getData().getProjectFileClasses()) {
             for (ProjectFileCreatorExtension creatorExtension : findCreatorExtension(type)) {
                 if (creatorExtension != null && !creatorExtension.getDependenciesTypes().isEmpty()) {
-                    if (areAssignable(creatorExtension.getDependenciesTypes(), selectedItemsTypes) && creatorExtension.numberOfDependencies() == numberOfSelectedItems) {
+                    List<Class<?>> dependenciesTypes = creatorExtension.getDependenciesTypes();
+                    if (areAssignable(dependenciesTypes, selectedItemsTypes)) {
                         menuItem = new GseMenuItem(creatorExtension.getMenuText());
                         menuItem.setOrder(creatorExtension.getMenuOrder());
                         menuItem.setGraphic(creatorExtension.getMenuGraphic());
@@ -695,8 +695,8 @@ public class ProjectPane extends Tab {
     }
 
     private boolean areAssignable(List<Class<?>> dependenciesTypes, List<? extends Class<?>> selectedItemsTypes) {
-        return dependenciesTypes.stream()
-                .allMatch(dependencyType -> selectedItemsTypes.stream().filter(dependencyType::isAssignableFrom).count() == 1);
+        return dependenciesTypes.stream().distinct().count() == selectedItemsTypes.stream().distinct().count() && dependenciesTypes.stream()
+                .allMatch(dependencyType -> selectedItemsTypes.stream().anyMatch(dependencyType::isAssignableFrom));
     }
 
     private GseMenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
