@@ -168,7 +168,7 @@ public class ProjectPane extends Tab {
     }
 
     private void handleEvent(NodeEvent nodeEvent) {
-        if (NodeDataRemoved.TYPENAME.equals(nodeEvent.getType())) {
+        if (NodeDataRemoved.TYPENAME.equals(nodeEvent.getType()) || NodeRemoved.TYPENAME.equals(nodeEvent.getType())) {
             //Deleted node can not be fetched
             return;
         }
