@@ -61,7 +61,7 @@ public final class CopyManager {
         init();
     }
 
-    public void copyPaste(List<? extends AbstractNodeBase> nodes, AbstractNodeBase targetFolder) throws CopyPasteException, IOException {
+    public void copyPaste(List<? extends AbstractNodeBase> nodes, AbstractNodeBase targetFolder) throws CopyPasteException {
         String fileSystem = getCommonFileSystem(nodes);
         Optional<Project> targetProjectOpt = (targetFolder instanceof ProjectNode) ? Optional.of(((ProjectNode) targetFolder).getProject()) : Optional.empty();
         Optional<TaskMonitor.Task> task = targetProjectOpt.map(targetProject -> targetProject.getFileSystem().getTaskMonitor().startTask("Copying", targetProject));
@@ -127,7 +127,7 @@ public final class CopyManager {
         return currentCopies;
     }
 
-    public void paste(String fileSystemName, List<String> nodesIds, AbstractNodeBase folder) throws CopyPasteException, IOException {
+    public void paste(String fileSystemName, List<String> nodesIds, AbstractNodeBase folder) throws CopyPasteException {
         paste(fileSystemName, nodesIds, folder, LOGGER::debug);
     }
 
@@ -135,7 +135,7 @@ public final class CopyManager {
      * @param nodesIds the copied node's id
      * @param folder   the archive destination's folder
      */
-    public void paste(String fileSystemName, List<String> nodesIds, AbstractNodeBase folder, Consumer<String> logger) throws CopyPasteException, IOException {
+    public void paste(String fileSystemName, List<String> nodesIds, AbstractNodeBase folder, Consumer<String> logger) throws CopyPasteException {
         Objects.requireNonNull(nodesIds);
         throwBadArgumentException(fileSystemName, folder);
 
@@ -256,7 +256,7 @@ public final class CopyManager {
         }, CLEANUP_DELAY, CLEANUP_PERIOD);
     }
 
-    private String renameAndPaste(AbstractNodeBase folder, List<? extends AbstractNodeBase> children, CopyInfo info) throws CopyPasteException, IOException {
+    private String renameAndPaste(AbstractNodeBase folder, List<? extends AbstractNodeBase> children, CopyInfo info) throws CopyPasteException {
         for (AbstractNodeBase child : children) {
             String name = child.getName();
             if (info.node.getName().equals(name)) {

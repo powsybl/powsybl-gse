@@ -839,7 +839,7 @@ public class ProjectPane extends Tab {
                         Platform.runLater(() -> {
                             GseAlerts.showPasteCompleteInfo(nodeNames, projectFolder.getName());
                         });
-                    } catch (CopyPasteException | IOException e) {
+                    } catch (CopyPasteException e) {
                         LOGGER.error("Failed to copy nodes {}", projectNodes, e);
                         Platform.runLater(() -> GseAlerts.showDialogCopyError(e));
                     } finally {
