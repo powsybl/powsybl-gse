@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package com.powsybl.gse.app;
+package com.powsybl.gse.util;
 
 import com.powsybl.afs.AfsException;
 import com.powsybl.afs.Project;
@@ -13,8 +13,6 @@ import com.powsybl.afs.ProjectNode;
 import com.powsybl.afs.TaskMonitor;
 import com.powsybl.afs.storage.Utils;
 import com.powsybl.gse.spi.GseContext;
-import com.powsybl.gse.util.GseAlerts;
-import com.powsybl.gse.util.NameTextField;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.SimpleObjectProperty;
@@ -40,7 +38,7 @@ import java.util.ResourceBundle;
  */
 public class ArchivePane <T extends ProjectNode> extends GridPane {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ProjectPane.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ArchivePane.class);
 
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.ArchivePane");
 
@@ -58,7 +56,6 @@ public class ArchivePane <T extends ProjectNode> extends GridPane {
 
     public ArchivePane(T node, Scene scene, GseContext context) {
         this.node = Objects.requireNonNull(node);
-
         nameTextField = NameTextField.create(node);
         setVgap(5);
         setHgap(5);

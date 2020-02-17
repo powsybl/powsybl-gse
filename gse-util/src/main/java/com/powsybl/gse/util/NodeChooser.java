@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.prefs.Preferences;
@@ -689,7 +690,8 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 InfoDialog infoDialog = new InfoDialog(String.format(RESOURCE_BUNDLE.getString("ArchiveTask"), item.getName()), true);
                 try {
                     Utils.checkDiskSpace(selectedDirectory.toPath());
-                    item.archive(selectedDirectory.toPath(), true, false);
+                    Files.createDirectory(selectedDirectory.toPath().resolve(item.getName()));
+                    item.archive(selectedDirectory.toPath().resolve(item.getName()), true, false);
                     infoDialog.updateStage(RESOURCE_BUNDLE.getString("CompleteTask"));
                     LOGGER.info("Archiving node {} ({}) is complete", item.getName(), item.getId());
                 } catch (AfsException | IOException e) {

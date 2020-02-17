@@ -20,6 +20,7 @@ import com.powsybl.gse.copy_paste.afs.exceptions.CopyDifferentFileSystemNameExce
 import com.powsybl.gse.copy_paste.afs.exceptions.CopyPasteException;
 import com.powsybl.gse.spi.*;
 import com.powsybl.gse.util.*;
+import com.powsybl.gse.util.ArchivePane;
 import com.sun.javafx.stage.StageHelper;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
@@ -47,7 +48,6 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.time.ZonedDateTime;
