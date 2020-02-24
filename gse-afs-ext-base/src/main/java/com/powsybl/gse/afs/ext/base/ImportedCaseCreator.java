@@ -196,7 +196,7 @@ public class ImportedCaseCreator extends GridPane implements ProjectFileCreator 
                         projectNode.rename(name);
                     }
                 });
-            } else if (buttonType.getButtonData() == ButtonBar.ButtonData.OTHER) {
+            } else if (buttonType.getButtonData() == ButtonBar.ButtonData.NO) {
                 folder.getChild(name).ifPresent(projectNode -> {
                     Optional<String> text = GseUtil.runOnPlatformAndWait(() -> RenamePane.showAndWaitDialog(scene.getWindow(), projectNode).orElse(null));
                     text.ifPresent(newName -> {
