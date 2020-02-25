@@ -35,5 +35,9 @@ public interface ProjectFileCreatorExtension {
 
     KeyCodeCombination getMenuKeycode();
 
+    default boolean isMenuVisible() {
+        return true;
+    }
+
     ProjectFileCreator newCreator(ProjectFolder folder, Scene scene, GseContext context);
 }

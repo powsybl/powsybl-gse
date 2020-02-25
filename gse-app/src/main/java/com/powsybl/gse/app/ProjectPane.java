@@ -1154,7 +1154,7 @@ public class ProjectPane extends Tab {
         items.add(createCreateFolderItem(selectedTreeItem, folder).order(99));
         for (Class<? extends ProjectFile> type : project.getFileSystem().getData().getProjectFileClasses()) {
             for (ProjectFileCreatorExtension creatorExtension : findCreatorExtension(type)) {
-                if (creatorExtension != null) {
+                if (creatorExtension != null && creatorExtension.isMenuVisible()) {
                     GseMenuItem menuItem = new GseMenuItem(creatorExtension.getMenuText());
                     menuItem.setOrder(creatorExtension.getMenuOrder());
                     menuItem.setGraphic(creatorExtension.getMenuGraphic());

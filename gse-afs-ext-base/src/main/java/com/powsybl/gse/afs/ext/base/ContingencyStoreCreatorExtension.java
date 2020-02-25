@@ -9,6 +9,8 @@ package com.powsybl.gse.afs.ext.base;
 import com.google.auto.service.AutoService;
 import com.powsybl.afs.ProjectFolder;
 import com.powsybl.afs.contingency.ContingencyStore;
+import com.powsybl.commons.config.ModuleConfig;
+import com.powsybl.commons.config.PlatformConfig;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileCreator;
 import com.powsybl.gse.spi.ProjectFileCreatorExtension;
@@ -52,6 +54,17 @@ public class ContingencyStoreCreatorExtension implements ProjectFileCreatorExten
     @Override
     public KeyCodeCombination getMenuKeycode() {
         return new KeyCodeCombination(KeyCode.Z, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN);
+    }
+
+    @Override
+    public boolean isMenuVisible() {
+        ModuleConfig moduleConfig = PlatformConfig.defaultConfig().getOptionalModuleConfig("contingency-creator-extension-menu").orElse(null);
+        if (moduleConfig == null) {
+            return true;
+        } else if (moduleConfig.hasProperty("visible")) {
+            return moduleConfig.getBooleanProperty("visible");
+        }
+        return true;
     }
 
     @Override
