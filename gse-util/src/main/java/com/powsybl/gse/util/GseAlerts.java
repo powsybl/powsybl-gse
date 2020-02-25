@@ -82,7 +82,7 @@ public final class GseAlerts {
         alert.setHeaderText(MessageFormat.format(RESOURCE_BUNDLE.getString("ReplaceFile"), documentName));
         alert.setContentText(MessageFormat.format(RESOURCE_BUNDLE.getString("FileWithTheSameNameExists"), folderName));
         ButtonType replace = new ButtonType(RESOURCE_BUNDLE.getString("Replace"), ButtonBar.ButtonData.YES);
-        ButtonType rename = new ButtonType(RESOURCE_BUNDLE.getString("Rename"), ButtonBar.ButtonData.NO);
+        ButtonType rename = new ButtonType(RESOURCE_BUNDLE.getString("Rename"), ButtonBar.ButtonData.OTHER);
         alert.getButtonTypes().setAll(replace, rename, ButtonType.CANCEL);
         alert.getDialogPane().setPrefWidth(600);
         alert.getDialogPane().setPrefHeight(170);
