@@ -70,6 +70,7 @@ public class ProjectPane extends Tab {
     private static final ServiceLoaderCache<ProjectFileViewerExtension> VIEWER_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileViewerExtension.class);
     private static final ServiceLoaderCache<ProjectFileMetadataViewerExtension> METADATA_VIEWER_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileMetadataViewerExtension.class);
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
+    private static final ServiceLoaderCache<ProjectExtension> PROJECT_EXTENSION_LOADER = new ServiceLoaderCache<>(ProjectExtension.class);
     private static final List<ProjectFileExtension> PROJECT_FILE_EXTENSIONS = new ServiceLoaderCache<>(ProjectFileExtension.class).getServices();
 
     private static final String STAR_NOTIFICATION = " *";
@@ -165,6 +166,21 @@ public class ProjectPane extends Tab {
                 }
             }
         };
+
+        initProjectExtensions();
+    }
+
+    private void initProjectExtensions() {
+        PROJECT_EXTENSION_LOADER
+                .getServices()
+                .stream()
+                .filter(ProjectExtension::isDefaultOpened)
+                .forEach(ext -> {
+                    ProjectFileViewer viewer = ext.newViewer(project, getContent().getScene(), context);
+                    TabKey tabKey = new TabKey(project.getId(), ext.getClass());
+                    String tabName = ext.getName();
+                    createTab(tabName, viewer, ext.getMenuGraphic(), tabKey, findDetachableTabPanes());
+                });
     }
 
     private void handleEvent(NodeEvent nodeEvent) {
@@ -952,6 +968,24 @@ public class ProjectPane extends Tab {
         }
     }
 
+    private void viewProjectExt(ProjectExtension viewerExtension) {
+        List<DetachableTabPane> detachableTabPanes = findDetachableTabPanes();
+
+        TabKey tabKey = new TabKey(project.getId(), viewerExtension.getClass());
+        // check tab has not already been open
+        for (DetachableTabPane tabPane : detachableTabPanes) {
+            for (Tab tab : tabPane.getTabs()) {
+                if (tabKey.equals(tab.getUserData())) {
+                    tab.getTabPane().getSelectionModel().select(tab);
+                    return;
+                }
+            }
+        }
+        Node graphic = viewerExtension.getMenuGraphic();
+        ProjectFileViewer viewer = viewerExtension.newViewer(project, getContent().getScene(), context);
+        createTab(viewerExtension.getName(), viewer, graphic, tabKey, detachableTabPanes);
+    }
+
     private void viewFile(ProjectFile file, ProjectFileViewerExtension viewerExtension, String tabName) {
         List<DetachableTabPane> detachableTabPanes = findDetachableTabPanes();
 
@@ -967,6 +1001,10 @@ public class ProjectPane extends Tab {
         }
         Node graphic = viewerExtension.getMenuGraphic(file);
         ProjectFileViewer viewer = viewerExtension.newViewer(file, getContent().getScene(), context);
+        createTab(tabName, viewer, graphic, tabKey, detachableTabPanes);
+    }
+
+    private static void createTab(String tabName, ProjectFileViewer viewer, Node graphic, TabKey tabKey, List<DetachableTabPane> detachableTabPanes) {
         Tab tab = new MyTab(tabName, viewer);
         tab.setOnCloseRequest(event -> {
             if (!viewer.isClosable()) {
@@ -1151,6 +1189,26 @@ public class ProjectPane extends Tab {
         ContextMenu contextMenu = new ContextMenu();
         List<GseMenuItem> items = new ArrayList<>();
         ProjectFolder folder = (ProjectFolder) selectedTreeItem.getValue();
+
+        if (selectedTreeItem == treeView.getRoot() && PROJECT_EXTENSION_LOADER.getServices().size() > 0) {
+            contextMenu.getItems().addAll(
+                PROJECT_EXTENSION_LOADER
+                        .getServices()
+                        .stream()
+                        .map(ext -> {
+                            GseMenuItem menuItem = new GseMenuItem(ext.getMenuText());
+                            menuItem.setOrder(ext.getMenuOrder());
+                            menuItem.setGraphic(ext.getMenuGraphic());
+                            menuItem.setAccelerator(ext.getMenuKeycode());
+                            menuItem.setOnAction(event -> viewProjectExt(ext));
+                            return menuItem;
+                        })
+                        .sorted(Comparator.comparing(GseMenuItem::getOrder))
+                        .collect(Collectors.toList())
+            );
+            contextMenu.getItems().add(new SeparatorMenuItem());
+        }
+
         items.add(createCreateFolderItem(selectedTreeItem, folder).order(99));
         for (Class<? extends ProjectFile> type : project.getFileSystem().getData().getProjectFileClasses()) {
             for (ProjectFileCreatorExtension creatorExtension : findCreatorExtension(type)) {
