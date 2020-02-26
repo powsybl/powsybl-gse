@@ -691,7 +691,7 @@ public class NodeChooser<N, F extends N, D extends N, T extends N> extends GridP
                 try {
                     Utils.checkDiskSpace(selectedDirectory.toPath());
                     Files.createDirectory(selectedDirectory.toPath().resolve(item.getName()));
-                    item.archive(selectedDirectory.toPath().resolve(item.getName()), true, false);
+                    item.archive(selectedDirectory.toPath().resolve(item.getName()), true, false, new HashMap<>());
                     infoDialog.updateStage(RESOURCE_BUNDLE.getString("CompleteTask"));
                     LOGGER.info("Archiving node {} ({}) is complete", item.getName(), item.getId());
                 } catch (AfsException | IOException e) {

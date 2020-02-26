@@ -7,11 +7,9 @@
 
 package com.powsybl.gse.util;
 
-import com.powsybl.afs.AfsException;
-import com.powsybl.afs.Project;
-import com.powsybl.afs.ProjectNode;
-import com.powsybl.afs.TaskMonitor;
+import com.powsybl.afs.*;
 import com.powsybl.afs.storage.Utils;
+import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.GseContext;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
@@ -28,10 +26,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Objects;
-import java.util.ResourceBundle;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author Valentin Berthault <valentin.berthault at rte-france.com>
@@ -53,6 +52,10 @@ public class ArchivePane <T extends ProjectNode> extends GridPane {
     private final SimpleObjectProperty<File> directoryProperty = new SimpleObjectProperty<>();
 
     private final CheckBox dependenciesCheck = new CheckBox(RESOURCE_BUNDLE.getString("DependenciesCheck"));
+
+    private final CheckBox keepResults = new CheckBox(RESOURCE_BUNDLE.getString("keepResults"));
+
+    private static final ServiceLoaderCache<ProjectFileExtension> PROJECT_FILE_EXECUTION = new ServiceLoaderCache<>(ProjectFileExtension.class);
 
     public ArchivePane(T node, Scene scene, GseContext context) {
         this.node = Objects.requireNonNull(node);
@@ -80,6 +83,7 @@ public class ArchivePane <T extends ProjectNode> extends GridPane {
             }
         });
         addRow(2, dependenciesCheck);
+        addRow(3, keepResults);
         add(nameTextField.getFileAlreadyExistsLabel(), 0, 5, 3, 1);
         Platform.runLater(nameTextField.getInputField()::requestFocus);
     }
@@ -102,9 +106,21 @@ public class ArchivePane <T extends ProjectNode> extends GridPane {
         Path directoryPath = directory.toPath().resolve(nameTextField.getText());
         TaskMonitor.Task task = project.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("ArchiveTask"), directory.getName()), project);
         try {
+            Path zipPath = directoryPath.getParent().resolve(directoryPath.getFileName() + ".zip");
+            if (zipPath != null && Files.exists(zipPath)) {
+                throw new FileAlreadyExistsException("Archive already exist");
+            }
+
             Files.createDirectory(directoryPath);
             Utils.checkDiskSpace(directory.toPath());
-            node.archive(directoryPath, true, dependenciesCheck.isSelected());
+            Map<String, List<String>> outputBlackList = new HashMap<>();
+
+            if (!keepResults.isSelected()) {
+                List<ProjectFileExtension> services = PROJECT_FILE_EXECUTION.getServices();
+                outputBlackList = services.stream().collect(Collectors.toMap(ProjectFileExtension::getProjectFilePseudoClass, ProjectFileExtension::getOutputList));
+            }
+
+            node.archive(directoryPath, true, dependenciesCheck.isSelected(), outputBlackList);
             LOGGER.info("Archiving node {} ({}) is complete", node.getName(), node.getId());
         } catch (AfsException | IOException e) {
             GseAlerts.showDialogError(e.getMessage());
