@@ -102,8 +102,8 @@ public class ProjectPane extends Tab {
 
         ModuleConfig extensionsModuleConfig = PlatformConfig.defaultConfig().getOptionalModuleConfig("extensions").orElse(null);
         if (extensionsModuleConfig != null && extensionsModuleConfig.hasProperty("disabled")) {
-            String disabled = extensionsModuleConfig.getStringProperty("disabled");
-            blackListExtensions.addAll(Arrays.asList(disabled.split(",")));
+            List<String> disabledExtensions = extensionsModuleConfig.getStringListProperty("disabled");
+            blackListExtensions.addAll(disabledExtensions);
         }
 
         appStorageListener = eventList -> eventList.getEvents().forEach(this::handleEvent);
