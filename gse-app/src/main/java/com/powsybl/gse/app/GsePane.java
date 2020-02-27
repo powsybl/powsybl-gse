@@ -332,12 +332,19 @@ public class GsePane extends StackPane {
             contextMenu.getItems().add(documentationMenuItem);
         });
 
-        MenuItem aboutMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("About") + "...");
+        MenuItem aboutMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("About"));
         aboutMenuItem.setOnAction(event -> showAbout());
         MenuItem shortcutMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Shortcuts") + "...");
         shortcutMenuItem.setOnAction(event -> showShortcuts());
         contextMenu.getItems().addAll(aboutMenuItem, shortcutMenuItem);
 
+        appBar.getToggleSwitch().selectedProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue) {
+                this.getScene().getStylesheets().add("/css/gse-dark-theme.css");
+            } else {
+                this.getScene().getStylesheets().remove("/css/gse-dark-theme.css");
+            }
+        });
         appBar.getHelpButton().setOnAction(event -> contextMenu.show(appBar.getHelpButton(), Side.BOTTOM, 0, 0));
 
         return appBar;
