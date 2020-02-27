@@ -171,16 +171,20 @@ public class ProjectPane extends Tab {
     }
 
     private void initProjectExtensions() {
-        PROJECT_EXTENSION_LOADER
-                .getServices()
-                .stream()
-                .filter(ProjectExtension::isDefaultOpened)
-                .forEach(ext -> {
-                    ProjectFileViewer viewer = ext.newViewer(project, getContent().getScene(), context);
-                    TabKey tabKey = new TabKey(project.getId(), ext.getClass());
-                    String tabName = ext.getName();
-                    createTab(tabName, viewer, ext.getMenuGraphic(), tabKey, findDetachableTabPanes());
-                });
+        try {
+            PROJECT_EXTENSION_LOADER
+                    .getServices()
+                    .stream()
+                    .filter(ProjectExtension::isDefaultOpened)
+                    .forEach(ext -> {
+                        ProjectFileViewer viewer = ext.newViewer(project, getContent().getScene(), context);
+                        TabKey tabKey = new TabKey(project.getId(), ext.getClass());
+                        String tabName = ext.getName();
+                        createTab(tabName, viewer, ext.getMenuGraphic(), tabKey, findDetachableTabPanes());
+                    });
+        } catch (Exception e){
+            LOGGER.error("Failed to init a project extension", e);
+        }
     }
 
     private void handleEvent(NodeEvent nodeEvent) {
