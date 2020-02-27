@@ -13,6 +13,8 @@ import com.powsybl.afs.*;
 import com.powsybl.afs.storage.AppStorage;
 import com.powsybl.afs.storage.NodeInfo;
 import com.powsybl.afs.storage.events.*;
+import com.powsybl.commons.config.ModuleConfig;
+import com.powsybl.commons.config.PlatformConfig;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.copy_paste.afs.CopyManager;
 import com.powsybl.gse.copy_paste.afs.CopyService;
@@ -1154,7 +1156,7 @@ public class ProjectPane extends Tab {
         items.add(createCreateFolderItem(selectedTreeItem, folder).order(99));
         for (Class<? extends ProjectFile> type : project.getFileSystem().getData().getProjectFileClasses()) {
             for (ProjectFileCreatorExtension creatorExtension : findCreatorExtension(type)) {
-                if (creatorExtension != null && creatorExtension.isMenuVisible()) {
+                if (creatorExtension != null && isCreatorExtensionAuthorized(creatorExtension)) {
                     GseMenuItem menuItem = new GseMenuItem(creatorExtension.getMenuText());
                     menuItem.setOrder(creatorExtension.getMenuOrder());
                     menuItem.setGraphic(creatorExtension.getMenuGraphic());
@@ -1182,6 +1184,17 @@ public class ProjectPane extends Tab {
         items.sort(Comparator.comparing(GseMenuItem::getOrder));
         contextMenu.getItems().addAll(items);
         return contextMenu;
+    }
+
+    private static boolean isCreatorExtensionAuthorized(ProjectFileCreatorExtension creatorExtension) {
+        String moduleConfigName = creatorExtension.getModuleConfigName();
+        if (moduleConfigName != null) {
+            ModuleConfig moduleConfig = PlatformConfig.defaultConfig().getOptionalModuleConfig(moduleConfigName).orElse(null);
+            if (moduleConfig != null && moduleConfig.hasProperty("visible")) {
+                return moduleConfig.getBooleanProperty("visible");
+            }
+        }
+        return true;
     }
 
     public void dispose() {
