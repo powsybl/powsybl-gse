@@ -35,9 +35,5 @@ public interface ProjectFileCreatorExtension {
 
     KeyCodeCombination getMenuKeycode();
 
-    default String getModuleConfigName() {
-        return null;
-    }
-
     ProjectFileCreator newCreator(ProjectFolder folder, Scene scene, GseContext context);
 }

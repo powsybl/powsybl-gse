@@ -55,11 +55,6 @@ public class ContingencyStoreCreatorExtension implements ProjectFileCreatorExten
     }
 
     @Override
-    public String getModuleConfigName() {
-        return "contingency-creator-extension-menu";
-    }
-
-    @Override
     public ProjectFileCreator newCreator(ProjectFolder folder, Scene scene, GseContext context) {
         return new ContingencyStoreCreator(folder);
     }
