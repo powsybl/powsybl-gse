@@ -1163,7 +1163,7 @@ public class ProjectPane extends Tab {
         items.add(createCreateFolderItem(selectedTreeItem, folder).order(99));
         for (Class<? extends ProjectFile> type : project.getFileSystem().getData().getProjectFileClasses()) {
             for (ProjectFileCreatorExtension creatorExtension : findCreatorExtension(type)) {
-                if (creatorExtension != null && isCreatorExtensionAuthorized(creatorExtension)) {
+                if (creatorExtension != null && isCreatorExtensionEnabled(creatorExtension)) {
                     GseMenuItem menuItem = new GseMenuItem(creatorExtension.getMenuText());
                     menuItem.setOrder(creatorExtension.getMenuOrder());
                     menuItem.setGraphic(creatorExtension.getMenuGraphic());
@@ -1193,7 +1193,7 @@ public class ProjectPane extends Tab {
         return contextMenu;
     }
 
-    private boolean isCreatorExtensionAuthorized(ProjectFileCreatorExtension creatorExtension) {
+    private boolean isCreatorExtensionEnabled(ProjectFileCreatorExtension creatorExtension) {
         return !blackListExtensions.contains(creatorExtension.getClass().getName());
     }
 
