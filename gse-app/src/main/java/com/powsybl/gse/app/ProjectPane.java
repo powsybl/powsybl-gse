@@ -89,6 +89,7 @@ public class ProjectPane extends Tab {
     private final Map<String, ProjectPaneProjectFolderListener> lCache = new HashMap<>();
     private final CopyManager localArchiveManager = CopyManager.getInstance();
     private final AppStorageListener appStorageListener;
+    private List<String> blackListExtensions = new ArrayList<>();
 
     public ProjectPane(Scene scene, Project project, GseContext context) {
         this.project = Objects.requireNonNull(project);
@@ -98,6 +99,12 @@ public class ProjectPane extends Tab {
         taskMonitorPane = new TaskMonitorPane(taskItems);
         copyService = initCopyService();
         treeView = createProjectTreeview();
+
+        ModuleConfig extensionsModuleConfig = PlatformConfig.defaultConfig().getOptionalModuleConfig("extensions").orElse(null);
+        if (extensionsModuleConfig != null && extensionsModuleConfig.hasProperty("disabled")) {
+            String disabled = extensionsModuleConfig.getStringProperty("disabled");
+            blackListExtensions.addAll(Arrays.asList(disabled.split(",")));
+        }
 
         appStorageListener = eventList -> eventList.getEvents().forEach(this::handleEvent);
         project.getFileSystem().getEventBus().addListener(appStorageListener);
@@ -1186,15 +1193,8 @@ public class ProjectPane extends Tab {
         return contextMenu;
     }
 
-    private static boolean isCreatorExtensionAuthorized(ProjectFileCreatorExtension creatorExtension) {
-        String moduleConfigName = creatorExtension.getModuleConfigName();
-        if (moduleConfigName != null) {
-            ModuleConfig moduleConfig = PlatformConfig.defaultConfig().getOptionalModuleConfig(moduleConfigName).orElse(null);
-            if (moduleConfig != null && moduleConfig.hasProperty("visible")) {
-                return moduleConfig.getBooleanProperty("visible");
-            }
-        }
-        return true;
+    private boolean isCreatorExtensionAuthorized(ProjectFileCreatorExtension creatorExtension) {
+        return !blackListExtensions.contains(creatorExtension.getClass().getName());
     }
 
     public void dispose() {
