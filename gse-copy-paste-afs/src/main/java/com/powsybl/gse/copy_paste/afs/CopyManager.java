@@ -45,7 +45,7 @@ public final class CopyManager {
     private static final String COPY_INFO_SEPARATOR = "/";
     private static final String COPY_NODE_INFO_SEPARATOR = ";";
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> PROJECT_FILE_EXECUTION_TASK_EXTENSIONS = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
-
+    private static final ServiceLoaderCache<ProjectFileExtension> PROJECT_FILE_EXECUTION = new ServiceLoaderCache<>(ProjectFileExtension.class);
     private static CopyManager INSTANCE = null;
 
     private Map<String, CopyInfo> currentCopies = new HashMap<>();
@@ -112,8 +112,11 @@ public final class CopyManager {
                 LOGGER.info("Copying (archiving) node {} ({})", node.getName(), node.getId());
                 logger.accept(String.format("Copying node %s", copyInfo.getNode().getName()));
                 try {
+                    Map<String, List<String>> outputBlackList = new HashMap<>();
+                    List<ProjectFileExtension> services = PROJECT_FILE_EXECUTION.getServices();
+                    outputBlackList = services.stream().collect(Collectors.toMap(ProjectFileExtension::getProjectFilePseudoClass, ProjectFileExtension::getOutputList));
                     Utils.checkDiskSpace(copyInfo.archivePath);
-                    node.archive(copyInfo.archivePath);
+                    node.archive(copyInfo.archivePath, outputBlackList);
                     copyInfo.archiveSuccess = true;
                     LOGGER.info("Copying (archiving) node {} ({}) is complete", node.getName(), node.getId());
                 } catch (Exception e) {
