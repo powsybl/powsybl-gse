@@ -171,20 +171,24 @@ public class ProjectPane extends Tab {
     }
 
     private void initProjectExtensions() {
-        try {
-            PROJECT_EXTENSION_LOADER
-                    .getServices()
-                    .stream()
-                    .filter(ProjectExtension::isDefaultOpened)
-                    .forEach(ext -> {
-                        ProjectFileViewer viewer = ext.newViewer(project, getContent().getScene(), context);
-                        TabKey tabKey = new TabKey(project.getId(), ext.getClass());
-                        String tabName = ext.getName();
-                        createTab(tabName, viewer, ext.getMenuGraphic(), tabKey, findDetachableTabPanes());
-                    });
-        } catch (Exception e){
-            LOGGER.error("Failed to init a project extension", e);
-        }
+        context.getExecutor().submit(() -> {
+            try {
+                PROJECT_EXTENSION_LOADER
+                        .getServices()
+                        .stream()
+                        .filter(ProjectExtension::isDefaultOpened)
+                        .forEach(ext -> {
+                            ProjectFileViewer viewer = ext.newViewer(project, getContent().getScene(), context);
+                            TabKey tabKey = new TabKey(project.getId(), ext.getClass());
+                            String tabName = ext.getName();
+                            Platform.runLater(() ->
+                                    createTab(tabName, viewer, ext.getMenuGraphic(), tabKey, findDetachableTabPanes())
+                            );
+                        });
+            } catch (Exception e) {
+                LOGGER.error("Failed to init a project extension", e);
+            }
+        });
     }
 
     private void handleEvent(NodeEvent nodeEvent) {
@@ -1196,19 +1200,19 @@ public class ProjectPane extends Tab {
 
         if (selectedTreeItem == treeView.getRoot() && PROJECT_EXTENSION_LOADER.getServices().size() > 0) {
             contextMenu.getItems().addAll(
-                PROJECT_EXTENSION_LOADER
-                        .getServices()
-                        .stream()
-                        .map(ext -> {
-                            GseMenuItem menuItem = new GseMenuItem(ext.getMenuText());
-                            menuItem.setOrder(ext.getMenuOrder());
-                            menuItem.setGraphic(ext.getMenuGraphic());
-                            menuItem.setAccelerator(ext.getMenuKeycode());
-                            menuItem.setOnAction(event -> viewProjectExt(ext));
-                            return menuItem;
-                        })
-                        .sorted(Comparator.comparing(GseMenuItem::getOrder))
-                        .collect(Collectors.toList())
+                    PROJECT_EXTENSION_LOADER
+                            .getServices()
+                            .stream()
+                            .map(ext -> {
+                                GseMenuItem menuItem = new GseMenuItem(ext.getMenuText());
+                                menuItem.setOrder(ext.getMenuOrder());
+                                menuItem.setGraphic(ext.getMenuGraphic());
+                                menuItem.setAccelerator(ext.getMenuKeycode());
+                                menuItem.setOnAction(event -> viewProjectExt(ext));
+                                return menuItem;
+                            })
+                            .sorted(Comparator.comparing(GseMenuItem::getOrder))
+                            .collect(Collectors.toList())
             );
             contextMenu.getItems().add(new SeparatorMenuItem());
         }
