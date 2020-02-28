@@ -12,6 +12,7 @@ import com.panemu.tiwulfx.control.DetachableTabPane;
 import com.powsybl.afs.*;
 import com.powsybl.afs.storage.AppStorage;
 import com.powsybl.afs.storage.NodeInfo;
+import com.powsybl.afs.storage.events.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.copy_paste.afs.CopyManager;
 import com.powsybl.gse.copy_paste.afs.CopyService;
@@ -26,6 +27,7 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.geometry.Orientation;
@@ -84,6 +86,7 @@ public class ProjectPane extends Tab {
     private final TaskMonitorPane taskMonitorPane;
     private final Map<String, ProjectPaneProjectFolderListener> lCache = new HashMap<>();
     private final CopyManager localArchiveManager = CopyManager.getInstance();
+    private final AppStorageListener appStorageListener;
 
     public ProjectPane(Scene scene, Project project, GseContext context) {
         this.project = Objects.requireNonNull(project);
@@ -93,6 +96,9 @@ public class ProjectPane extends Tab {
         taskMonitorPane = new TaskMonitorPane(taskItems);
         copyService = initCopyService();
         treeView = createProjectTreeview();
+
+        appStorageListener = eventList -> eventList.getEvents().forEach(this::handleEvent);
+        project.getFileSystem().getEventBus().addListener(appStorageListener);
 
         DetachableTabPane ctrlTabPane1 = new DetachableTabPane();
         DetachableTabPane ctrlTabPane2 = new DetachableTabPane();
@@ -159,6 +165,35 @@ public class ProjectPane extends Tab {
                 }
             }
         };
+    }
+
+    private void handleEvent(NodeEvent nodeEvent) {
+        ProjectFile projectFile = project.getFileSystem().findProjectFile(nodeEvent.getId(), ProjectFile.class);
+        if (projectFile != null && projectFile.getProject().getId().equals(getProject().getId())) {
+            if (NodeDataUpdated.TYPENAME.equals(nodeEvent.getType()) || DependencyAdded.TYPENAME.equals(nodeEvent.getType())) {
+                refreshProjectFile(projectFile);
+            } else if (NodeNameUpdated.TYPENAME.equals(nodeEvent.getType())) {
+                List<ProjectFile> backwardDependencies = projectFile.getBackwardDependencies();
+                backwardDependencies.forEach(this::refreshProjectFile);
+            }
+        }
+    }
+
+    private void refreshProjectFile(ProjectFile projectFile) {
+        List<TreeItem<Object>> allTreeItems = new ArrayList<>();
+        findAllTreeItems(treeView.getRoot(), allTreeItems);
+        Optional<TreeItem<Object>> projectFileItem = allTreeItems.stream()
+                .filter(item -> ((ProjectNode) item.getValue()).getId().equals(projectFile.getId()))
+                .findFirst();
+        projectFileItem.ifPresent(treeItem -> refresh(treeItem.getParent()));
+    }
+
+    private void findAllTreeItems(TreeItem<Object> folderTreeItem, List<TreeItem<Object>> allTreeItems) {
+        ObservableList<TreeItem<Object>> children = folderTreeItem.getChildren();
+        allTreeItems.addAll(children);
+        children.stream()
+                .filter(item -> ((ProjectNode) item.getValue()).isFolder())
+                .forEach(folderItem -> findAllTreeItems(folderItem, allTreeItems));
     }
 
     private Optional<CopyService> initCopyService() {
@@ -705,7 +740,6 @@ public class ProjectPane extends Tab {
         DirectoryChooser directoryChooser = new DirectoryChooser();
         java.io.File selectedDirectory = directoryChooser.showDialog(getContent().getScene().getWindow());
         if (selectedDirectory != null) {
-            ProjectFolder targetFolder = (ProjectFolder) folder;
             context.getExecutor().execute(() -> {
                 TaskMonitor.Task task = project.getFileSystem().getTaskMonitor().startTask(String.format(RESOURCE_BUNDLE.getString("UnarchiveTask"), selectedDirectory.getName()), project);
                 try {
@@ -761,7 +795,6 @@ public class ProjectPane extends Tab {
                     }
 
                     List<CopyManager.CopyParams.NodeInfo> nodesInfos = cpInfo.getNodeInfos();
-                    String fileSystemName = cpInfo.getFileSystem();
                     ProjectFolder projectFolder = (ProjectFolder) selectedTreeItem.getValue();
                     String nodeNames = nodesInfos.stream().map(CopyManager.CopyParams.NodeInfo::getName).collect(Collectors.joining(", "));
 

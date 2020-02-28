@@ -34,10 +34,15 @@ import java.net.PasswordAuthentication;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.ResourceBundle;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -49,6 +54,25 @@ public final class GseUtil {
     private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang/GseUtil");
 
     private GseUtil() {
+    }
+
+    public static <T> Optional<T> runOnPlatformAndWait(Supplier<T> runnable) {
+        CountDownLatch wait = new CountDownLatch(1);
+        AtomicReference<T> result = new AtomicReference<>();
+        Platform.runLater(() -> {
+            try {
+                result.set(runnable.get());
+            } finally {
+                wait.countDown();
+            }
+        });
+        try {
+            wait.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        T resultData = result.get();
+        return resultData != null ? Optional.of(result.get()) : Optional.empty();
     }
 
     public static void setWaitingText(Labeled labeled) {
@@ -127,6 +151,9 @@ public final class GseUtil {
         executor.execute(() -> {
             try {
                 task.run();
+            } catch (CancellationException e) {
+                Platform.runLater(() -> GseAlerts.showDialogError("Task has been cancelled"));
+                LOGGER.warn("Task has been cancelled", e);
             } catch (Throwable t) {
                 Platform.runLater(() -> GseUtil.showDialogError(t));
             }

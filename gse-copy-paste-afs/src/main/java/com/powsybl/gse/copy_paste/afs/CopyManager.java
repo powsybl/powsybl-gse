@@ -8,6 +8,7 @@ package com.powsybl.gse.copy_paste.afs;
 
 import com.powsybl.afs.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
+import com.powsybl.computation.local.LocalComputationManager;
 import com.powsybl.gse.copy_paste.afs.exceptions.*;
 import com.powsybl.gse.spi.ProjectFileExecutionTaskExtension;
 import javafx.scene.input.Clipboard;
@@ -23,8 +24,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -37,7 +36,8 @@ public final class CopyManager {
     private static final String PROJECT_NODE_COPY_TYPE = "@PROJECT_NODE@";
     private static final String NODE_COPY_TYPE = "@NODE@";
     private static final String COPY_SIGNATURE = "@COPY_SIGNATURE@";
-    private static final long COPY_EXPIRATION_TIME = 12;
+    private static final long COPY_EXPIRATION_TIME = 6;
+    private static final long MIN_DISK_SPACE_THRESHOLD = 10;
     private static final Logger LOGGER = LoggerFactory.getLogger(CopyManager.class);
     private static final String TEMP_DIR_PREFIX = "powsybl_node_export";
     private static final long CLEANUP_DELAY = 36000;
@@ -48,7 +48,6 @@ public final class CopyManager {
 
     private static CopyManager INSTANCE = null;
 
-    private ExecutorService tPool = Executors.newCachedThreadPool();
     private Map<String, CopyInfo> currentCopies = new HashMap<>();
 
     public static CopyManager getInstance() {
@@ -106,6 +105,14 @@ public final class CopyManager {
                 copyInfo.nodeId = node.getId();
                 copyInfo.node = node;
                 copyInfo.archivePath = resolveArchiveTargetDirectory(targetDirectory);
+
+                File archiveFile = copyInfo.archivePath.toFile();
+                long freeSpacePercent = 100 * archiveFile.getFreeSpace() / archiveFile.getTotalSpace();
+                LOGGER.info("Copying into drive with {}% free space", freeSpacePercent);
+                if (freeSpacePercent < MIN_DISK_SPACE_THRESHOLD) {
+                    throw new CopyPasteException("Not enough space");
+                }
+
                 copyInfo.expirationDate = ZonedDateTime.now().plusHours(COPY_EXPIRATION_TIME);
 
                 currentCopies.put(copyInfo.nodeId, copyInfo);
@@ -221,7 +228,7 @@ public final class CopyManager {
 
     private Path resolveArchiveTargetDirectory(File directoryProp) throws IOException, CopyNotEmptyArchiveDirectoryException {
         if (directoryProp == null) {
-            return Files.createTempDirectory(TEMP_DIR_PREFIX);
+            return Files.createTempDirectory(LocalComputationManager.getDefault().getLocalDir(), TEMP_DIR_PREFIX);
         }
 
         if (!directoryProp.exists() || !directoryProp.canWrite() || !directoryProp.isDirectory()) {
@@ -257,7 +264,6 @@ public final class CopyManager {
     }
 
     private String renameAndPaste(AbstractNodeBase folder, List<? extends AbstractNodeBase> children, CopyInfo info) throws CopyPasteException {
-
         for (AbstractNodeBase child : children) {
             String name = child.getName();
             if (info.node.getName().equals(name)) {
@@ -329,7 +335,7 @@ public final class CopyManager {
                 .append(COPY_INFO_SEPARATOR)
                 .append(fileSystemName)
                 .append(COPY_INFO_SEPARATOR);
-        nodes.forEach(nod -> copyParameters.append(nod.getId()).append(COPY_NODE_INFO_SEPARATOR).append(node.getName().replaceAll(COPY_INFO_SEPARATOR, "").replaceAll(COPY_NODE_INFO_SEPARATOR, "")).append(COPY_INFO_SEPARATOR));
+        nodes.forEach(nod -> copyParameters.append(nod.getId()).append(COPY_NODE_INFO_SEPARATOR).append(nod.getName().replaceAll(COPY_INFO_SEPARATOR, "").replaceAll(COPY_NODE_INFO_SEPARATOR, "")).append(COPY_INFO_SEPARATOR));
         return copyParameters;
     }
 
