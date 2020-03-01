@@ -40,7 +40,7 @@ public class GseApp extends Application {
 
     @Override
     public void start(Stage stage) {
-        gsePane = new GsePane(new GseContext(executor), appData, this);
+        gsePane = new GsePane(new GseContext(executor, this), appData, this);
         stage.setTitle(gsePane.getTitle());
         stage.getIcons().addAll(gsePane.getIcons());
         Scene scene = new Scene(gsePane, 1200, 800);
