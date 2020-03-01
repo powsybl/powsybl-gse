@@ -1194,6 +1194,9 @@ public class ProjectPane extends Tab {
             dialog.showAndWait()
                     .filter(result -> result)
                     .ifPresent(result -> editor.saveChanges());
+        } catch (Exception e) {
+            LOGGER.error("", e);
+            Platform.runLater(() -> GseAlerts.showDialogError(e.getMessage()));
         } finally {
             dialog.close();
             editor.dispose();
