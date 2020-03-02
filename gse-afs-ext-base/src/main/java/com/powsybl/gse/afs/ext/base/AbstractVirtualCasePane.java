@@ -81,4 +81,12 @@ abstract class AbstractVirtualCasePane<T extends ProjectNode> extends GridPane {
 
     public void dispose() {
     }
+
+    public void setCase(ProjectFile caseFile) {
+        caseSelectionPane.nodeProperty().setValue(caseFile);
+    }
+
+    public void setScript(ModificationScript modificationScript) {
+        scriptSelectionPane.nodeProperty().setValue(modificationScript);
+    }
 }

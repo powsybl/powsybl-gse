@@ -168,6 +168,10 @@ public class ProjectPane extends Tab {
     }
 
     private void handleEvent(NodeEvent nodeEvent) {
+        if (NodeDataRemoved.TYPENAME.equals(nodeEvent.getType()) || NodeRemoved.TYPENAME.equals(nodeEvent.getType())) {
+            //Deleted node can not be fetched
+            return;
+        }
         ProjectFile projectFile = project.getFileSystem().findProjectFile(nodeEvent.getId(), ProjectFile.class);
         if (projectFile != null && projectFile.getProject().getId().equals(getProject().getId())) {
             if (NodeDataUpdated.TYPENAME.equals(nodeEvent.getType()) || DependencyAdded.TYPENAME.equals(nodeEvent.getType())) {
@@ -183,6 +187,7 @@ public class ProjectPane extends Tab {
         List<TreeItem<Object>> allTreeItems = new ArrayList<>();
         findAllTreeItems(treeView.getRoot(), allTreeItems);
         Optional<TreeItem<Object>> projectFileItem = allTreeItems.stream()
+                .filter(item -> item.getValue() instanceof ProjectNode)
                 .filter(item -> ((ProjectNode) item.getValue()).getId().equals(projectFile.getId()))
                 .findFirst();
         projectFileItem.ifPresent(treeItem -> refresh(treeItem.getParent()));
@@ -192,6 +197,7 @@ public class ProjectPane extends Tab {
         ObservableList<TreeItem<Object>> children = folderTreeItem.getChildren();
         allTreeItems.addAll(children);
         children.stream()
+                .filter(item -> item.getValue() instanceof ProjectNode)
                 .filter(item -> ((ProjectNode) item.getValue()).isFolder())
                 .forEach(folderItem -> findAllTreeItems(folderItem, allTreeItems));
     }
@@ -673,6 +679,32 @@ public class ProjectPane extends Tab {
 
     // contextual menu
 
+    private GseMenuItem createMultipleDependenciesFileItem(List<? extends TreeItem<Object>> selectedTreeItems) {
+        GseMenuItem menuItem = null;
+        List<? extends Class<?>> selectedItemsTypes = selectedTreeItems.stream().map(iem -> iem.getValue().getClass()).collect(Collectors.toList());
+
+        for (Class<? extends ProjectFile> type : project.getFileSystem().getData().getProjectFileClasses()) {
+            for (ProjectFileCreatorExtension creatorExtension : findCreatorExtension(type)) {
+                if (creatorExtension != null && !creatorExtension.getDependenciesTypes().isEmpty()) {
+                    List<Class<?>> dependenciesTypes = creatorExtension.getDependenciesTypes();
+                    if (areAssignable(dependenciesTypes, selectedItemsTypes)) {
+                        menuItem = new GseMenuItem(creatorExtension.getMenuText());
+                        menuItem.setOrder(creatorExtension.getMenuOrder());
+                        menuItem.setGraphic(creatorExtension.getMenuGraphic());
+                        menuItem.setAccelerator(creatorExtension.getMenuKeycode());
+                        menuItem.setOnAction(event -> showProjectItemCreatorDialogWithFilledPaths(selectedTreeItems, creatorExtension));
+                    }
+                }
+            }
+        }
+        return menuItem;
+    }
+
+    private boolean areAssignable(List<Class<?>> dependenciesTypes, List<? extends Class<?>> selectedItemsTypes) {
+        return dependenciesTypes.stream().distinct().count() == selectedItemsTypes.stream().distinct().count() && dependenciesTypes.stream()
+                .allMatch(dependencyType -> selectedItemsTypes.stream().anyMatch(dependencyType::isAssignableFrom));
+    }
+
     private GseMenuItem createDeleteProjectNodeItem(List<? extends TreeItem<Object>> selectedTreeItems) {
         GseMenuItem deleteMenuItem = GseMenuItem.createDeleteMenuItem();
         deleteMenuItem.setOnAction(event -> deleteNodesAlert(selectedTreeItems));
@@ -1095,6 +1127,10 @@ public class ProjectPane extends Tab {
         if (copyService.isPresent()) {
             contextMenu.getItems().add(createCopyProjectNodeItem(selectedTreeItems));
         }
+        GseMenuItem multipleDependenciesFileItem = createMultipleDependenciesFileItem(selectedTreeItems);
+        if (multipleDependenciesFileItem != null) {
+            contextMenu.getItems().add(multipleDependenciesFileItem);
+        }
         contextMenu.getItems().add(createDeleteProjectNodeItem(selectedTreeItems));
         return contextMenu;
     }
@@ -1126,6 +1162,34 @@ public class ProjectPane extends Tab {
         }
     }
 
+    private void showProjectItemCreatorDialogWithFilledPaths(List<? extends TreeItem<Object>> selectedTreeItems, ProjectFileCreatorExtension creatorExtension) {
+        TreeItem<Object> treeItem = selectedTreeItems.get(0);
+        List<ProjectFile> selectedFiles = selectedTreeItems.stream().map(item -> (ProjectFile) item.getValue()).collect(Collectors.toList());
+        ProjectFolder folder = (ProjectFolder) treeItem.getParent().getValue();
+        ProjectFileCreator creator = creatorExtension.newCreatorWithParameters(folder, getContent().getScene(), context, selectedFiles);
+        Dialog<Boolean> dialog = createProjectItemDialog(creator.getTitle(), creator.okProperty(), creator.getContent());
+        try {
+            dialog.showAndWait().filter(result -> result).ifPresent(result -> {
+                ProjectCreationTask task = creator.createTask();
+
+                tasks.add(folder, task.getNamePreview());
+                refresh(treeItem.getParent());
+
+                GseUtil.execute(context.getExecutor(), () -> {
+                    try {
+                        task.run();
+                    } finally {
+                        tasks.remove(folder, task.getNamePreview());
+                        Platform.runLater(() -> refresh(treeItem));
+                    }
+                });
+            });
+        } finally {
+            dialog.close();
+            creator.dispose();
+        }
+    }
+
     private void showProjectItemEditorDialog(ProjectFile file, ProjectFileEditorExtension editorExtension, String tabName) {
 
         ProjectFileEditor editor = editorExtension.newEditor(file, getContent().getScene(), context);
@@ -1136,6 +1200,9 @@ public class ProjectPane extends Tab {
             dialog.showAndWait()
                     .filter(result -> result)
                     .ifPresent(result -> editor.saveChanges());
+        } catch (Exception e) {
+            LOGGER.error("", e);
+            Platform.runLater(() -> GseAlerts.showDialogError(e.getMessage()));
         } finally {
             dialog.close();
             editor.dispose();

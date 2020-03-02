@@ -18,9 +18,12 @@ import com.powsybl.gse.util.Shortcut;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Side;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
@@ -33,11 +36,14 @@ import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Popup;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
 
@@ -53,6 +59,7 @@ public class GsePane extends StackPane {
     private static final ServiceLoaderCache<ProjectFileExecutionTaskExtension> EXECUTION_TASK_EXTENSION = new ServiceLoaderCache<>(ProjectFileExecutionTaskExtension.class);
     private static final ServiceLoaderCache<ProjectFileEditorExtension> EDITOR_EXTENSION = new ServiceLoaderCache<>(ProjectFileEditorExtension.class);
     private static final ServiceLoaderCache<ProjectFileViewerExtension> VIEWER_EXTENSION = new ServiceLoaderCache<>(ProjectFileViewerExtension.class);
+    private static final ServiceLoaderCache<GseAppExtension> APP_EXTENSION = new ServiceLoaderCache<>(GseAppExtension.class);
 
     private final KeyCombination closeKeyCombination = new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN);
 
@@ -66,6 +73,8 @@ public class GsePane extends StackPane {
     private final TabPane tabPane = new TabPane();
     private final Preferences preferences;
     private final Application javaxApplication;
+
+    private final Map<Class, Pair<Tab, GseAppExtension.View<? extends Node>>> extViews = new HashMap<>();
 
     private final KeyCombination createKeyCombination = new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN);
 
@@ -108,12 +117,18 @@ public class GsePane extends StackPane {
     }
 
     private void openProjectDialog(GseContext context, AppData data) {
-        Set<String> openedProjects = new HashSet<>();
-        for (Tab tab : tabPane.getTabs()) {
-            openedProjects.add(((ProjectPane) tab).getProject().getId());
-        }
+        Set<String> openedProjects = getOpenProjects();
         Optional<Project> project = NodeChooser.showAndWaitDialog(getScene().getWindow(), data, context, true, Project.class, openedProjects);
         project.ifPresent(this::openProject);
+    }
+
+    private Set<String> getOpenProjects() {
+        return tabPane
+                .getTabs()
+                .stream()
+                .filter(tab -> ProjectPane.class.isAssignableFrom(tab.getClass()))
+                .map(tab -> ((ProjectPane) tab).getProject().getId())
+                .collect(Collectors.toSet());
     }
 
     private void createNewProject(GseContext context, AppData data) {
@@ -141,10 +156,7 @@ public class GsePane extends StackPane {
     }
 
     private void savePreferences() {
-        List<String> openedProjects = new ArrayList<>();
-        for (Tab tab : tabPane.getTabs()) {
-            openedProjects.add(((ProjectPane) tab).getProject().getPath().toString());
-        }
+        List<String> openedProjects = new ArrayList<>(getOpenProjects());
         preferences.put(OPENED_PROJECTS, openedProjects.stream().collect(Collectors.joining(",")));
     }
 
@@ -156,23 +168,15 @@ public class GsePane extends StackPane {
 
     private boolean isProjectOpen(Project project) {
         Objects.requireNonNull(project);
-        for (Tab tab : tabPane.getTabs()) {
-            ProjectPane projectPane = (ProjectPane) tab;
-            if (projectPane.getProject().getId().equals(project.getId())) {
-                return true;
-            }
-        }
-        return false;
+        return tabPane
+                .getTabs()
+                .stream()
+                .filter(tab -> ProjectPane.class.isAssignableFrom(tab.getClass()))
+                .anyMatch(tab -> project.getId().equals(((ProjectPane) tab).getProject().getId()));
     }
 
     private void cleanClosedProjects() {
-        Iterator<Tab> it = tabPane.getTabs().iterator();
-        while (it.hasNext()) {
-            ProjectPane projectPane = (ProjectPane) it.next();
-            if (projectPane.getProject().getFileSystem().isClosed()) {
-                it.remove();
-            }
-        }
+        tabPane.getTabs().removeIf(tab -> tab instanceof ProjectPane && ((ProjectPane) tab).getProject().getFileSystem().isClosed());
     }
 
     private void showAbout() {
@@ -309,7 +313,9 @@ public class GsePane extends StackPane {
     }
 
     private GseAppBar createAppBar() {
-        GseAppBar appBar = new GseAppBar(context, brandingConfig);
+        List<Button> extButtons = initExtensions(GseAppBar::createButton, button -> button::setOnAction, GseAppExtension::isMain);
+
+        GseAppBar appBar = new GseAppBar(context, brandingConfig, extButtons);
         if (appBar.getUserSessionPane() != null) {
             appBar.getUserSessionPane().sessionProperty().addListener((observable, oldUserSession, newUserSession) -> {
                 setUserSession(newUserSession);
@@ -338,6 +344,8 @@ public class GsePane extends StackPane {
         shortcutMenuItem.setOnAction(event -> showShortcuts());
         contextMenu.getItems().addAll(aboutMenuItem, shortcutMenuItem);
 
+        contextMenu.getItems().addAll(initExtensions(MenuItem::new, menu -> menu::setOnAction, ext -> !ext.isMain()));
+
         appBar.getToggleSwitch().selectedProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue) {
                 this.getScene().getStylesheets().add("/css/gse-dark-theme.css");
@@ -350,17 +358,39 @@ public class GsePane extends StackPane {
         return appBar;
     }
 
+    private <T> List<T> initExtensions(Function<String, T> menuGenerator, Function<T, Consumer<EventHandler<ActionEvent>>> onActionEvent, Predicate<GseAppExtension> filter) {
+        return APP_EXTENSION
+                .getServices()
+                .stream()
+                .filter(filter)
+                .map(ext -> Pair.of(ext, menuGenerator.apply(ext.getMenuText())))
+                .peek(extButton -> onActionEvent.apply(extButton.getValue()).accept(event -> {
+                    GseAppExtension ext = extButton.getKey();
+                    Pair<Tab, GseAppExtension.View<? extends Node>> existingTab = extViews.getOrDefault(ext.getClass(), Pair.of(null, null));
+                    Optional<GseAppExtension.View<? extends Node>> optView = ext.view(context, existingTab.getValue());
+                    optView.ifPresent(view -> {
+                        Tab tab = (existingTab.getKey() != null) ? existingTab.getKey() : new Tab(view.getTitle(), view.getNode());
+                        tabPane.getTabs().add(tab);
+                        tabPane.getSelectionModel().select(tab);
+                        extViews.put(ext.getClass(), Pair.of(tab, view));
+                        tab.setOnClosed(tabCloseEvent -> extViews.remove(ext.getClass()));
+                    });
+                }))
+                .map(Pair::getValue)
+                .collect(Collectors.toList());
+    }
+
     private void openProject(Project project) {
         if (!isProjectOpen(project)) {
             addProject(project);
         } else {
-            for (Tab tab : tabPane.getTabs()) {
-                ProjectPane projectPane = (ProjectPane) tab;
-                if (projectPane.getProject().getId().equals(project.getId())) {
-                    tab.getTabPane().getSelectionModel().select(tab);
-                    break;
-                }
-            }
+            tabPane
+                    .getTabs()
+                    .stream()
+                    .filter(tab -> ProjectPane.class.isAssignableFrom(tab.getClass()))
+                    .filter(tab -> ((ProjectPane) tab).getProject().getId().equals(project.getId()))
+                    .findFirst()
+                    .ifPresent(tab -> tab.getTabPane().getSelectionModel().select(tab));
         }
     }
 
@@ -376,17 +406,20 @@ public class GsePane extends StackPane {
 
     public void dispose() {
         savePreferences();
-        for (Tab tab : tabPane.getTabs()) {
-            ((ProjectPane) tab).dispose();
-        }
+        tabPane
+                .getTabs()
+                .stream()
+                .filter(tab -> ProjectPane.class.isAssignableFrom(tab.getClass()))
+                .map(ProjectPane.class::cast)
+                .forEach(ProjectPane::dispose);
     }
 
     public boolean isClosable() {
-        for (Tab tab : tabPane.getTabs()) {
-            if (!(((ProjectPane) tab).canBeClosed())) {
-                return false;
-            }
-        }
-        return true;
+        return tabPane
+                .getTabs()
+                .stream()
+                .filter(tab -> ProjectPane.class.isAssignableFrom(tab.getClass()))
+                .map(ProjectPane.class::cast)
+                .allMatch(ProjectPane::canBeClosed);
     }
 }
