@@ -29,6 +29,14 @@ public final class GseAlerts {
     private GseAlerts() {
     }
 
+    public static Optional<ButtonType> showRemoveConfirmationAlert(String removeElementName) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        final String remove = RESOURCE_BUNDLE.getString("Remove");
+        alert.setTitle(remove);
+        alert.setHeaderText(remove + " \'" + removeElementName + "\' ?");
+        return alert.showAndWait();
+    }
+
     public static void showDraggingError() {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle(RESOURCE_BUNDLE.getString("DragError"));

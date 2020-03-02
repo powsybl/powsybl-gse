@@ -6,10 +6,10 @@
  */
 package com.powsybl.gse.afs.ext.base;
 
-import com.powsybl.afs.ProjectFile;
+import com.powsybl.afs.ext.base.AbstractScript;
 import com.powsybl.afs.ext.base.ScriptListener;
 import com.powsybl.afs.ext.base.ScriptType;
-import com.powsybl.afs.ext.base.StorableScript;
+import com.powsybl.afs.storage.events.*;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.spi.AutoCompletionWordsProvider;
 import com.powsybl.gse.spi.GseContext;
@@ -17,6 +17,7 @@ import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.spi.Savable;
 import com.powsybl.gse.util.Glyph;
 import com.powsybl.gse.util.GseAlerts;
+import com.powsybl.gse.util.GseDialog;
 import com.powsybl.gse.util.GseUtil;
 import com.powsybl.gse.util.editor.AbstractCodeEditor;
 import com.powsybl.gse.util.editor.AbstractCodeEditorFactoryService;
@@ -27,6 +28,8 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -42,11 +45,13 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.scene.text.TextFlow;
+import javafx.util.Callback;
 import org.controlsfx.control.MasterDetailPane;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -60,7 +65,11 @@ public class ModificationScriptEditor extends BorderPane
 
     private static final int VALIDATION_INFO_TIMEOUT = 3000;
 
+    private static final double DIVIDER_POSITION = 0.05;
+
     private static final ServiceLoaderCache<AbstractCodeEditorFactoryService> CODE_EDITOR_FACTORIES = new ServiceLoaderCache<>(AbstractCodeEditorFactoryService.class);
+
+    private static final String GSE_TOOLBAR_BUTTON_STYLE = "gse-toolbar-button";
 
     private final GseContext context;
 
@@ -78,47 +87,54 @@ public class ModificationScriptEditor extends BorderPane
 
     private final Button validateButton;
 
+    private final Button addVirtualScriptButton;
+
     private final ProgressIndicator progressIndicator = new ProgressIndicator();
 
     private final StackPane codeEditorWithProgressIndicator;
+
+    private final MasterDetailPane codeEditorWithIncludesPane;
 
     private final SplitPane splitPane;
 
     private AbstractCodeEditor codeEditor;
 
-    private StorableScript storableScript;
+    private Optional<AbstractCodeEditorFactoryService> preferredCodeEditor;
+
+    private AbstractScript<? extends AbstractScript> abstractScript;
 
     private final SimpleBooleanProperty saved = new SimpleBooleanProperty(true);
 
     private Service<String> scriptUpdateService;
 
-    public ModificationScriptEditor(StorableScript storableScript, Scene scene, GseContext context) {
-        this.storableScript = storableScript;
+    private AppStorageListener appStorageListener;
+
+    public ModificationScriptEditor(AbstractScript abstractScript, Scene scene, GseContext context) {
+        this.abstractScript = abstractScript;
         this.context = context;
 
-        Optional<AbstractCodeEditorFactoryService> preferredCodeEditor = CODE_EDITOR_FACTORIES.getServices()
+        preferredCodeEditor = CODE_EDITOR_FACTORIES.getServices()
                 .stream()
                 .findAny();
 
-        codeEditor = preferredCodeEditor
-                .map(codeEditorFactoryService -> {
-                    try {
-                        LOGGER.info("Trying to use custom editor {}", codeEditorFactoryService.getEditorClass());
-                        return codeEditorFactoryService.build();
-                    } catch (Exception e) {
-                        LOGGER.error("Failed to instanciate editor {}", codeEditorFactoryService.getEditorClass(), e);
-                    }
-                    return null;
-                })
-                .orElse(new GroovyCodeEditor());
+        codeEditor = getCodeEditor();
 
+        appStorageListener = eventList -> eventList.getEvents().forEach(nodeEvent -> Platform.runLater(() -> handleEvent(nodeEvent)));
+
+        abstractScript.getFileSystem().getEventBus().addListener(appStorageListener);
         //Adding  autocompletion keywords suggestions depending the context
         List<String> suggestions = new ArrayList<>();
-        List<AutoCompletionWordsProvider> completionWordsProviderExtensions = findCompletionWordsProviderExtensions(storableScript);
+        List<AutoCompletionWordsProvider> completionWordsProviderExtensions = findCompletionWordsProviderExtensions(abstractScript);
         completionWordsProviderExtensions.forEach(extension -> suggestions.addAll(extension.completionKeyWords()));
 
         codeEditorWithProgressIndicator = new StackPane();
-        splitPane = new SplitPane(codeEditorWithProgressIndicator);
+        codeEditorWithIncludesPane = new MasterDetailPane();
+        codeEditorWithIncludesPane.setMasterNode(codeEditorWithProgressIndicator);
+        codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(false));
+        codeEditorWithIncludesPane.setShowDetailNode(true);
+        codeEditorWithIncludesPane.setDetailSide(Side.TOP);
+        codeEditorWithIncludesPane.setDividerPosition(DIVIDER_POSITION);
+        splitPane = new SplitPane(codeEditorWithIncludesPane);
         setUpEditor(codeEditor, suggestions);
         codeEditor.setTabSize(4);
 
@@ -130,14 +146,19 @@ public class ModificationScriptEditor extends BorderPane
 
         Text saveGlyph = Glyph.createAwesomeFont('\uf0c7').size("1.3em");
         saveButton = new Button("", saveGlyph);
-        saveButton.getStyleClass().add("gse-toolbar-button");
+        saveButton.getStyleClass().add(GSE_TOOLBAR_BUTTON_STYLE);
         saveButton.disableProperty().bind(saved);
         saveButton.setOnAction(event -> save());
 
         Image validateImage = new Image(ModificationScriptEditor.class.getResourceAsStream("/icons/spell-check-solid.png"));
         validateButton = new Button("", new ImageView(validateImage));
-        validateButton.getStyleClass().add("gse-toolbar-button");
+        validateButton.getStyleClass().add(GSE_TOOLBAR_BUTTON_STYLE);
         validateButton.setOnAction(event -> validateScript(codeWithSyntaxCheckPane));
+
+        Text plusGlyph = Glyph.createAwesomeFont('\uf055').size("1.3em");
+        addVirtualScriptButton = new Button("", plusGlyph);
+        addVirtualScriptButton.getStyleClass().add(GSE_TOOLBAR_BUTTON_STYLE);
+        addVirtualScriptButton.setOnAction(event -> addIncludedScript(scene, context));
 
         comboBox = new ComboBox(FXCollections.observableArrayList(2, 4, 8));
         comboBox.getSelectionModel().select(1);
@@ -145,7 +166,7 @@ public class ModificationScriptEditor extends BorderPane
         tabSizeLabel = new Label(RESOURCE_BUNDLE.getString("TabSize") + ": ");
         caretPositionDisplay = new Label(codeEditor.currentPosition());
 
-        toolBar = new ToolBar(saveButton, validateButton);
+        toolBar = new ToolBar(saveButton, validateButton, addVirtualScriptButton);
 
         Pane spacer = new Pane();
         bottomToolBar = new ToolBar(tabSizeLabel, comboBox, spacer, caretPositionDisplay);
@@ -157,7 +178,38 @@ public class ModificationScriptEditor extends BorderPane
         setCenter(codeWithSyntaxCheckPane);
 
         // listen to modifications
-        storableScript.addListener(this);
+        abstractScript.addListener(this);
+    }
+
+    private void handleEvent(NodeEvent nodeEvent) {
+        if (numberOfDependenciesHaveChanged(nodeEvent)) {
+            updateIncludePane();
+        } else if (dependenciesHaveChanged(nodeEvent)) {
+            abstractScript.clearDependenciesCache();
+            updateIncludePane();
+        }
+    }
+
+    private boolean numberOfDependenciesHaveChanged(NodeEvent nodeEvent) {
+        return nodeEvent.getId().equals(abstractScript.getId()) && (DependencyAdded.TYPENAME.equals(nodeEvent.getType()) || DependencyRemoved.TYPENAME.equals(nodeEvent.getType()));
+    }
+
+    private boolean dependenciesHaveChanged(NodeEvent nodeEvent) {
+        return abstractScript.getIncludedScripts().stream()
+                .anyMatch(script -> nodeEvent.getId().equals(script.getId())
+                        && (NodeNameUpdated.TYPENAME.equals(nodeEvent.getType()) || NodeDataUpdated.TYPENAME.equals(nodeEvent.getType())));
+    }
+
+    private void addIncludedScript(Scene scene, GseContext context) {
+        VirtualScriptCreator virtualScriptCreator = new VirtualScriptCreator(abstractScript, scene, context);
+        Callback<ButtonType, Boolean> resultConverter = buttonType -> buttonType == ButtonType.OK ? Boolean.TRUE : Boolean.FALSE;
+        Dialog<Boolean> dialog = new GseDialog<>(virtualScriptCreator.getTitle(), virtualScriptCreator, scene.getWindow(), virtualScriptCreator.okProperty().not(), resultConverter);
+        dialog.showAndWait().filter(result -> result).ifPresent(result -> virtualScriptCreator.create());
+    }
+
+    private void removeIncludedScript(AbstractScript script) {
+        Optional<ButtonType> result = GseAlerts.showRemoveConfirmationAlert(script.getName());
+        result.filter(type -> type == ButtonType.OK).ifPresent(okButton -> abstractScript.removeScript(script.getId()));
     }
 
     private void setUpEditor(AbstractCodeEditor editor, List<String> completions) {
@@ -171,12 +223,12 @@ public class ModificationScriptEditor extends BorderPane
         codeEditorWithProgressIndicator.getChildren().addAll(codeEditor, new Group(progressIndicator));
     }
 
-    private List<AutoCompletionWordsProvider> findCompletionWordsProviderExtensions(StorableScript storableScript) {
-        return GroovyCodeEditor.findAutoCompletionWordProviderExtensions(storableScript.getClass());
+    private List<AutoCompletionWordsProvider> findCompletionWordsProviderExtensions(AbstractScript script) {
+        return GroovyCodeEditor.findAutoCompletionWordProviderExtensions(script.getClass());
     }
 
     private void validateScript(MasterDetailPane codeWithDetailPane) {
-        if (ScriptType.GROOVY.equals(storableScript.getScriptType())) {
+        if (ScriptType.GROOVY.equals(abstractScript.getScriptType())) {
             try {
                 GroovyShell groovyShell = new GroovyShell();
                 groovyShell.parse(codeEditor.getCode());
@@ -196,8 +248,100 @@ public class ModificationScriptEditor extends BorderPane
                 codeWithDetailPane.setShowDetailNode(true);
             }
         } else {
-            LOGGER.info("No validation process found for script type {}", storableScript.getScriptType());
+            LOGGER.info("No validation process found for script type {}", abstractScript.getScriptType());
         }
+    }
+
+    private void updateIncludePane() {
+        Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true)));
+    }
+
+    private Node createIncludedScriptsPane(boolean isExpanded) {
+        List<AbstractScript> includedScripts = abstractScript.getIncludedScripts();
+        List<IncludeScriptPane> includedScriptsPanes = includedScripts.stream()
+                .map(this::includedPane)
+                .collect(Collectors.toList());
+
+        List<HBox> allIncludesPanes = new ArrayList<>();
+        includedScriptsPanes.forEach(includedScriptPane -> {
+            int index = includedScripts.indexOf(includedScriptPane.getIncludedScript());
+            Button removeButton = createIncludedButton('\uf00d', "1.1em", event -> removeIncludedScript(includedScriptPane.getIncludedScript()));
+            Button upButton = createIncludedButton('\uf062', "0.9em", event -> {
+                abstractScript.switchIncludedDependencies(index, index - 1);
+                Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true)));
+            });
+            if (includedScriptsPanes.get(0) == includedScriptPane) {
+                upButton.setDisable(true);
+            }
+            Button downButton = createIncludedButton('\uf063', "0.9em", event -> {
+                abstractScript.switchIncludedDependencies(index, index + 1);
+                Platform.runLater(() -> codeEditorWithIncludesPane.setDetailNode(createIncludedScriptsPane(true)));
+            });
+            if (includedScriptsPanes.get(includedScriptsPanes.size() - 1) == includedScriptPane) {
+                downButton.setDisable(true);
+            }
+            upButton.setPadding(new Insets(5, 5, 5, 5));
+            downButton.setPadding(new Insets(5, 5, 5, 5));
+            HBox includePaneWithEditingButtons = new HBox(includedScriptPane, removeButton, upButton, downButton);
+            allIncludesPanes.add(includePaneWithEditingButtons);
+            HBox.setHgrow(includedScriptPane, Priority.ALWAYS);
+        });
+
+        VBox includesPanesBox = new VBox();
+        includesPanesBox.getChildren().addAll(allIncludesPanes);
+
+        String includeScriptsLabel = includedScripts.size() + " " + RESOURCE_BUNDLE.getString("IncludedScripts");
+        TitledPane rootTitledPane = new TitledPane(includeScriptsLabel, includesPanesBox);
+        rootTitledPane.setExpanded(isExpanded);
+        rootTitledPane.expandedProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue) {
+                codeEditorWithIncludesPane.setDividerPosition(0.5);
+            } else {
+                codeEditorWithIncludesPane.setDividerPosition(DIVIDER_POSITION);
+            }
+        });
+
+        return rootTitledPane;
+    }
+
+    private IncludeScriptPane includedPane(AbstractScript script) {
+        AbstractCodeEditor includedScriptCodeEditor = getCodeEditor();
+        includedScriptCodeEditor.setCode(script.readScript());
+        int editableTimeOut = 2000;
+        Timer timer = new Timer(true);
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                Platform.runLater(() -> includedScriptCodeEditor.setEditable(false));
+            }
+        }, editableTimeOut);
+        IncludeScriptPane titledPane = new IncludeScriptPane(script.getName(), includedScriptCodeEditor, script);
+        titledPane.setExpanded(false);
+        return titledPane;
+    }
+
+    private Button createIncludedButton(char font, String size, EventHandler<ActionEvent> eventHandler) {
+        Glyph glyph = Glyph.createAwesomeFont(font);
+        if (size != null) {
+            glyph.size(size);
+        }
+        Button btn = new Button("", glyph);
+        btn.setOnAction(eventHandler);
+        return btn;
+    }
+
+    private AbstractCodeEditor getCodeEditor() {
+        return preferredCodeEditor
+                .map(codeEditorFactoryService -> {
+                    try {
+                        LOGGER.info("Trying to use custom editor {}", codeEditorFactoryService.getEditorClass());
+                        return codeEditorFactoryService.build();
+                    } catch (Exception e) {
+                        LOGGER.error("Failed to instantiate editor {}", codeEditorFactoryService.getEditorClass(), e);
+                    }
+                    return null;
+                })
+                .orElse(new GroovyCodeEditor());
     }
 
     private Node createScriptValidationNode(Text message, int prefHeight, TextAlignment alignment, Color backgroundColor, Runnable closeDetail) {
@@ -248,9 +392,9 @@ public class ModificationScriptEditor extends BorderPane
     public void save() {
         if (!saved.getValue()) {
             // write script but remove listener before to avoid double update
-            storableScript.removeListener(this);
-            storableScript.writeScript(codeEditor.getCode());
-            storableScript.addListener(this);
+            abstractScript.removeListener(this);
+            abstractScript.writeScript(codeEditor.getCode());
+            abstractScript.addListener(this);
             saved.setValue(true);
         }
     }
@@ -264,7 +408,7 @@ public class ModificationScriptEditor extends BorderPane
         scriptUpdateService = GseUtil.createService(new Task<String>() {
             @Override
             protected String call() {
-                return storableScript.readScript();
+                return abstractScript.readScript();
             }
         }, context.getExecutor());
         progressIndicator.visibleProperty().bind(scriptUpdateService.runningProperty());
@@ -295,15 +439,30 @@ public class ModificationScriptEditor extends BorderPane
 
     @Override
     public void dispose() {
-        storableScript.removeListener(this);
+        abstractScript.removeListener(this);
     }
 
     @Override
     public boolean isClosable() {
         if (!saved.get()) {
-            return GseAlerts.showSaveDialog(((ProjectFile) storableScript).getName(), this);
+            return GseAlerts.showSaveDialog(abstractScript.getName(), this);
         }
         return true;
+    }
+
+    private static class IncludeScriptPane extends TitledPane {
+
+        private AbstractScript includedScript;
+
+        IncludeScriptPane(String title, Node content, AbstractScript includedScript) {
+            super(title, content);
+            this.includedScript = includedScript;
+        }
+
+        public AbstractScript getIncludedScript() {
+            return includedScript;
+        }
+
     }
 
 }

@@ -19,6 +19,8 @@ public abstract class AbstractCodeEditor extends MasterDetailPane {
 
     public abstract void setTabSize(int size);
 
+    public abstract void setEditable(boolean isEditable);
+
     public abstract void setCode(String code);
 
     public abstract String getCode();

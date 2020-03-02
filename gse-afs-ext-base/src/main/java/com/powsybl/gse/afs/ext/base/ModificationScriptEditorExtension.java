@@ -8,7 +8,7 @@ package com.powsybl.gse.afs.ext.base;
 
 import com.google.auto.service.AutoService;
 import com.powsybl.afs.ProjectFile;
-import com.powsybl.afs.ext.base.StorableScript;
+import com.powsybl.afs.ext.base.AbstractScript;
 import com.powsybl.gse.spi.GseContext;
 import com.powsybl.gse.spi.ProjectFileViewer;
 import com.powsybl.gse.spi.ProjectFileViewerExtension;
@@ -33,7 +33,7 @@ public class ModificationScriptEditorExtension implements ProjectFileViewerExten
 
     @Override
     public Class<?> getAdditionalType() {
-        return StorableScript.class;
+        return AbstractScript.class;
     }
 
     @Override
@@ -53,7 +53,7 @@ public class ModificationScriptEditorExtension implements ProjectFileViewerExten
 
     @Override
     public ProjectFileViewer newViewer(ProjectFile file, Scene scene, GseContext context) {
-        return new ModificationScriptEditor((StorableScript) file, scene, context);
+        return new ModificationScriptEditor((AbstractScript) file, scene, context);
     }
 
 }

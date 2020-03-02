@@ -26,6 +26,7 @@ import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Side;
 import javafx.scene.input.*;
+import javafx.scene.layout.Background;
 import javafx.scene.layout.VBox;
 import javafx.util.Pair;
 import org.apache.commons.lang3.StringUtils;
@@ -559,6 +560,12 @@ public class GroovyCodeEditor extends AbstractCodeEditor {
         }
         event.setDropCompleted(success);
         event.consume();
+    }
+
+    @Override
+    public void setEditable(boolean isEditable) {
+        codeArea.setEditable(isEditable);
+        codeArea.setBackground(Background.EMPTY);
     }
 
     public void setCode(String code) {
