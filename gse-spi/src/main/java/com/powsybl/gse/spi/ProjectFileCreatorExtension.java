@@ -12,12 +12,19 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCodeCombination;
 
+import java.util.Collections;
+import java.util.List;
+
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
 public interface ProjectFileCreatorExtension {
 
     Class<? extends ProjectFile> getProjectFileType();
+
+    default List<Class<?>> getDependenciesTypes() {
+        return Collections.emptyList();
+    }
 
     default Node getMenuGraphic() {
         return null;
@@ -36,4 +43,8 @@ public interface ProjectFileCreatorExtension {
     KeyCodeCombination getMenuKeycode();
 
     ProjectFileCreator newCreator(ProjectFolder folder, Scene scene, GseContext context);
+
+    default ProjectFileCreator newCreatorWithParameters(ProjectFolder folder, Scene scene, GseContext context, List<ProjectFile> parameters) {
+        return newCreator(folder, scene, context);
+    }
 }
