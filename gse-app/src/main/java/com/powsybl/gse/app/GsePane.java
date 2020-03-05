@@ -152,6 +152,8 @@ public class GsePane extends StackPane {
             } catch (Throwable t) {
                 LOGGER.error(t.toString(), t);
             }
+            boolean activeDark = Boolean.valueOf(preferences.get("darkMode", ""));
+            DefaultPreferencesPane.activeDarkMode(activeDark, getScene(), preferences);
         });
     }
 
@@ -187,6 +189,14 @@ public class GsePane extends StackPane {
             throw new GseException("Branding about pane is null");
         }
         popup.getContent().addAll(content);
+        popup.show(getScene().getWindow());
+    }
+
+    private void showPreferences() {
+        Popup popup = new Popup();
+        popup.setAutoHide(true);
+        DefaultPreferencesPane preferencesPane = new DefaultPreferencesPane(getScene(), preferences);
+        popup.getContent().addAll(preferencesPane);
         popup.show(getScene().getWindow());
     }
 
@@ -342,17 +352,11 @@ public class GsePane extends StackPane {
         aboutMenuItem.setOnAction(event -> showAbout());
         MenuItem shortcutMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Shortcuts") + "...");
         shortcutMenuItem.setOnAction(event -> showShortcuts());
-        contextMenu.getItems().addAll(aboutMenuItem, shortcutMenuItem);
+        MenuItem preferencesMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Preferences") + "...");
+        preferencesMenuItem.setOnAction(event -> showPreferences());
+        contextMenu.getItems().addAll(aboutMenuItem, shortcutMenuItem, preferencesMenuItem);
 
         contextMenu.getItems().addAll(initExtensions(MenuItem::new, menu -> menu::setOnAction, ext -> !ext.isMain()));
-
-        appBar.getToggleSwitch().selectedProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue) {
-                this.getScene().getStylesheets().add("/css/gse-dark-theme.css");
-            } else {
-                this.getScene().getStylesheets().remove("/css/gse-dark-theme.css");
-            }
-        });
         appBar.getHelpButton().setOnAction(event -> contextMenu.show(appBar.getHelpButton(), Side.BOTTOM, 0, 0));
 
         return appBar;

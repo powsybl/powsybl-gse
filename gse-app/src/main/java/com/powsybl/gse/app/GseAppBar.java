@@ -16,13 +16,11 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.text.Text;
-import org.controlsfx.control.ToggleSwitch;
 
 import java.util.List;
 import java.util.ResourceBundle;
@@ -40,8 +38,6 @@ public class GseAppBar extends HBox {
     private final Button openButton;
 
     private final Button helpButton;
-
-    private final ToggleSwitch styleSwitch;
 
     private UserSessionPane userSessionPane;
 
@@ -61,10 +57,6 @@ public class GseAppBar extends HBox {
         createButton.getStyleClass().add("gse-app-bar-text");
         openButton = createButton(RESOURCE_BUNDLE.getString("Open"));
         openButton.getStyleClass().add("gse-app-bar-text");
-        styleSwitch = new ToggleSwitch();
-        Tooltip tooltipStyleSwitch = new Tooltip(RESOURCE_BUNDLE.getString("StyleModeDark"));
-        styleSwitch.setTooltip(tooltipStyleSwitch);
-        styleSwitch.getStyleClass().add("gse-app-bar-text");
 
         Text questionGlyph = Glyph.createAwesomeFont('\uf059');
         questionGlyph.getStyleClass().add("gse-app-bar-icon");
@@ -80,7 +72,7 @@ public class GseAppBar extends HBox {
             getChildren().addAll(extButtons);
         }
 
-        getChildren().add(gluePanel, styleSwitch);
+        getChildren().add(gluePanel);
         GseAuthenticator.find().ifPresent(authenticator -> {
             userSessionPane = new UserSessionPane(context, authenticator);
             getChildren().add(userSessionPane);
@@ -107,10 +99,6 @@ public class GseAppBar extends HBox {
 
     public Button getOpenButton() {
         return openButton;
-    }
-
-    public ToggleSwitch getToggleSwitch() {
-        return styleSwitch;
     }
 
     public Button getHelpButton() {
