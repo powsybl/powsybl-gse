@@ -350,9 +350,9 @@ public class GsePane extends StackPane {
 
         MenuItem aboutMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("About"));
         aboutMenuItem.setOnAction(event -> showAbout());
-        MenuItem shortcutMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Shortcuts") + "...");
+        MenuItem shortcutMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Shortcuts"));
         shortcutMenuItem.setOnAction(event -> showShortcuts());
-        MenuItem preferencesMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Preferences") + "...");
+        MenuItem preferencesMenuItem = new MenuItem(RESOURCE_BUNDLE.getString("Preferences"));
         preferencesMenuItem.setOnAction(event -> showPreferences());
         contextMenu.getItems().addAll(aboutMenuItem, shortcutMenuItem, preferencesMenuItem);
 
