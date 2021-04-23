@@ -6,6 +6,7 @@
  */
 package com.powsybl.gse.map;
 
+import com.gluonhq.maps.MapLayer;
 import com.gluonhq.maps.MapView;
 import com.powsybl.afs.ext.base.ProjectCase;
 import com.powsybl.gse.spi.GseContext;
@@ -45,10 +46,29 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
      * Hack to fix layer refreshing issue
      */
     private class MapView2 extends MapView {
+
+        private final List<MapLayer> layers = new ArrayList<>();
+
         @Override
         public void markDirty() {
             super.markDirty();
             taskQueue.reset();
+        }
+
+        @Override
+        public void addLayer(MapLayer layer) {
+            super.addLayer(layer);
+            layers.add(layer);
+        }
+
+        @Override
+        public void removeLayer(MapLayer layer) {
+            super.removeLayer(layer);
+            layers.remove(layer);
+        }
+
+        public List<MapLayer> getLayers() {
+            return layers;
         }
     }
 
@@ -71,6 +91,8 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
     private final ProgressIndicator progressIndicator = new ProgressIndicator();
 
     private final CancellableGraphicTaskQueue taskQueue;
+
+    private final MapTimer timer = new MapTimer();
 
     private final NetworkMapConfig config = new NetworkMapConfig();
 
@@ -188,9 +210,11 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
                         },
                         TreeMap::new));
 
+            timer.start();
+
             Platform.runLater(() -> {
                 view.addLayer(new SubstationLayer(view, substationIndex));
-                view.addLayer(new LineLayer(view, branchesIndexes, taskQueue, config));
+                view.addLayer(new LineLayer(view, branchesIndexes, taskQueue, timer, config));
                 view.markDirty();
                 progressIndicator.setVisible(false);
                 mainPane.setDisable(false);
@@ -200,7 +224,10 @@ public class NetworkMap extends StackPane implements ProjectFileViewer {
 
     @Override
     public void dispose() {
-        // nothing to dispose
+        timer.stop();
+        for (MapLayer layer : view.getLayers()) {
+            ((CanvasBasedLayer) layer).dispose();
+        }
     }
 
     @Override
