@@ -74,7 +74,7 @@
         <jimfs.version>1.1</jimfs.version>
         <jodatime.version>2.9.7</jodatime.version>
         <junit.version>4.12</junit.version>
-        <logback.version>1.1.8</logback.version>
+        <logback.version>1.2.0</logback.version>
         <maps.version>1.0.2</maps.version>
         <maven.core.version>3.3.9</maven.core.version>
         <mockito.version>1.10.19</mockito.version>
