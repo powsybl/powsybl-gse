@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v1
         with:
           repository: powsybl/powsybl-afs
-          ref: refs/heads/master
+          ref: refs/heads/main
 
       - name: Build powsybl-afs with Maven
         run: mvn --batch-mode -DskipTests install
