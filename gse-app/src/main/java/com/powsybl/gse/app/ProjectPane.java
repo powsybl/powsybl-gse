@@ -13,6 +13,8 @@ import com.powsybl.afs.*;
 import com.powsybl.afs.storage.AppStorage;
 import com.powsybl.afs.storage.NodeInfo;
 import com.powsybl.afs.storage.events.*;
+import com.powsybl.commons.config.ModuleConfig;
+import com.powsybl.commons.config.PlatformConfig;
 import com.powsybl.commons.util.ServiceLoaderCache;
 import com.powsybl.gse.copy_paste.afs.CopyManager;
 import com.powsybl.gse.copy_paste.afs.CopyService;
@@ -87,6 +89,7 @@ public class ProjectPane extends Tab {
     private final Map<String, ProjectPaneProjectFolderListener> lCache = new HashMap<>();
     private final CopyManager localArchiveManager = CopyManager.getInstance();
     private final AppStorageListener appStorageListener;
+    private List<String> blackListExtensions = new ArrayList<>();
 
     public ProjectPane(Scene scene, Project project, GseContext context) {
         this.project = Objects.requireNonNull(project);
@@ -96,6 +99,12 @@ public class ProjectPane extends Tab {
         taskMonitorPane = new TaskMonitorPane(taskItems);
         copyService = initCopyService();
         treeView = createProjectTreeview();
+
+        ModuleConfig extensionsModuleConfig = PlatformConfig.defaultConfig().getOptionalModuleConfig("extensions").orElse(null);
+        if (extensionsModuleConfig != null && extensionsModuleConfig.hasProperty("disabled")) {
+            List<String> disabledExtensions = extensionsModuleConfig.getStringListProperty("disabled");
+            blackListExtensions.addAll(disabledExtensions);
+        }
 
         appStorageListener = eventList -> eventList.getEvents().forEach(this::handleEvent);
         project.getFileSystem().getEventBus().addListener(appStorageListener);
@@ -1221,7 +1230,7 @@ public class ProjectPane extends Tab {
         items.add(createCreateFolderItem(selectedTreeItem, folder).order(99));
         for (Class<? extends ProjectFile> type : project.getFileSystem().getData().getProjectFileClasses()) {
             for (ProjectFileCreatorExtension creatorExtension : findCreatorExtension(type)) {
-                if (creatorExtension != null) {
+                if (creatorExtension != null && isCreatorExtensionEnabled(creatorExtension)) {
                     GseMenuItem menuItem = new GseMenuItem(creatorExtension.getMenuText());
                     menuItem.setOrder(creatorExtension.getMenuOrder());
                     menuItem.setGraphic(creatorExtension.getMenuGraphic());
@@ -1249,6 +1258,10 @@ public class ProjectPane extends Tab {
         items.sort(Comparator.comparing(GseMenuItem::getOrder));
         contextMenu.getItems().addAll(items);
         return contextMenu;
+    }
+
+    private boolean isCreatorExtensionEnabled(ProjectFileCreatorExtension creatorExtension) {
+        return !blackListExtensions.contains(creatorExtension.getClass().getName());
     }
 
     public void dispose() {
