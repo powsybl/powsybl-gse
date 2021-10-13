@@ -22,15 +22,22 @@ import java.util.Objects;
  */
 public class CanvasBasedLayer extends MapLayer {
 
+    protected final MapView mapView;
+
     protected final Canvas canvas;
 
     protected CanvasBasedLayer(MapView mapView) {
-        Objects.requireNonNull(mapView);
-        canvas = new Canvas();
-        canvas.widthProperty().bind(mapView.widthProperty());
-        canvas.heightProperty().bind(mapView.heightProperty());
-        getChildren().add(canvas);
+        this.mapView = Objects.requireNonNull(mapView);
+        canvas = createCanvas();
         canvas.setOnMouseClicked(event -> onMapClick(getMapCoordinate(new Point2D(event.getX(), event.getY()))));
+    }
+
+    protected Canvas createCanvas() {
+        Canvas newCanvas = new Canvas();
+        newCanvas.widthProperty().bind(mapView.widthProperty());
+        newCanvas.heightProperty().bind(mapView.heightProperty());
+        getChildren().add(newCanvas);
+        return newCanvas;
     }
 
     protected void onMapClick(Coordinate c) {
@@ -60,12 +67,20 @@ public class CanvasBasedLayer extends MapLayer {
         return Geometries.rectangleGeographic(c1.getLon(), c1.getLat(), c2.getLon(), c2.getLat());
     }
 
+    protected static void cleanCanvas(Canvas canvas) {
+        GraphicsContext gc = canvas.getGraphicsContext2D();
+        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+    }
+
     @Override
     protected void layoutLayer() {
         super.layoutLayer();
 
         // clear
-        GraphicsContext gc = canvas.getGraphicsContext2D();
-        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        cleanCanvas(canvas);
+    }
+
+    protected void dispose() {
+        // to implement
     }
 }

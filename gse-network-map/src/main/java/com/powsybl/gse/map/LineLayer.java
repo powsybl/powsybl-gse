@@ -12,7 +12,11 @@ import com.github.davidmoten.rtree.geometry.Geometry;
 import com.gluonhq.maps.MapView;
 import com.goebl.simplify.PointExtractor;
 import com.goebl.simplify.Simplify;
+import com.powsybl.iidm.network.Line;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.geometry.Point2D;
+import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcType;
@@ -21,10 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Observable;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Objects;
-import java.util.SortedMap;
+import java.util.*;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
@@ -49,20 +50,108 @@ public class LineLayer extends CanvasBasedLayer {
         }
     };
 
-    private final Simplify<Point2D> simplify = new Simplify<>(new Point2D[0], POINT_EXTRACTOR);
+    private static final Simplify<Point2D> SIMPLIFY = new Simplify<>(new Point2D[0], POINT_EXTRACTOR);
+
+    static class SimplificationStatistics {
+
+        int segmentCount = 0;
+        int drawnSegmentCount = 0;
+
+        double getSimplificationRate() {
+            if (drawnSegmentCount != 0) {
+                return (double) drawnSegmentCount / segmentCount;
+            } else {
+                return 1;
+            }
+        }
+    }
+
+    static class ArrowConfig {
+        final double arrowsSpacing; // spacing between 2 arrows
+        final double arrowBaseSize;
+        final double arrowHeadSize;
+        final Color color;
+        final boolean reverse;
+
+        ArrowConfig(double arrowsSpacing, double arrowBaseSize, double arrowHeadSize, Color color, boolean reverse) {
+            this.arrowsSpacing = arrowsSpacing;
+            this.arrowBaseSize = arrowBaseSize;
+            this.arrowHeadSize = arrowHeadSize;
+            this.color = color;
+            this.reverse = reverse;
+        }
+    }
+
+    public static class PointsToDraw {
+
+        final Point2D[] array;
+
+        final Color lineColor;
+
+        final ArrowConfig arrowConfig;
+
+        public PointsToDraw(Point2D[] array, Color lineColor, ArrowConfig arrowConfig) {
+            this.array = array;
+            this.lineColor = lineColor;
+            this.arrowConfig = arrowConfig;
+        }
+    }
 
     private final SortedMap<Integer, BranchGraphicIndex> branchesIndexes;
 
     private final CancellableGraphicTaskQueue taskQueue;
 
+    private final MapTimer timer;
+
     private final NetworkMapConfig config;
 
+    private final Canvas slowArrowsCanvas;
+
+    private final Canvas mediumArrowsCanvas;
+
+    private final Canvas fastArrowsCanvas;
+
+    private final List<PointsToDraw> slowArrowsPointsList = new ArrayList<>();
+
+    private final List<PointsToDraw> mediumArrowsPointsList = new ArrayList<>();
+
+    private final List<PointsToDraw> fastArrowsPointsList = new ArrayList<>();
+
+    private final ChangeListener<Number> slowArrowsListener = new ChangeListener<Number>() {
+        @Override
+        public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+            drawArrows(slowArrowsCanvas, slowArrowsPointsList, newValue.doubleValue());
+        }
+    };
+
+    private final ChangeListener<Number> mediumArrowsListener = new ChangeListener<Number>() {
+        @Override
+        public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+            drawArrows(mediumArrowsCanvas, mediumArrowsPointsList, newValue.doubleValue());
+        }
+    };
+
+    private final ChangeListener<Number> fastArrowsListener = new ChangeListener<Number>() {
+        @Override
+        public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+            drawArrows(fastArrowsCanvas, fastArrowsPointsList, newValue.doubleValue());
+        }
+    };
+
     public LineLayer(MapView mapView, SortedMap<Integer, BranchGraphicIndex> branchesIndexes,
-                     CancellableGraphicTaskQueue taskQueue, NetworkMapConfig config) {
+                     CancellableGraphicTaskQueue taskQueue, MapTimer timer,
+                     NetworkMapConfig config) {
         super(mapView);
         this.branchesIndexes = Objects.requireNonNull(branchesIndexes);
         this.taskQueue = Objects.requireNonNull(taskQueue);
+        this.timer = Objects.requireNonNull(timer);
         this.config = Objects.requireNonNull(config);
+        slowArrowsCanvas = createCanvas();
+        mediumArrowsCanvas = createCanvas();
+        fastArrowsCanvas = createCanvas();
+        timer.getSlowProgress().addListener(slowArrowsListener);
+        timer.getMediumProgress().addListener(mediumArrowsListener);
+        timer.getFastProgress().addListener(fastArrowsListener);
     }
 
     @Override
@@ -74,75 +163,173 @@ public class LineLayer extends CanvasBasedLayer {
         }
     }
 
-    private void reinitGraphicsContext(GraphicsContext gc, BranchGraphic branch) {
-        if (Objects.isNull(branch.getLine().getModel())) {
-            gc.setStroke(UNMAPPED_LINE_COLOR);
-            gc.setFill(UNMAPPED_LINE_COLOR);
-            gc.setLineDashes(1., 7., 1., 7.);
+    private PointsToDraw computePointsToDraw(BranchGraphic branch, double zoom, SimplificationStatistics stats) {
+        Point2D[] points = new Point2D[branch.getPylons().size()];
+        int i = 0;
+        for (PylonGraphic pylon : branch.getPylons()) {
+            Coordinate c = pylon.getCoordinate();
+            Point2D point = baseMap.getMapPoint(c.getLat(), c.getLon());
+            points[i++] = point;
+        }
+
+        Point2D[] pointsToDraw;
+        if (zoom > PYLON_SHOW_ZOOM_THRESHOLD) {
+            pointsToDraw = points;
         } else {
-            gc.setStroke(branch.getLine().getColor());
-            gc.setFill(branch.getLine().getColor());
-            gc.setLineDashes(0.);
+            pointsToDraw = SIMPLIFY.simplify(points, 1, true);
+        }
+
+        Line l = branch.getLine().getModel();
+        Color lineColor = l != null ? branch.getLine().getColor() : UNMAPPED_LINE_COLOR;
+        boolean reverse = l != null && l.getTerminal1().getP() >= 0;
+
+        stats.segmentCount += points.length - 1;
+        stats.drawnSegmentCount += pointsToDraw.length - 1;
+
+        ArrowConfig arrowConfig = null;
+        if (zoom >= 9) {
+            arrowConfig = new ArrowConfig(50, 5, 10, lineColor, reverse);
+        } else if (zoom >= 8) {
+            arrowConfig = new ArrowConfig(50, 3, 6, lineColor, reverse);
+        }
+
+        return new PointsToDraw(pointsToDraw, lineColor, arrowConfig);
+    }
+
+    private void drawArrows(Canvas canvas, List<PointsToDraw> pointsList, double progress) {
+        cleanCanvas(canvas);
+        ArrowDrawingContext context = new ArrowDrawingContext();
+        for (PointsToDraw points : pointsList) {
+            drawArrows(slowArrowsCanvas.getGraphicsContext2D(), points, context, progress);
         }
     }
 
-    private void draw(GraphicsContext gc, int drawOrder, BranchGraphicIndex segmentIndex,
+    static class ArrowDrawingContext {
+        double lastSegmentDistance;
+        double residualSpacing;
+    }
+
+    private static void drawArrows(GraphicsContext g, Point2D point1, Point2D point2, ArrowDrawingContext context,
+                                   ArrowConfig arrowConfig) {
+        double x1 = point1.getX();
+        double y1 = point1.getY();
+        double x2 = point2.getX();
+        double y2 = point2.getY();
+        double dxSegment = x2 - x1;
+        double dySegment = y2 - y1;
+        double segmentLength = Math.hypot(dxSegment, dySegment);
+        double a = Math.atan2(dySegment, dxSegment);
+        double ap = Math.PI / 2 - a;
+        double dxArrowBase = Math.cos(ap) * arrowConfig.arrowBaseSize;
+        double dyArrowBase = Math.sin(ap) * arrowConfig.arrowBaseSize;
+        double dxArrowHead = Math.cos(a) * arrowConfig.arrowHeadSize;
+        double dyArrowHead = Math.sin(a) * arrowConfig.arrowHeadSize;
+        double distance = context.lastSegmentDistance + context.residualSpacing;
+        while (distance < context.lastSegmentDistance + segmentLength) {
+            double xArrow = x1 + Math.cos(a) * (distance - context.lastSegmentDistance);
+            double yArrow = y1 + Math.sin(a) * (distance - context.lastSegmentDistance);
+
+            // draw arrow
+            g.beginPath();
+            g.moveTo(xArrow - dxArrowBase, yArrow + dyArrowBase);
+            g.lineTo(xArrow + dxArrowBase, yArrow - dyArrowBase);
+            g.lineTo(xArrow + dxArrowHead, yArrow + dyArrowHead);
+            g.closePath();
+            g.fill();
+
+            distance += arrowConfig.arrowsSpacing;
+        }
+        context.residualSpacing = distance - context.lastSegmentDistance - segmentLength;
+        context.lastSegmentDistance += segmentLength;
+    }
+
+    public static void drawArrows(GraphicsContext g, PointsToDraw points, ArrowDrawingContext context, double progress) {
+        ArrowConfig arrowConfig = points.arrowConfig;
+        g.setFill(arrowConfig.color);
+
+        context.lastSegmentDistance = 0;
+        context.residualSpacing = progress * arrowConfig.arrowsSpacing;
+        if (arrowConfig.reverse) {
+            for (int i = points.array.length - 1;  i >= 1; i--) {
+                drawArrows(g, points.array[i], points.array[i - 1], context, arrowConfig);
+            }
+        } else {
+            for (int i = 1; i < points.array.length; i++) {
+                drawArrows(g, points.array[i - 1], points.array[i], context, arrowConfig);
+            }
+        }
+    }
+
+    private void drawFlows(BranchGraphic branch, PointsToDraw points) {
+        if (points.arrowConfig != null) {
+            Line l = branch.getLine().getModel();
+            if (l != null &&
+                    !Double.isNaN(l.getTerminal1().getI()) &&
+                    l.getCurrentLimits1() != null &&
+                    !Double.isNaN(l.getCurrentLimits1().getPermanentLimit())) {
+                double rate = l.getTerminal1().getI() / l.getCurrentLimits1().getPermanentLimit();
+                if (rate < 0.2) {
+                    slowArrowsPointsList.add(points);
+                } else if (rate < 0.5) {
+                    mediumArrowsPointsList.add(points);
+                } else {
+                    fastArrowsPointsList.add(points);
+                }
+            }
+        }
+    }
+
+    private void draw(GraphicsContext gc, int drawOrder, BranchGraphicIndex branchIndex,
                       double zoom, boolean showPylons) {
         LOGGER.trace("Drawing lines at order {}", drawOrder);
 
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
 
-        int[] segmentCount = new int[1];
-        int[] drawnSegmentCount = new int[1];
+        SimplificationStatistics stats = new SimplificationStatistics();
 
         double pylonSize = 5;
 
-        segmentIndex.getTree().search(getMapBounds()).toBlocking().forEach(e -> {
+        branchIndex.getTree().search(getMapBounds()).toBlocking().forEach(e -> {
             BranchGraphic branch = e.value();
 
-            reinitGraphicsContext(gc, branch);
+            PointsToDraw points = computePointsToDraw(branch, zoom, stats);
 
-            Point2D[] points = new Point2D[branch.getPylons().size()];
-            int i = 0;
-            for (PylonGraphic pylon : branch.getPylons()) {
-                Coordinate c = pylon.getCoordinate();
-                Point2D point = baseMap.getMapPoint(c.getLat(), c.getLon());
-                points[i++] = point;
-            }
-
-            Point2D[] pointsToDraw;
-            if (zoom > PYLON_SHOW_ZOOM_THRESHOLD) {
-                pointsToDraw = points;
+            gc.setStroke(points.lineColor);
+            gc.setFill(points.lineColor);
+            if (Objects.isNull(branch.getLine().getModel())) {
+                gc.setLineDashes(1., 7., 1., 7.);
             } else {
-                pointsToDraw = simplify.simplify(points, 1, true);
+                gc.setLineDashes(0.);
             }
-
-            segmentCount[0] += points.length - 1;
-            drawnSegmentCount[0] += pointsToDraw.length - 1;
 
             Point2D prev = null;
-            for (Point2D point : pointsToDraw) {
+            for (Point2D point : points.array) {
+                // draw segment
                 if (prev != null) {
                     gc.strokeLine(prev.getX(), prev.getY(), point.getX(), point.getY());
                 }
+
                 // draw pylon
                 if (showPylons && zoom > PYLON_SHOW_ZOOM_THRESHOLD) {
                     gc.fillArc(point.getX() - pylonSize / 2, point.getY() - pylonSize / 2, pylonSize, pylonSize, 0, 360, ArcType.ROUND);
                 }
+
                 prev = point;
             }
+
+            // draw flows
+            drawFlows(branch, points);
         });
 
         stopWatch.stop();
 
-        double simplificationRate = 1;
-        if (drawnSegmentCount[0] != 0) {
-            simplificationRate = (double) drawnSegmentCount[0] / segmentCount[0];
-        }
+        LOGGER.info("Speed: {} branches slow, {} branches medium, {} branches fast",
+                slowArrowsPointsList.size(), mediumArrowsPointsList.size(), fastArrowsPointsList.size());
 
         LOGGER.info("{} line segments (order={}, simplification={}) drawn in {} ms at zoom {}",
-                segmentCount[0], drawOrder, simplificationRate, stopWatch.getTime(), baseMap.zoom().getValue());
+                stats.segmentCount, drawOrder, stats.getSimplificationRate(), stopWatch.getTime(),
+                baseMap.zoom().getValue());
     }
 
     @Override
@@ -155,6 +342,10 @@ public class LineLayer extends CanvasBasedLayer {
         GraphicsContext gc = canvas.getGraphicsContext2D();
         gc.setLineWidth(zoom >= 9 ? 2 : 1);
 
+        slowArrowsPointsList.clear();
+        mediumArrowsPointsList.clear();
+        fastArrowsPointsList.clear();
+
         Iterator<Map.Entry<Integer, BranchGraphicIndex>> it = branchesIndexes.entrySet().iterator();
         if (it.hasNext()) {
             Map.Entry<Integer, BranchGraphicIndex> e = it.next();
@@ -165,5 +356,12 @@ public class LineLayer extends CanvasBasedLayer {
             Map.Entry<Integer, BranchGraphicIndex> e = it.next();
             taskQueue.addTask(() -> draw(gc, e.getKey(), e.getValue(), zoom, showPylons));
         }
+    }
+
+    @Override
+    protected void dispose() {
+        timer.getSlowProgress().removeListener(slowArrowsListener);
+        timer.getMediumProgress().removeListener(mediumArrowsListener);
+        timer.getFastProgress().removeListener(fastArrowsListener);
     }
 }
