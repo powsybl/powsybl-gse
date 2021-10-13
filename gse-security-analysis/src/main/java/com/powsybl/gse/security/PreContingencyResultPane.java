@@ -13,26 +13,17 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
-import javafx.geometry.Side;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.SelectionMode;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableColumnBase;
-import javafx.scene.control.TableView;
+import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
-import org.controlsfx.control.HiddenSidesPane;
 
 import java.util.Objects;
-import java.util.ResourceBundle;
 import java.util.function.Predicate;
 import java.util.prefs.Preferences;
 
 /**
  * @author Geoffroy Jamgotchian <geoffroy.jamgotchian at rte-france.com>
  */
-class PreContingencyResultPane extends BorderPane implements LimitViolationsResultPane {
-
-    private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("lang.SecurityAnalysis");
+class PreContingencyResultPane extends AbstractContingencyResultPane implements LimitViolationsResultPane {
 
     private final ObservableList<LimitViolation> violations = FXCollections.observableArrayList();
 
@@ -92,21 +83,14 @@ class PreContingencyResultPane extends BorderPane implements LimitViolationsResu
         TableUtils.installCopyPasteHandler(tableView, true);
 
         filterPane = new LimitViolationsFilterPane(this);
-        HiddenSidesPane hiddenSidesPane = new HiddenSidesPane();
-        hiddenSidesPane.setContent(tableView);
-        hiddenSidesPane.setRight(new ScrollPane(filterPane));
 
-        // to prevent filter pane from disappear when clicking on a control
-        filterPane.setOnMouseEntered(e -> hiddenSidesPane.setPinnedSide(Side.LEFT));
-        filterPane.setOnMouseExited(e -> hiddenSidesPane.setPinnedSide(null));
+        BorderPane borderPane = new BorderPane();
+        borderPane.setCenter(tableView);
 
-        setCenter(hiddenSidesPane);
-    }
+        setCenter(borderPane);
 
-    private static <S, T> TableColumn<S, T> createColumn(String type) {
-        TableColumn<S, T> column = new TableColumn<>(RESOURCE_BUNDLE.getString(type));
-        column.setUserData(type);
-        return column;
+        ToggleButton filterButton = createFilterButton(borderPane, filterPane);
+        setRight(filterButton);
     }
 
     @Override
